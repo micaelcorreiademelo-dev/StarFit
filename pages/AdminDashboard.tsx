@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
+import AdminTrainers from '../components/AdminTrainers';
+import AdminPlans from '../components/AdminPlans';
 import { User } from '../types';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { MOCK_MRR_DATA } from '../constants';
@@ -50,7 +52,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-7xl mx-auto space-y-8 pb-20">
+          {activeTab === 'dashboard' && (
+            <div className="max-w-7xl mx-auto space-y-8 pb-20">
             <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-black text-white">Dashboard Geral</h1>
@@ -169,6 +172,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               </div>
             </div>
           </div>
+          )}
+          {activeTab === 'users' && <AdminTrainers />}
+          {activeTab === 'plans' && <AdminPlans />}
         </div>
       </main>
     </div>
