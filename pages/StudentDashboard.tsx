@@ -34,9 +34,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const [activeTab, setActiveTab] = useState('dashboard');
   const [workoutTab, setWorkoutTab] = useState<'upcoming' | 'history'>('upcoming');
   const [isTraining, setIsTraining] = useState(false);
-  const [completedExercises, setCompletedExercises] = useState<string[]>(['ex3']); // Mocking one completed exercise
+  const [completedExercises, setCompletedExercises] = useState<string[]>(['ex3']);
   const [newMessage, setNewMessage] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Trainer Linkage State
+  const [trainerLinkStatus, setTrainerLinkStatus] = useState<'initial' | 'search' | 'pending' | 'linked' | 'none'>('initial');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [foundTrainer, setFoundTrainer] = useState<any>(null);
 
   // Settings State
   const [notifications, setNotifications] = useState({
@@ -1027,10 +1032,151 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           </div>
         </div>
       </div>
+
+      {/* Personal Trainer Setting */}
+      <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-[0_0_12px_rgba(0,0,0,0.05)] border border-border-light dark:border-border-dark">
+        <div className="p-6 border-b border-border-light dark:border-border-dark">
+          <h2 className="text-text-light-primary dark:text-text-dark-primary text-xl font-bold leading-tight tracking-[-0.015em]">Personal Trainer</h2>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm mt-1">Gerencie seu vínculo com o personal trainer.</p>
+        </div>
+        <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <img src={trainerAvatar} alt="Treinador" className="size-16 rounded-full border-2 border-primary/20 object-cover" />
+            <div>
+              <h3 className="font-bold text-text-light-primary dark:text-text-dark-primary text-lg">Ricardo "PUMP" Ferraz</h3>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">@ricardopump</p>
+              <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary">Vínculo Ativo</span>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              if (confirm('Tem certeza que deseja remover este vínculo? Você não terá mais acesso aos treinos deste personal.')) {
+                setTrainerLinkStatus('search');
+                setActiveTab('dashboard');
+              }
+            }}
+            className="w-full md:w-auto px-6 py-2 rounded-lg border border-red-500/50 text-red-500 font-bold hover:bg-red-500/10 transition-all text-sm whitespace-nowrap"
+          >
+            Remover Vínculo
+          </button>
+        </div>
+      </div>
     </div>
   );
 
+  const renderLinkageFlow = () => {
+    switch (trainerLinkStatus) {
+      case 'initial':
+        return (
+          <div className="flex flex-col items-center justify-center h-full max-w-xl mx-auto text-center gap-8 animate-in fade-in zoom-in duration-500">
+            <div className="size-24 rounded-full bg-primary/10 flex flex-col items-center justify-center text-primary mb-2 shadow-xl shadow-primary/20">
+              <span className="material-symbols-outlined text-5xl">group_add</span>
+            </div>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-black text-text-light-primary dark:text-text-dark-primary mb-4 leading-tight">Você já possui um personal trainer?</h1>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary">Para montarmos seus treinos, precisamos saber se você já treina com alguém na StarFit.</p>
+            </div>
+            <div className="flex gap-4 w-full">
+              <button 
+                onClick={() => setTrainerLinkStatus('search')}
+                className="flex-1 bg-primary text-background-dark font-bold py-4 rounded-xl hover:brightness-110 shadow-lg shadow-primary/20 transition-all text-lg"
+              >
+                Sim
+              </button>
+              <button 
+                onClick={() => setTrainerLinkStatus('none')}
+                className="flex-1 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-light-primary dark:text-text-dark-primary font-bold py-4 rounded-xl hover:border-text-light-secondary dark:hover:border-text-dark-secondary transition-all text-lg"
+              >
+                Não
+              </button>
+            </div>
+          </div>
+        );
+      case 'search':
+        return (
+          <div className="flex flex-col h-full max-w-xl mx-auto py-12 animate-in slide-in-from-right duration-500">
+            <button 
+              onClick={() => { setTrainerLinkStatus('initial'); setFoundTrainer(null); setSearchQuery(''); }}
+              className="flex w-fit items-center gap-2 text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-text-dark-primary transition-colors mb-8"
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+              Voltar
+            </button>
+            <h1 className="text-3xl font-black text-text-light-primary dark:text-text-dark-primary mb-6">Buscar Personal</h1>
+            
+            <div className="relative mb-8">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-text-light-secondary dark:text-text-dark-secondary">search</span>
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Digitar código ou username (ex: @flaylima)" 
+                className="w-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl py-4 pl-12 pr-4 text-text-light-primary dark:text-text-dark-primary placeholder-text-light-secondary focus:ring-2 focus:ring-primary focus:border-primary transition-all font-medium"
+              />
+              <button 
+                onClick={() => setFoundTrainer({ 
+                  id: 't1', 
+                  name: 'Alex Lima', 
+                  username: '@flaylima', 
+                  specialty: 'Musculação e Hipertrofia', 
+                  desc: 'Com mais de 10 anos de experiência...', 
+                  avatar: trainerAvatar 
+                })}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary text-background-dark px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all text-sm"
+              >
+                Buscar
+              </button>
+            </div>
+
+            {foundTrainer && (
+              <div className="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl p-6 flex flex-col items-center text-center gap-4 animate-in zoom-in-95 duration-300">
+                <img src={foundTrainer.avatar} alt="Trainer" className="size-24 rounded-full border-4 border-primary/20 shadow-lg object-cover" />
+                <div>
+                  <h2 className="text-2xl font-bold text-text-light-primary dark:text-text-dark-primary">{foundTrainer.name}</h2>
+                  <p className="text-primary font-semibold text-sm mb-2">{foundTrainer.specialty}</p>
+                  <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm px-4">{foundTrainer.desc}</p>
+                </div>
+                <button 
+                  onClick={() => setTrainerLinkStatus('pending')}
+                  className="w-full mt-4 bg-primary text-background-dark font-bold py-3 rounded-xl shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined">person_add</span>
+                  Solicitar vínculo
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      case 'pending':
+        return (
+          <div className="flex flex-col items-center justify-center h-full max-w-xl mx-auto text-center gap-6 animate-in fade-in zoom-in duration-500">
+            <div className="size-24 rounded-full bg-yellow-500/10 flex flex-col items-center justify-center text-yellow-500 mb-2 border border-yellow-500/20">
+              <span className="material-symbols-outlined text-5xl">hourglass_empty</span>
+            </div>
+            <div>
+              <h1 className="text-3xl font-black text-text-light-primary dark:text-text-dark-primary mb-4 leading-tight">Solicitação Enviada!</h1>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary px-8">
+                Sua solicitação de vínculo foi enviada para o personal trainer. Aguarde a aprovação para começar seus treinos.
+              </p>
+            </div>
+            <button 
+              onClick={() => setTrainerLinkStatus('linked')} // Mocking approval for demo purposes if clicked, but let's just let it be pending or provide a way out
+              className="mt-4 px-6 py-3 rounded-xl border border-border-light dark:border-border-dark hover:bg-card-light dark:hover:bg-card-dark transition-all text-text-light-secondary dark:text-text-dark-secondary font-medium"
+            >
+              Cancelar solicitação
+            </button>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   const renderContent = () => {
+    if (trainerLinkStatus === 'initial' || trainerLinkStatus === 'search' || trainerLinkStatus === 'pending') {
+      return renderLinkageFlow();
+    }
+    
     if (isTraining) return renderWorkoutDetails();
     
     switch (activeTab) {

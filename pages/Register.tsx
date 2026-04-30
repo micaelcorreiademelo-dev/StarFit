@@ -31,7 +31,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister }) => {
                 <legend className="text-lg font-bold text-text-primary px-2">1. Escolha seu perfil</legend>
                 <p className="text-sm text-text-secondary mb-5 -mt-2 px-2">Selecione como você usará o StarFit.</p>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Student Option */}
                   <div>
                     <input 

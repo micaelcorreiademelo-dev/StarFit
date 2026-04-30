@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const AdminPlans: React.FC = () => {
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -160,10 +162,36 @@ const AdminPlans: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-text-secondary">15/08/2024</td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="text-text-secondary hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+                  <td className="px-6 py-4 text-right relative">
+                    <button 
+                      onClick={() => setOpenMenuId(openMenuId === 0 ? null : 0)}
+                      className="text-text-secondary hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+                    >
                       <span className="material-symbols-outlined">more_horiz</span>
                     </button>
+
+                    {openMenuId === 0 && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10" 
+                          onClick={() => setOpenMenuId(null)}
+                        />
+                        <div className="absolute right-full top-0 mr-2 w-40 bg-card-dark border border-border-dark rounded-xl shadow-xl z-50 overflow-hidden text-left">
+                          <button className="w-full px-4 py-2.5 text-left text-sm text-text-secondary hover:text-white hover:bg-white/5 transition-colors flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg">edit</span>
+                            Editar
+                          </button>
+                          <button className="w-full px-4 py-2.5 text-left text-sm text-text-secondary hover:text-white hover:bg-white/5 transition-colors flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg">file_copy</span>
+                            Duplicar
+                          </button>
+                          <button className="w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg text-red-500">delete</span>
+                            Excluir
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </td>
                 </tr>
                 <tr className="hover:bg-white/5 transition-colors">
@@ -184,10 +212,36 @@ const AdminPlans: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-text-secondary">22/08/2024</td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="text-text-secondary hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+                  <td className="px-6 py-4 text-right relative">
+                    <button 
+                      onClick={() => setOpenMenuId(openMenuId === 1 ? null : 1)}
+                      className="text-text-secondary hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+                    >
                       <span className="material-symbols-outlined">more_horiz</span>
                     </button>
+
+                    {openMenuId === 1 && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10" 
+                          onClick={() => setOpenMenuId(null)}
+                        />
+                        <div className="absolute right-full top-0 mr-2 w-40 bg-card-dark border border-border-dark rounded-xl shadow-xl z-50 overflow-hidden text-left">
+                          <button className="w-full px-4 py-2.5 text-left text-sm text-text-secondary hover:text-white hover:bg-white/5 transition-colors flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg">edit</span>
+                            Editar
+                          </button>
+                          <button className="w-full px-4 py-2.5 text-left text-sm text-text-secondary hover:text-white hover:bg-white/5 transition-colors flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg">file_copy</span>
+                            Duplicar
+                          </button>
+                          <button className="w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg text-red-500">delete</span>
+                            Excluir
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </td>
                 </tr>
                 <tr className="hover:bg-white/5 transition-colors">
@@ -208,10 +262,36 @@ const AdminPlans: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-text-secondary">-</td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="text-text-secondary hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+                  <td className="px-6 py-4 text-right relative">
+                    <button 
+                      onClick={() => setOpenMenuId(openMenuId === 2 ? null : 2)}
+                      className="text-text-secondary hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+                    >
                       <span className="material-symbols-outlined">more_horiz</span>
                     </button>
+
+                    {openMenuId === 2 && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10" 
+                          onClick={() => setOpenMenuId(null)}
+                        />
+                        <div className="absolute right-full top-0 mr-2 w-40 bg-card-dark border border-border-dark rounded-xl shadow-xl z-50 overflow-hidden text-left">
+                          <button className="w-full px-4 py-2.5 text-left text-sm text-text-secondary hover:text-white hover:bg-white/5 transition-colors flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg">edit</span>
+                            Editar
+                          </button>
+                          <button className="w-full px-4 py-2.5 text-left text-sm text-text-secondary hover:text-white hover:bg-white/5 transition-colors flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg">file_copy</span>
+                            Duplicar
+                          </button>
+                          <button className="w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg text-red-500">delete</span>
+                            Excluir
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </td>
                 </tr>
               </tbody>

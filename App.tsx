@@ -11,6 +11,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import Checkout from './pages/Checkout';
 import PaymentConfirmation from './pages/PaymentConfirmation';
 import SubscriptionManagement from './pages/SubscriptionManagement';
+import PublicLandingPage from './pages/PublicLandingPage';
 import { User } from './types';
 
 const App: React.FC = () => {
@@ -25,7 +26,7 @@ const App: React.FC = () => {
       role,
       avatar: `https://i.pravatar.cc/150?u=${role}`
     });
-    setShowOnboarding(true);
+    // showOnboarding set to false by default, removed toggling it here.
   };
 
   const handleRegister = (role: 'STUDENT' | 'TRAINER') => {
@@ -62,6 +63,9 @@ const App: React.FC = () => {
           user.role === 'TRAINER' ? <TrainerDashboard user={user} onLogout={() => setUser(null)} /> :
           <StudentDashboard user={user} onLogout={() => setUser(null)} />
         } />
+        
+        <Route path="/@:username" element={<PublicLandingPage />} />
+        <Route path="/:username" element={<PublicLandingPage />} />
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

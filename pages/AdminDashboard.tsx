@@ -3,6 +3,10 @@ import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import AdminTrainers from '../components/AdminTrainers';
 import AdminPlans from '../components/AdminPlans';
+import AdminReports from '../components/AdminReports';
+import AdminSupport from '../components/AdminSupport';
+import AdminSecurity from '../components/AdminSecurity';
+import AdminSettings from '../components/AdminSettings';
 import { User } from '../types';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { MOCK_MRR_DATA } from '../constants';
@@ -175,6 +179,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           )}
           {activeTab === 'users' && <AdminTrainers />}
           {activeTab === 'plans' && <AdminPlans />}
+          {activeTab === 'reports' && <AdminReports />}
+          {activeTab === 'support' && <AdminSupport />}
+          {activeTab === 'security' && <AdminSecurity />}
+          {activeTab === 'settings' && <AdminSettings />}
         </div>
       </main>
     </div>
