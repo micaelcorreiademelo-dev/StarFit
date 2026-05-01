@@ -14,10 +14,22 @@ import TrainerChat from "./TrainerChat";
 import TrainerLandingPage from "./TrainerLandingPage";
 import TrainerSettings from "./TrainerSettings";
 import TrainerPlans from "./TrainerPlans";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, startOfWeek, endOfWeek, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfDay, isToday, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface TrainerDashboardProps {
   user: User;
   onLogout: () => void;
+}
+
+interface AgendaEvent {
+  id: string;
+  title: string;
+  type: string;
+  date: Date;
+  time: string;
+  status: "Concluído" | "Cancelado" | "Agendado";
+  color: string;
 }
 
 interface ExerciseEntry {
@@ -137,6 +149,69 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todas");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [agendaView, setAgendaView] = useState<"Mês" | "Semana" | "Dia">("Semana");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null);
+  const [linkingWorkoutStudent, setLinkingWorkoutStudent] = useState<any>(null);
+  const [selectedWorkoutToLink, setSelectedWorkoutToLink] = useState<string>("");
+
+  // Dummy events
+  const [events] = useState<AgendaEvent[]>([
+    {
+      id: "1",
+      title: "Ana Beatriz",
+      type: "Avaliação Presencial",
+      date: addDays(new Date(), -1),
+      time: "09:00",
+      status: "Concluído",
+      color: "bg-primary/10 text-primary border-primary/20",
+    },
+    {
+      id: "2",
+      title: "Juliano Souza",
+      type: "Avaliação Online",
+      date: addDays(new Date(), -2),
+      time: "14:00",
+      status: "Cancelado",
+      color: "bg-red-500/10 text-red-500 border-red-500/20",
+    },
+    {
+      id: "3",
+      title: "Marcos Felipe",
+      type: "Consultoria",
+      date: new Date(),
+      time: "10:00",
+      status: "Agendado",
+      color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    },
+    {
+      id: "4",
+      title: "Paula Lima",
+      type: "Retorno",
+      date: new Date(),
+      time: "18:00",
+      status: "Agendado",
+      color: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    },
+    {
+      id: "5",
+      title: "Ricardo Alves",
+      type: "Treino Online",
+      date: addDays(new Date(), 1),
+      time: "08:00",
+      status: "Agendado",
+      color: "bg-green-500/10 text-green-400 border-green-500/20",
+    },
+    {
+      id: "6",
+      title: "Fernanda Costa",
+      type: "Avaliação Presencial",
+      date: addDays(new Date(), 2),
+      time: "15:00",
+      status: "Agendado",
+      color: "bg-primary/10 text-primary border-primary/20",
+    }
+  ]);
 
   const [linkRequests, setLinkRequests] = useState([
     {
@@ -297,7 +372,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   };
 
   // Estado para Agenda
-  const [agendaView, setAgendaView] = useState<"Mês" | "Semana">("Semana");
+  // (agendaView declarada no topo)
 
   const addExercise = () => {
     const newEx: ExerciseEntry = {
@@ -640,234 +715,356 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     </div>
   );
 
-  const renderAgenda = () => (
-    <div className="flex flex-col xl:flex-row w-full gap-8 animate-in fade-in duration-500 pb-20">
-      {/* Main Agenda Section */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="flex flex-wrap justify-between gap-3 pb-6">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-white text-4xl font-black leading-tight tracking-[-0.033em]">
-              Agenda
-            </h1>
-            <p className="text-text-secondary text-base font-normal leading-normal">
-              Gerencie seus compromissos e sessões.
-            </p>
-          </div>
-          <button className="flex h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/20 hover:brightness-110 transition-all">
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            Novo Agendamento
-          </button>
-        </header>
+  const nextPeriod = () => {
+    if (agendaView === "Mês") setCurrentDate(addMonths(currentDate, 1));
+    else if (agendaView === "Semana") setCurrentDate(addWeeks(currentDate, 1));
+    else setCurrentDate(addDays(currentDate, 1));
+  };
 
-        <div className="flex-grow flex flex-col gap-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex h-10 w-full md:w-auto items-center justify-center rounded-lg bg-card-dark border border-border-dark p-1">
-              <button
-                onClick={() => setAgendaView("Mês")}
-                className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 text-sm font-medium transition-all ${agendaView === "Mês" ? "bg-background-dark text-white shadow-sm" : "text-text-secondary hover:text-white"}`}
-              >
-                Mês
-              </button>
-              <button
-                onClick={() => setAgendaView("Semana")}
-                className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 text-sm font-medium transition-all ${agendaView === "Semana" ? "bg-background-dark text-white shadow-sm" : "text-text-secondary hover:text-white"}`}
-              >
-                Semana
-              </button>
-            </div>
-            <div className="flex items-center gap-4 w-full md:w-auto">
-              <button className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card-dark border border-border-dark hover:bg-white/10 text-white transition-colors">
-                <span className="material-symbols-outlined text-lg">
-                  chevron_left
-                </span>
-              </button>
-              <p className="text-white text-base font-bold whitespace-nowrap">
-                20 — 26 Outubro
-              </p>
-              <button className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card-dark border border-border-dark hover:bg-white/10 text-white transition-colors">
-                <span className="material-symbols-outlined text-lg">
-                  chevron_right
-                </span>
-              </button>
-            </div>
-          </div>
+  const prevPeriod = () => {
+    if (agendaView === "Mês") setCurrentDate(subMonths(currentDate, 1));
+    else if (agendaView === "Semana") setCurrentDate(subWeeks(currentDate, 1));
+    else setCurrentDate(subDays(currentDate, 1));
+  };
 
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-px bg-border-dark border border-border-dark rounded-xl overflow-hidden">
-            {[
-              {
-                day: "Dom 20",
-                events: [],
-              },
-              {
-                day: "Seg 21",
-                events: [
-                  {
-                    title: "Ana Beatriz",
-                    type: "Avaliação Presencial",
-                    time: "09:00",
-                    status: "Concluído",
-                    color: "bg-primary/10 text-primary border-primary/20",
-                  },
-                ],
-              },
-              {
-                day: "Ter 22",
-                events: [
-                  {
-                    title: "Juliano Souza",
-                    type: "Avaliação Online",
-                    time: "14:00",
-                    status: "Cancelado",
-                    color: "bg-red-500/10 text-red-500 border-red-500/20",
-                  },
-                ],
-              },
-              {
-                day: "Qua 23",
-                events: [],
-              },
-              {
-                day: "Qui 24",
-                isToday: true,
-                events: [
-                  {
-                    title: "Marcos Felipe",
-                    type: "Consultoria",
-                    time: "10:00",
-                    status: "Agendado",
-                    color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                  },
-                  {
-                    title: "Paula Lima",
-                    type: "Retorno",
-                    time: "18:00",
-                    status: "Agendado",
-                    color:
-                      "bg-purple-500/10 text-purple-400 border-purple-500/20",
-                  },
-                ],
-              },
-              {
-                day: "Sex 25",
-                events: [],
-              },
-              {
-                day: "Sáb 26",
-                events: [],
-              },
-            ].map((col, idx) => (
-              <div
-                key={idx}
-                className={`bg-background-dark p-3 min-h-[160px] flex flex-col gap-3 ${col.isToday ? "bg-card-dark/50" : ""}`}
-              >
-                <div className="text-center">
-                  <p
-                    className={`text-xs uppercase tracking-widest ${col.isToday ? "text-primary font-black" : "text-text-secondary font-bold"}`}
-                  >
-                    {col.day}
-                  </p>
+  const renderAgenda = () => {
+    let daysToRender: Date[] = [];
+    if (agendaView === "Mês") {
+      daysToRender = eachDayOfInterval({ start: startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 }), end: endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 }) });
+    } else if (agendaView === "Semana") {
+      daysToRender = eachDayOfInterval({ start: startOfWeek(currentDate, { weekStartsOn: 0 }), end: endOfWeek(currentDate, { weekStartsOn: 0 }) });
+    } else {
+      daysToRender = [startOfDay(currentDate)];
+    }
+
+    const periodLabel = agendaView === "Mês"
+      ? format(currentDate, "MMMM yyyy", { locale: ptBR })
+      : agendaView === "Semana"
+        ? `${format(startOfWeek(currentDate, { weekStartsOn: 0 }), "dd MMM", { locale: ptBR })} — ${format(endOfWeek(currentDate, { weekStartsOn: 0 }), "dd MMM", { locale: ptBR })}`
+        : format(currentDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
+
+    return (
+      <div className="flex flex-col w-full gap-8 animate-in fade-in duration-500 pb-20 relative">
+        {selectedEvent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-card-dark border border-border-dark w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
+              <div className="flex items-center justify-between p-4 border-b border-border-dark bg-background-dark/50">
+                <h3 className="text-white font-bold tracking-tight">Detalhes do Agendamento</h3>
+                <button onClick={() => setSelectedEvent(null)} className="text-text-secondary hover:text-white transition-colors">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="p-6 flex flex-col gap-5">
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-xl flex items-center justify-center ${selectedEvent.color}`}>
+                    <span className="material-symbols-outlined text-3xl">
+                       {selectedEvent.status === "Concluído" ? "check_circle" : selectedEvent.status === "Cancelado" ? "cancel" : "schedule"}
+                    </span>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-white">{selectedEvent.title}</h2>
+                    <span className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-black uppercase tracking-wider ${selectedEvent.color}`}>{selectedEvent.status}</span>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  {col.events.map((evt, i) => (
-                    <div
-                      key={i}
-                      className={`p-2 rounded-lg border flex flex-col gap-1.5 shadow-sm hover:brightness-110 transition-all cursor-pointer ${evt.color}`}
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[10px] uppercase font-black tracking-wider opacity-80">
-                          {evt.time}
-                        </span>
-                        <span className="material-symbols-outlined text-[14px] opacity-70">
-                          {evt.status === "Concluído"
-                            ? "check_circle"
-                            : evt.status === "Cancelado"
-                              ? "cancel"
-                              : "schedule"}
-                        </span>
-                      </div>
-                      <p className="text-xs font-bold leading-tight">
-                        {evt.title}
-                      </p>
-                      <p className="text-[10px] font-medium opacity-80">
-                        {evt.type}
+                
+                <div className="grid grid-cols-2 gap-4 bg-background-dark p-4 rounded-xl border border-border-dark">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-text-secondary tracking-widest mb-1">Data</p>
+                    <p className="text-white text-sm font-semibold">{format(selectedEvent.date, "dd/MM/yyyy")}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-text-secondary tracking-widest mb-1">Horário</p>
+                    <p className="text-white text-sm font-semibold">{selectedEvent.time}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[10px] uppercase font-bold text-text-secondary tracking-widest mb-1">Tipo de Evento</p>
+                    <p className="text-white text-sm font-semibold">{selectedEvent.type}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Agenda Section */}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="flex flex-wrap justify-between gap-3 pb-6">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-white text-4xl font-black leading-tight tracking-[-0.033em]">
+                Agenda
+              </h1>
+              <p className="text-text-secondary text-base font-normal leading-normal">
+                Gerencie seus compromissos e sessões.
+              </p>
+            </div>
+            <button className="flex h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/20 hover:brightness-110 transition-all">
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              Novo Agendamento
+            </button>
+          </header>
+
+          <div className="flex-grow flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex h-10 w-full md:w-auto items-center justify-center rounded-lg bg-card-dark border border-border-dark p-1">
+                <button
+                  onClick={() => setAgendaView("Dia")}
+                  className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 text-sm font-medium transition-all ${agendaView === "Dia" ? "bg-background-dark text-white shadow-sm" : "text-text-secondary hover:text-white"}`}
+                >
+                  Dia
+                </button>
+                <button
+                  onClick={() => setAgendaView("Semana")}
+                  className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 text-sm font-medium transition-all ${agendaView === "Semana" ? "bg-background-dark text-white shadow-sm" : "text-text-secondary hover:text-white"}`}
+                >
+                  Semana
+                </button>
+                <button
+                  onClick={() => setAgendaView("Mês")}
+                  className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-4 text-sm font-medium transition-all ${agendaView === "Mês" ? "bg-background-dark text-white shadow-sm" : "text-text-secondary hover:text-white"}`}
+                >
+                  Mês
+                </button>
+              </div>
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <button onClick={prevPeriod} className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card-dark border border-border-dark hover:bg-white/10 text-white transition-colors">
+                  <span className="material-symbols-outlined text-lg">
+                    chevron_left
+                  </span>
+                </button>
+                <p className="text-white text-base font-bold whitespace-nowrap capitalize">
+                  {periodLabel}
+                </p>
+                <button onClick={nextPeriod} className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card-dark border border-border-dark hover:bg-white/10 text-white transition-colors">
+                  <span className="material-symbols-outlined text-lg">
+                    chevron_right
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className={`grid ${agendaView === "Dia" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-7"} gap-px bg-border-dark border border-border-dark rounded-xl overflow-hidden`}>
+              {daysToRender.map((day, idx) => {
+                const dayEvents = events.filter(e => isSameDay(e.date, day));
+                const today = isToday(day);
+                const isCurrentMonth = isSameMonth(day, currentDate);
+                
+                return (
+                  <div
+                    key={idx}
+                    className={`bg-background-dark p-3 min-h-[160px] flex flex-col gap-3 ${today ? "bg-card-dark/50" : ""} ${agendaView === "Mês" && !isCurrentMonth ? "opacity-30" : ""}`}
+                  >
+                    <div className="text-center">
+                      <p
+                        className={`text-xs uppercase tracking-widest ${today ? "text-primary font-black" : "text-text-secondary font-bold"}`}
+                      >
+                        {format(day, "EEE dd", { locale: ptBR })}
                       </p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+                    <div className="flex flex-col gap-2">
+                      {dayEvents.map((evt, i) => (
+                        <div
+                          key={i}
+                          onClick={() => setSelectedEvent(evt)}
+                          className={`p-2 rounded-lg border flex flex-col gap-1.5 shadow-sm hover:brightness-110 transition-all cursor-pointer ${evt.color}`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] uppercase font-black tracking-wider opacity-80">
+                              {evt.time}
+                            </span>
+                            <span className="material-symbols-outlined text-[14px] opacity-70">
+                              {evt.status === "Concluído"
+                                ? "check_circle"
+                                : evt.status === "Cancelado"
+                                  ? "cancel"
+                                  : "schedule"}
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold leading-tight">
+                            {evt.title}
+                          </p>
+                          <p className="text-[10px] font-medium opacity-80">
+                            {evt.type}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      <aside className="w-full xl:w-80 flex flex-col gap-6">
-        <div className="rounded-xl bg-card-dark border border-border-dark p-6">
-          <h3 className="text-white text-lg font-bold mb-4">
-            Próximos Agendamentos
-          </h3>
-          <div className="space-y-4">
-            {[
-              {
-                title: "Marcos Felipe",
-                type: "Consultoria",
-                time: "Hoje, 10:00",
-                status: "Agendado",
-                bg: "bg-blue-500/10 text-blue-400",
-              },
-              {
-                title: "Paula Lima",
-                type: "Retorno",
-                time: "Hoje, 18:00",
-                status: "Agendado",
-                bg: "bg-purple-500/10 text-purple-400",
-              },
-              {
-                title: "Ricardo Santos",
-                type: "Avaliação Presencial",
-                time: "Amanhã, 08:30",
-                status: "Agendado",
-                bg: "bg-primary/10 text-primary",
-              },
-            ].map((rem, i) => (
-              <div
-                key={i}
-                className="flex flex-col gap-3 pb-4 border-b border-border-dark last:border-0 last:pb-0"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold text-white truncate">
-                    {rem.title}
-                  </p>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${rem.bg}`}
-                  >
-                    {rem.status}
-                  </span>
+        <aside className="w-full flex flex-col gap-6">
+          <div className="rounded-xl bg-card-dark border border-border-dark p-6">
+            <h3 className="text-white text-lg font-bold mb-4">
+              Próximos Agendamentos
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                {
+                  title: "Marcos Felipe",
+                  type: "Consultoria",
+                  time: "Hoje, 10:00",
+                  status: "Agendado",
+                  bg: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                },
+                {
+                  title: "Paula Lima",
+                  type: "Retorno",
+                  time: "Hoje, 18:00",
+                  status: "Agendado",
+                  bg: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+                },
+                {
+                  title: "Ricardo Santos",
+                  type: "Avaliação Presencial",
+                  time: "Amanhã, 08:30",
+                  status: "Agendado",
+                  bg: "bg-primary/10 text-primary border-primary/20",
+                },
+              ].map((rem, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col gap-3 p-4 bg-background-dark rounded-lg border border-border-dark hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-white truncate">
+                      {rem.title}
+                    </p>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${rem.bg}`}
+                    >
+                      {rem.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-text-secondary text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[14px]">
+                        event
+                      </span>{" "}
+                      {rem.type}
+                    </span>
+                    <span className="flex items-center gap-1.5 font-medium text-white">
+                      <span className="material-symbols-outlined text-[14px] text-text-secondary">
+                        schedule
+                      </span>{" "}
+                      {rem.time}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-text-secondary text-xs">
-                  <span className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[14px]">
-                      event
-                    </span>{" "}
-                    {rem.type}
-                  </span>
-                  <span className="flex items-center gap-1.5 font-medium text-white">
-                    <span className="material-symbols-outlined text-[14px] text-text-secondary">
-                      schedule
-                    </span>{" "}
-                    {rem.time}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </aside>
-    </div>
-  );
+        </aside>
+      </div>
+    );
+  };
 
   const renderStudents = () => (
-    <div className="flex flex-col gap-6 w-full animate-in fade-in duration-500 pb-20">
+    <div className="flex flex-col gap-6 w-full animate-in fade-in duration-500 pb-20 relative">
+      {/* Modal Vincular Treino */}
+      {linkingWorkoutStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
+          <div className="bg-card-dark border border-border-dark w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between p-4 border-b border-border-dark bg-background-dark/50">
+              <h3 className="text-white font-bold tracking-tight">Vincular Treino</h3>
+              <button 
+                onClick={() => {
+                  setLinkingWorkoutStudent(null);
+                  setSelectedWorkoutToLink("");
+                }} 
+                className="text-text-secondary hover:text-white transition-colors"
+                type="button"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                  Aluno
+                </label>
+                <p className="text-white font-black text-lg">{linkingWorkoutStudent.name}</p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                  Selecionar Ficha
+                </label>
+                <select
+                  value={selectedWorkoutToLink}
+                  onChange={(e) => setSelectedWorkoutToLink(e.target.value)}
+                  className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white focus:border-primary focus:outline-none transition-colors appearance-none"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 1rem center',
+                    backgroundSize: '1.2em'
+                  }}
+                >
+                  <option value="" disabled>Escolha uma ficha...</option>
+                  <option value="Hipertrofia A - Peito">Hipertrofia A - Peito</option>
+                  <option value="Hipertrofia B - Costas">Hipertrofia B - Costas</option>
+                  <option value="Emagrecimento Fullbody">Emagrecimento Fullbody</option>
+                  <option value="Adaptação Iniciante">Adaptação Iniciante</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-border-dark">
+                <button
+                  onClick={() => {
+                    setWorkoutName(`Treino Exclusivo - ${linkingWorkoutStudent.name}`);
+                    setActiveTab("workouts");
+                    setLinkingWorkoutStudent(null);
+                    setSelectedWorkoutToLink("");
+                  }}
+                  className="w-full flex items-center justify-center gap-2 h-12 bg-white/5 text-white rounded-xl font-bold hover:bg-white/10 transition-all border border-white/10"
+                >
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  Criar Treino Exclusivo
+                </button>
+              </div>
+
+              {selectedWorkoutToLink && (
+                <div className="flex flex-col gap-3 mt-2 animate-in fade-in slide-in-from-top-2">
+                  <button
+                    onClick={() => {
+                      if (selectedWorkoutToLink) {
+                        alert(`Treino '${selectedWorkoutToLink}' vinculado a ${linkingWorkoutStudent.name} com sucesso!`);
+                        setLinkingWorkoutStudent(null);
+                        setSelectedWorkoutToLink("");
+                      }
+                    }}
+                    disabled={!selectedWorkoutToLink}
+                    className="w-full flex items-center justify-center gap-2 h-12 bg-primary text-background-dark rounded-xl font-bold shadow-lg shadow-primary/20 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <span className="material-symbols-outlined text-sm">link</span>
+                    Vincular Acesso
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (selectedWorkoutToLink) {
+                        window.open(`https://wa.me/${linkingWorkoutStudent.phone || ''}?text=Olá ${linkingWorkoutStudent.name}, seu novo treino '${selectedWorkoutToLink}' já está disponível no app!`, '_blank');
+                        setLinkingWorkoutStudent(null);
+                        setSelectedWorkoutToLink("");
+                      }
+                    }}
+                    disabled={!selectedWorkoutToLink}
+                    className="w-full flex items-center justify-center gap-2 h-12 bg-green-500/10 text-green-500 rounded-xl font-bold hover:bg-green-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-green-500/20"
+                  >
+                    <span className="material-symbols-outlined text-sm">send</span>
+                    Vincular e Notificar (WhatsApp)
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Heading matching AdminTrainers */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-2">
         <div>
@@ -1041,6 +1238,17 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             </span>
                           </a>
 
+                          {/* Send Workout */}
+                          <button
+                            onClick={() => setLinkingWorkoutStudent(student)}
+                            title="Vincular Treino"
+                            className="size-8 flex items-center justify-center rounded-lg bg-white/5 text-text-secondary hover:bg-blue-500/20 hover:text-blue-400 transition-all transform hover:scale-110"
+                          >
+                            <span className="material-symbols-outlined text-lg">
+                              fitness_center
+                            </span>
+                          </button>
+
                           {/* Delete */}
                           <button
                             onClick={() => handleDeleteStudent(student.id)}
@@ -1093,8 +1301,17 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                 {student.goal}
                               </p>
                             </div>
-                            <div className="flex flex-col justify-center items-center md:items-end">
-                              <button className="flex items-center justify-center gap-2 h-9 px-4 bg-primary/10 text-primary rounded-lg font-bold text-xs hover:bg-primary hover:text-background-dark transition-colors border border-primary/20">
+                            <div className="flex flex-col justify-center items-center md:items-end gap-2">
+                              <button 
+                                onClick={() => setLinkingWorkoutStudent(student)}
+                                className="flex items-center justify-center gap-2 w-full h-9 px-4 bg-blue-500/10 text-blue-400 rounded-lg font-bold text-xs hover:bg-blue-500 transition-colors border border-blue-500/20"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">
+                                  fitness_center
+                                </span>
+                                Vincular Treino
+                              </button>
+                              <button className="flex items-center justify-center gap-2 w-full h-9 px-4 bg-primary/10 text-primary rounded-lg font-bold text-xs hover:bg-primary hover:text-background-dark transition-colors border border-primary/20">
                                 <span className="material-symbols-outlined text-[18px]">
                                   admin_panel_settings
                                 </span>
@@ -1398,6 +1615,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   </span>
                 </button>
                 <div className="flex border-t border-border-dark divide-x divide-border-dark opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                  <button
+                    title="Vincular a Aluno"
+                    onClick={() => setActiveTab("students")}
+                    className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      person_add
+                    </span>
+                  </button>
                   <button
                     title="Duplicar"
                     className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/5 transition-colors"
@@ -1865,7 +2091,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       case "subscription":
         return renderSubscription();
       case "plans":
-        return <TrainerPlans />;
+        return <TrainerPlans user={user} />;
       case "chat":
         return <TrainerChat />;
       case "landing-page":

@@ -1,5 +1,12 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { trainerService } from "../services/trainerService";
+
+export interface SectionConfig {
+  visible: boolean;
+  order: number;
+  backgroundColor: string;
+}
 
 export interface LandingPageData {
   username: string;
@@ -10,6 +17,13 @@ export interface LandingPageData {
     textColor: string;
     buttonStyle: string;
     cardStyle: string;
+  };
+  sections: {
+    about: SectionConfig;
+    services: SectionConfig;
+    testimonials: SectionConfig;
+    gallery: SectionConfig;
+    contact: SectionConfig;
   };
   hero: {
     name: string;
@@ -22,6 +36,7 @@ export interface LandingPageData {
     profileImage: string;
   };
   about: {
+    title: string;
     description: string;
     experience: string;
     methodology: string;
@@ -44,16 +59,23 @@ export interface LandingPageData {
     isPopular?: boolean;
   }[];
   results: {
-    id: number;
-    image: string;
-  }[];
+    title: string;
+    items: { id: number; image: string }[];
+  };
   testimonials: {
-    id: number;
-    name: string;
-    role: string;
-    image: string;
-    text: string;
-  }[];
+    title: string;
+    items: {
+      id: number;
+      name: string;
+      role: string;
+      text: string;
+      image: string;
+    }[];
+  };
+  contact: {
+    title: string;
+    description: string;
+  };
   social: {
     instagram: string;
     whatsapp: string;
@@ -72,6 +94,13 @@ export const defaultLandingPageData: LandingPageData = {
     buttonStyle: "rounded-lg",
     cardStyle: "rounded-xl",
   },
+  sections: {
+    about: { visible: true, order: 1, backgroundColor: "transparent" },
+    services: { visible: true, order: 2, backgroundColor: "transparent" },
+    testimonials: { visible: true, order: 3, backgroundColor: "transparent" },
+    gallery: { visible: true, order: 4, backgroundColor: "transparent" },
+    contact: { visible: true, order: 5, backgroundColor: "transparent" },
+  },
   hero: {
     name: "Alex Lima",
     specialty: "Personal Trainer",
@@ -86,6 +115,7 @@ export const defaultLandingPageData: LandingPageData = {
       "https://lh3.googleusercontent.com/aida-public/AB6AXuC3le6RtZuj7OTouysR-yPC2mk5Hv60BeO71uo8VCeJ0NQFwqu16M7FvAphw0ub_a-PmIyHrQ3Q3MQ5WolY4X8X7V3FSgR-844hEtY88MN7F0Vj0J9o7EQhdOoCaUOSvos6w18VWcsM48NMMrtjcAISQWvy3tqowRCOFfSiNR4nFc3AaEp2BIG1wS0U6vnqyE7Bgl870X5Ynq6TCPEAZ6_ANLxADwKiStEUQFsjq1GnMIgv_mtjvC_aw-ZZw1qqg0JF5WVOgz0rILo",
   },
   about: {
+    title: "Sobre Mim",
     description:
       "Com mais de 10 anos de experiência, minha paixão é ajudar pessoas a descobrirem seu potencial máximo através do fitness. Minha filosofia é simples: treino inteligente, nutrição equilibrada e consistência.",
     experience: "10+ anos de experiência",
@@ -159,46 +189,56 @@ export const defaultLandingPageData: LandingPageData = {
       isPopular: false,
     },
   ],
-  results: [
-    {
-      id: 1,
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDIdJNdHAqPS_Kt7JeQl-T14zFi_-Oe6T6K2jDJ0eWM-92dMKEC31yJxgq0lIA8DcQInks_nviQpe7OFG8AOoDhoQC6-gOrC8QoHGEfYzmJzorGLLVNjGpqvIeJ3saJUza6nACWoD3j2rl4cmF0yltEvz_6uNPxiljUdllZ5zeDUdK5S8zcINFS2QRGtL6yoYeFtHzmTRB8C9uWHxgI8Kdu5mtdyJmFM6sE6_2Cwq2Nhep78pcevKcb59FqTAh44EYKzyleJdi5CZM",
-    },
-    {
-      id: 2,
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuCpfmXHSpJ2RsrVtJ7em4ac57VvOsZrjxqwJ9fetGG_VxWWeOScyy7bFzsESaAtaaNkV1JMjtkHPwsXPpPMsQBA2jO0w-IHHttuLp1lvS6wfsUAipmFlGzCS-GuWKCCIpu4FPb5v6nzwULgcj2eSwlnsRXc09d25OPzijQK71OFOjoR-6zGpSFq7OxPNfQhSv5nyZXQ7dfhjM-TBc-GFtMQUX9GGJu7L0HGq5eg3Cw_lUm5eoFhAgurXZ1QOQsfRu4AS4AUSXuj7nM",
-    },
-    {
-      id: 3,
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBqBq0M2r_EjlTznFt5EmUv7K5geVxundFIIIsC9XSM3QzB2rfcRbwvNreNKzyAxqMoIpZYD8iFzcLUt0zvUo1BH5DU0RMOHZVeUT6piH28ii3Ub6X6WW-8Bdt1kMVESaqTDlu7ru9NnUvyNtyGaNMt4O7jszRAP5RMfKZlCcgf-2JAUivoweZk7WrkczNZ20WO-fiZ2RSe3eBv7_Vjs6EFaVH08tw5DaoCOpSraeJ5lnjB5dVLjimM7i6eRiAJwX5ygxxdMeNzExE",
-    },
-    {
-      id: 4,
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuAgfdNFwZ4ek6H4x59mIj_FKsb0YETZzZ3HkTfo7iDHzgWRmYSBmSQ-S4HfyBrZj623u4nYRL-D3-FMRAhLZ2d77Et7Bo24DQDYeT_8L_MsXAbsM2zaZYGFyNfAmq44c92FQyi3cyANfX1aDA0iyWHdXnDNLj4gR1giZxjdPluhqQndCiqlgBYevc5YLBp62VQJzerYjHUL-RRDr0h8NohU41TS5mJCk8lQKtSzqyq5IlE0cW9KsGFOKc7FENVCxay2-xcpHHGKXLo",
-    },
-  ],
-  testimonials: [
-    {
-      id: 1,
-      name: "Mariana Costa",
-      role: "Aluna de Consultoria",
-      text: "O melhor investimento que fiz na minha saúde! O Alex é um profissional incrível, sempre motivando e ajustando o treino para os meus objetivos. Já perdi 10kg em 3 meses!",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuCG6oQIoFHifdFGhKdgQqypHWsfeaTEXQW66LeiGMrFO44sJHSspXzDxdGnXRun_gtAdDLB36hyUerCxJIeu5NoyyvXxNtdZjG7cw6P-9X6EaVQraLI6R2xYkYqTSJVO2rrMXI544tNCK_iFSk4Z0eVGvv-eAAlBGIIej2AyHhvmqNM5hmLX3DyDVS6VsFWukWn9OyhzEVF4vt6eUWyIr3241yTK8UFTFPo-pdAQR91-eWHb_a6swveFfNicxFuVVP0CfiSrH5rs8k",
-    },
-    {
-      id: 2,
-      name: "João Ferreira",
-      role: "Aluno Presencial",
-      text: "Finalmente consegui sair do sedentarismo. Os treinos são desafiadores, mas divertidos. A atenção que ele dá durante as aulas presenciais faz toda a diferença.",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBJ0spbGfhLmtjmHyxI_-wA8LS19vYzdZNMk3zRnSMTtxF9xJ1d8_V_X9jkqGgHQMwpDEW01GsD5hJQ3-qd3WlZGbOBeJ_ln1om1gwmu_-R-gyDfapsy3vBqyL7dcbPN8vPdQgYTTkShNwBiQE2gnzTPdulDNFdtNjbYl1V6QlYaxmcV1uTOJa48ETOpV432LcUjCzni97sxsyfBOIQDTOCpoIA2fZZAdHFz5TWW6yugbPvJGg1plByiZ72AMGq9mIDtlA66NMK6nA",
-    },
-  ],
+  results: {
+    title: "Galeria de Resultados",
+    items: [
+      {
+        id: 1,
+        image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuDIdJNdHAqPS_Kt7JeQl-T14zFi_-Oe6T6K2jDJ0eWM-92dMKEC31yJxgq0lIA8DcQInks_nviQpe7OFG8AOoDhoQC6-gOrC8QoHGEfYzmJzorGLLVNjGpqvIeJ3saJUza6nACWoD3j2rl4cmF0yltEvz_6uNPxiljUdllZ5zeDUdK5S8zcINFS2QRGtL6yoYeFtHzmTRB8C9uWHxgI8Kdu5mtdyJmFM6sE6_2Cwq2Nhep78pcevKcb59FqTAh44EYKzyleJdi5CZM",
+      },
+      {
+        id: 2,
+        image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuCpfmXHSpJ2RsrVtJ7em4ac57VvOsZrjxqwJ9fetGG_VxWWeOScyy7bFzsESaAtaaNkV1JMjtkHPwsXPpPMsQBA2jO0w-IHHttuLp1lvS6wfsUAipmFlGzCS-GuWKCCIpu4FPb5v6nzwULgcj2eSwlnsRXc09d25OPzijQK71OFOjoR-6zGpSFq7OxPNfQhSv5nyZXQ7dfhjM-TBc-GFtMQUX9GGJu7L0HGq5eg3Cw_lUm5eoFhAgurXZ1QOQsfRu4AS4AUSXuj7nM",
+      },
+      {
+        id: 3,
+        image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuBqBq0M2r_EjlTznFt5EmUv7K5geVxundFIIIsC9XSM3QzB2rfcRbwvNreNKzyAxqMoIpZYD8iFzcLUt0zvUo1BH5DU0RMOHZVeUT6piH28ii3Ub6X6WW-8Bdt1kMVESaqTDlu7ru9NnUvyNtyGaNMt4O7jszRAP5RMfKZlCcgf-2JAUivoweZk7WrkczNZ20WO-fiZ2RSe3eBv7_Vjs6EFaVH08tw5DaoCOpSraeJ5lnjB5dVLjimM7i6eRiAJwX5ygxxdMeNzExE",
+      },
+      {
+        id: 4,
+        image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuAgfdNFwZ4ek6H4x59mIj_FKsb0YETZzZ3HkTfo7iDHzgWRmYSBmSQ-S4HfyBrZj623u4nYRL-D3-FMRAhLZ2d77Et7Bo24DQDYeT_8L_MsXAbsM2zaZYGFyNfAmq44c92FQyi3cyANfX1aDA0iyWHdXnDNLj4gR1giZxjdPluhqQndCiqlgBYevc5YLBp62VQJzerYjHUL-RRDr0h8NohU41TS5mJCk8lQKtSzqyq5IlE0cW9KsGFOKc7FENVCxay2-xcpHHGKXLo",
+      },
+    ],
+  },
+  testimonials: {
+    title: "O que meus alunos dizem",
+    items: [
+      {
+        id: 1,
+        name: "Mariana Costa",
+        role: "Aluna de Consultoria",
+        text: "O melhor investimento que fiz na minha saúde! O Alex é um profissional incrível, sempre motivando e ajustando o treino para os meus objetivos. Já perdi 10kg em 3 meses!",
+        image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuCG6oQIoFHifdFGhKdgQqypHWsfeaTEXQW66LeiGMrFO44sJHSspXzDxdGnXRun_gtAdDLB36hyUerCxJIeu5NoyyvXxNtdZjG7cw6P-9X6EaVQraLI6R2xYkYqTSJVO2rrMXI544tNCK_iFSk4Z0eVGvv-eAAlBGIIej2AyHhvmqNM5hmLX3DyDVS6VsFWukWn9OyhzEVF4vt6eUWyIr3241yTK8UFTFPo-pdAQR91-eWHb_a6swveFfNicxFuVVP0CfiSrH5rs8k",
+      },
+      {
+        id: 2,
+        name: "João Ferreira",
+        role: "Aluno Presencial",
+        text: "Finalmente consegui sair do sedentarismo. Os treinos são desafiadores, mas divertidos. A atenção que ele dá durante as aulas presenciais faz toda a diferença.",
+        image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuBJ0spbGfhLmtjmHyxI_-wA8LS19vYzdZNMk3zRnSMTtxF9xJ1d8_V_X9jkqGgHQMwpDEW01GsD5hJQ3-qd3WlZGbOBeJ_ln1om1gwmu_-R-gyDfapsy3vBqyL7dcbPN8vPdQgYTTkShNwBiQE2gnzTPdulDNFdtNjbYl1V6QlYaxmcV1uTOJa48ETOpV432LcUjCzni97sxsyfBOIQDTOCpoIA2fZZAdHFz5TWW6yugbPvJGg1plByiZ72AMGq9mIDtlA66NMK6nA",
+      },
+    ],
+  },
+  contact: {
+    title: "Fale Comigo",
+    description: "Pronto para começar sua transformação? Entre em contato agora mesmo e vamos juntos alcançar os seus melhores resultados.",
+  },
   social: {
     instagram: "https://instagram.com/",
     whatsapp: "https://wa.me/",
@@ -210,13 +250,31 @@ export const defaultLandingPageData: LandingPageData = {
 const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
   previewData,
 }) => {
-  const { username } = useParams<{ username: string }>();
+  const { username: urlUsername } = useParams<{ username: string }>();
+  // Default to a specific username if none provided in URL
+  const username = urlUsername || "carlossousa";
 
-  // Use preview data if provided, otherwise mock data based on username.
-  const data = previewData || {
-    ...defaultLandingPageData,
-    username: username || defaultLandingPageData.username,
-  };
+  const [data, setData] = useState<LandingPageData>(() => {
+    if (previewData) return previewData;
+    return trainerService.getTrainerData(username);
+  });
+
+  useEffect(() => {
+    if (!previewData) {
+      setData(trainerService.getTrainerData(username));
+    }
+  }, [username, previewData]);
+
+  // Listen for real-time updates if in the same session
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail.username === username && !previewData) {
+        setData(e.detail.data);
+      }
+    };
+    window.addEventListener("trainer_data_updated", handleUpdate);
+    return () => window.removeEventListener("trainer_data_updated", handleUpdate);
+  }, [username, previewData]);
 
   useEffect(() => {
     document.title = `${data.hero.name} - Personal Trainer`;
@@ -228,10 +286,11 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
 
   return (
     <div
-      className="absolute inset-0 flex w-full flex-col font-display text-[#e0f5e7] custom-landing-page overflow-x-hidden overflow-y-auto custom-scrollbar"
+      className="absolute inset-0 flex w-full flex-col font-display custom-landing-page overflow-x-hidden overflow-y-auto custom-scrollbar"
       style={{
         ...primaryStyle,
         backgroundColor: data.theme.backgroundColor,
+        color: data.theme.textColor,
       }}
     >
       <style>{`
@@ -266,9 +325,12 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
         <div className="flex flex-1 justify-center">
           <div className="flex w-full flex-col">
             {/* TopNavBar */}
-            <header className="sticky top-0 z-40 flex w-full justify-center whitespace-nowrap border-b border-[var(--primary)]/30 bg-[#102216]/80 px-6 py-3 backdrop-blur-sm md:px-10">
+            <header 
+              className="sticky top-0 z-40 flex w-full justify-center whitespace-nowrap border-b border-[var(--primary)]/30 px-6 py-3 backdrop-blur-sm md:px-10"
+              style={{ backgroundColor: `${data.theme.backgroundColor}E6` }}
+            >
               <div className="flex w-full max-w-7xl items-center justify-between">
-                <div className="flex items-center gap-3 text-[#e0f5e7]">
+                <div className="flex items-center gap-3">
                   <div className="size-5 text-[var(--primary)]">
                     <svg
                       fill="none"
@@ -283,31 +345,35 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                       ></path>
                     </svg>
                   </div>
-                  <h2 className="text-lg font-bold tracking-tight">
+                  <h2 className="text-lg font-bold tracking-tight" style={{ color: data.theme.textColor }}>
                     {data.hero.name} Trainer
                   </h2>
                 </div>
                 <nav className="hidden items-center gap-8 md:flex">
                   <a
-                    className="text-sm font-medium text-[#e0f5e7] hover:text-[var(--primary)] transition-colors"
+                    className="text-sm font-medium transition-colors hover:text-[var(--primary)] opacity-90 hover:opacity-100"
+                    style={{ color: data.theme.textColor }}
                     href="#sobre"
                   >
                     Sobre
                   </a>
                   <a
-                    className="text-sm font-medium text-[#e0f5e7] hover:text-[var(--primary)] transition-colors"
+                    className="text-sm font-medium transition-colors hover:text-[var(--primary)] opacity-90 hover:opacity-100"
+                    style={{ color: data.theme.textColor }}
                     href="#servicos"
                   >
                     Serviços
                   </a>
                   <a
-                    className="text-sm font-medium text-[#e0f5e7] hover:text-[var(--primary)] transition-colors"
+                    className="text-sm font-medium transition-colors hover:text-[var(--primary)] opacity-90 hover:opacity-100"
+                    style={{ color: data.theme.textColor }}
                     href="#planos"
                   >
                     Planos
                   </a>
                   <a
-                    className="text-sm font-medium text-[#e0f5e7] hover:text-[var(--primary)] transition-colors"
+                    className="text-sm font-medium transition-colors hover:text-[var(--primary)] opacity-90 hover:opacity-100"
+                    style={{ color: data.theme.textColor }}
                     href="#contato"
                   >
                     Contato
@@ -342,7 +408,7 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                     </h2>
                   </div>
                   <a
-                    className="mt-4 flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-6 bg-custom-primary text-[#0d1b12] text-base font-bold tracking-wide transition-transform hover:scale-105"
+                    className={`mt-4 flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden h-12 px-6 bg-custom-primary text-[#0d1b12] text-base font-bold tracking-wide transition-transform hover:scale-105 ${data.theme.buttonStyle}`}
                     href="#planos"
                   >
                     <span className="truncate">{data.hero.ctaText}</span>
@@ -350,60 +416,215 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                 </div>
               </section>
 
-              {/* ProfileHeader / Sobre Mim */}
-              <section className="flex flex-col gap-6" id="sobre">
-                <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
-                  Sobre Mim
-                </h2>
-                <div className="flex w-full flex-col items-center gap-6 rounded-xl bg-[#182c1e] p-6 md:flex-row md:gap-8 md:p-8 shadow-sm">
-                  <div
-                    className="h-40 w-40 flex-shrink-0 rounded-full bg-cover bg-center bg-no-repeat border-2 border-custom-primary/30"
-                    style={{
-                      backgroundImage: `url("${data.hero.profileImage}")`,
-                    }}
-                  ></div>
-                  <div className="flex flex-col gap-2 text-center md:text-left">
-                    <p className="text-2xl font-bold tracking-tight text-[#e0f5e7]">
-                      {data.hero.name}
-                    </p>
-                    <p className="text-[#8fc5a4] leading-relaxed">
-                      {data.about.description}
-                    </p>
-                    <p className="font-semibold text-custom-primary mt-2">
-                      {data.about.cref}
-                    </p>
-                  </div>
-                </div>
-              </section>
+              {/* Dynamic Sections */}
+              {[
+                { id: "about", priority: data.sections.about.order, visible: data.sections.about.visible },
+                { id: "services", priority: data.sections.services.order, visible: data.sections.services.visible },
+                { id: "testimonials", priority: data.sections.testimonials.order, visible: data.sections.testimonials.visible },
+                { id: "gallery", priority: data.sections.gallery.order, visible: data.sections.gallery.visible },
+                { id: "contact", priority: data.sections.contact.order, visible: data.sections.contact.visible },
+              ]
+                .filter((s) => s.visible)
+                .sort((a, b) => a.priority - b.priority)
+                .map((section) => {
+                  if (section.id === "about") {
+                    return (
+                      <section className="flex flex-col gap-6" id="sobre" key="about">
+                        <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
+                          {data.about.title || "Sobre Mim"}
+                        </h2>
+                        <div 
+                          className={`flex w-full flex-col items-center gap-6 bg-[#182c1e] p-6 md:flex-row md:gap-8 md:p-8 shadow-sm ${data.theme.cardStyle}`}
+                          style={{ backgroundColor: data.sections.about.backgroundColor !== "transparent" ? data.sections.about.backgroundColor : undefined }}
+                        >
+                          <div
+                            className="h-40 w-40 flex-shrink-0 rounded-full bg-cover bg-center bg-no-repeat border-2 border-custom-primary/30"
+                            style={{
+                              backgroundImage: `url("${data.hero.profileImage}")`,
+                            }}
+                          ></div>
+                          <div className="flex flex-col gap-2 text-center md:text-left">
+                            <div className="flex flex-col gap-1 md:flex-row md:items-center">
+                              <p className="text-2xl font-bold tracking-tight text-[#e0f5e7]">
+                                {data.hero.name}
+                              </p>
+                              {data.about.cref && (
+                                <span className="inline-block mt-1 md:mt-0 px-3 py-1 bg-custom-primary/10 text-custom-primary text-xs font-bold rounded-full w-max mx-auto md:mx-0 border border-custom-primary/20">
+                                  {data.about.cref}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[#8fc5a4] leading-relaxed whitespace-pre-wrap">
+                              {data.about.description}
+                            </p>
+                            <p className="font-semibold text-custom-primary mt-2">
+                              {data.about.cref}
+                            </p>
+                          </div>
+                        </div>
+                      </section>
+                    );
+                  }
 
-              {/* Serviços Oferecidos */}
-              <section className="flex flex-col gap-6" id="servicos">
-                <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
-                  Serviços Oferecidos
-                </h2>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {data.services.map((service) => (
-                    <div
-                      key={service.id}
-                      className="flex flex-col items-center gap-4 rounded-xl bg-[#182c1e] p-6 text-center shadow-sm hover:-translate-y-1 transition-transform"
-                    >
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-custom-primary/20 text-custom-primary">
-                        <span className="material-symbols-outlined text-3xl">
-                          {service.icon}
-                        </span>
-                      </div>
-                      <h3 className="text-xl font-bold text-[#e0f5e7]">
-                        {service.title}
-                      </h3>
-                      <p className="text-sm text-[#8fc5a4]">
-                        {service.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
+                  if (section.id === "services") {
+                    return (
+                      <section className="flex flex-col gap-6" id="servicos" key="services">
+                        <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
+                          Serviços Oferecidos
+                        </h2>
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                          {data.services.map((service) => (
+                            <div
+                              key={service.id}
+                              className={`flex flex-col items-center gap-4 bg-[#182c1e] p-6 text-center shadow-sm hover:-translate-y-1 transition-transform ${data.theme.cardStyle}`}
+                              style={{ backgroundColor: data.sections.services.backgroundColor !== "transparent" ? data.sections.services.backgroundColor : undefined }}
+                            >
+                              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-custom-primary/20 text-custom-primary">
+                                <span className="material-symbols-outlined text-3xl">
+                                  {service.icon}
+                                </span>
+                              </div>
+                              <h3 className="text-xl font-bold text-[#e0f5e7]">
+                                {service.title}
+                              </h3>
+                              <p className="text-sm text-[#8fc5a4]">
+                                {service.description}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  }
 
-              {/* Planos e Preços */}
+                  if (section.id === "testimonials") {
+                    return (
+                      <section className="flex flex-col gap-6" id="depoimentos" key="testimonials">
+                        <h2 className="text-center text-3xl font-bold tracking-tight text-[#e0f5e7]">
+                          {data.testimonials.title || "O que meus alunos dizem"}
+                        </h2>
+                        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 mt-4">
+                          {data.testimonials.items.map((testimonial) => (
+                            <div
+                              key={testimonial.id}
+                              className={`flex flex-col justify-between gap-4 bg-[#182c1e] p-6 shadow-sm border border-transparent hover:border-[var(--primary)]/20 transition-colors ${data.theme.cardStyle}`}
+                              style={{ backgroundColor: data.sections.testimonials.backgroundColor !== "transparent" ? data.sections.testimonials.backgroundColor : undefined }}
+                            >
+                              <p className="text-[#8fc5a4] italic">
+                                "{testimonial.text}"
+                              </p>
+                              <div className="flex items-center gap-3 mt-4">
+                                <div
+                                  className="h-12 w-12 rounded-full bg-cover bg-center border border-[var(--primary)]/30"
+                                  style={{
+                                    backgroundImage: `url("${testimonial.image}")`,
+                                  }}
+                                ></div>
+                                <div>
+                                  <p className="font-bold text-[#e0f5e7]">
+                                    {testimonial.name}
+                                  </p>
+                                  <p className="text-sm text-[#8fc5a4]">
+                                    {testimonial.role}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  }
+
+                  if (section.id === "gallery") {
+                    return (
+                      <section className="flex flex-col gap-6" id="galeria" key="gallery">
+                        <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
+                          {data.results.title || "Galeria de Resultados"}
+                        </h2>
+                        <div 
+                          className={`p-6 bg-[#182c1e] shadow-sm ${data.theme.cardStyle}`}
+                          style={{ backgroundColor: data.sections.gallery.backgroundColor !== "transparent" ? data.sections.gallery.backgroundColor : undefined }}
+                        >
+                          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mt-2">
+                            {data.results.items.map((res) => (
+                              <div
+                                key={res.id}
+                                className="aspect-square w-full rounded-lg bg-cover bg-center border border-[var(--primary)]/20 shadow-sm hover:scale-105 transition-transform duration-300"
+                                style={{ backgroundImage: `url("${res.image}")` }}
+                              ></div>
+                            ))}
+                          </div>
+                        </div>
+                      </section>
+                    );
+                  }
+
+                  if (section.id === "contact") {
+                    return (
+                      <section
+                        className={`flex flex-col gap-6 bg-[#182c1e] p-6 md:p-8 shadow-sm border border-[var(--primary)]/10 ${data.theme.cardStyle}`}
+                        id="contato"
+                        key="contact"
+                        style={{ backgroundColor: data.sections.contact.backgroundColor !== "transparent" ? data.sections.contact.backgroundColor : undefined }}
+                      >
+                        <div className="text-center">
+                          <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
+                            {data.contact.title || "Fale Comigo"}
+                          </h2>
+                          <p className="mt-2 text-[#8fc5a4]">
+                            {data.contact.description || "Preencha o formulário abaixo para tirar dúvidas ou agendar sua primeira aula."}
+                          </p>
+                        </div>
+                        <form className="mx-auto w-full max-w-xl space-y-4 mt-4">
+                          <div>
+                            <label className="sr-only" htmlFor="name">
+                              Nome
+                            </label>
+                            <input
+                              className="w-full rounded-lg border-[var(--primary)]/30 bg-[#102216]/50 p-3 text-sm text-[#e0f5e7] focus:border-[var(--primary)] focus:ring-[var(--primary)] outline-none"
+                              id="name"
+                              placeholder="Seu nome"
+                              type="text"
+                            />
+                          </div>
+                          <div>
+                            <label className="sr-only" htmlFor="email">
+                              Email
+                            </label>
+                            <input
+                              className="w-full rounded-lg border-[var(--primary)]/30 bg-[#102216]/50 p-3 text-sm text-[#e0f5e7] focus:border-[var(--primary)] focus:ring-[var(--primary)] outline-none"
+                              id="email"
+                              placeholder="Seu melhor email"
+                              type="email"
+                            />
+                          </div>
+                          <div>
+                            <label className="sr-only" htmlFor="message">
+                              Mensagem
+                            </label>
+                            <textarea
+                              className="w-full rounded-lg border-[var(--primary)]/30 bg-[#102216]/50 p-3 text-sm text-[#e0f5e7] focus:border-[var(--primary)] focus:ring-[var(--primary)] outline-none resize-none"
+                              id="message"
+                              placeholder="Sua mensagem..."
+                              rows={5}
+                            ></textarea>
+                          </div>
+                          <button
+                            className={`w-full cursor-pointer bg-custom-primary px-5 py-3 font-bold text-[#0d1b12] transition-transform hover:scale-[1.02] ${data.theme.buttonStyle}`}
+                            type="submit"
+                          >
+                            Enviar Mensagem
+                          </button>
+                        </form>
+                      </section>
+                    );
+                  }
+
+                  return null;
+                })}
+
+              {/* Planos e Preços - FIXED SECTION ALWAYS VISIBLE (for demonstration synced with real plans) */}
               <section className="flex flex-col gap-6 text-center" id="planos">
                 <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
                   Escolha seu Plano
@@ -412,7 +633,7 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                   {data.plans.map((plan) => (
                     <div
                       key={plan.id}
-                      className={`flex flex-col rounded-xl bg-[#182c1e] p-6 text-left transition-transform ${plan.isPopular ? "border-2 border-custom-primary shadow-[0_0_20px_rgba(var(--primary),0.2)] scale-105 z-10 hover:scale-110" : "border border-[var(--primary)]/30 hover:scale-[1.02]"}`}
+                      className={`flex flex-col bg-[#182c1e] p-6 text-left transition-transform ${plan.isPopular ? "border-2 border-custom-primary shadow-[0_0_20px_rgba(var(--primary),0.2)] scale-105 z-10 hover:scale-110" : "border border-[var(--primary)]/30 hover:scale-[1.02]"} ${data.theme.cardStyle}`}
                     >
                       {plan.isPopular && (
                         <p className="self-start rounded-full bg-custom-primary px-3 py-1 text-xs font-bold uppercase text-[#0d1b12] mb-4">
@@ -444,7 +665,7 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                         ))}
                       </ul>
                       <button
-                        className={`mt-6 w-full cursor-pointer rounded-lg px-4 py-3 text-sm font-bold transition-all ${plan.isPopular ? "bg-custom-primary text-[#0d1b12] hover:brightness-110" : "bg-custom-primary/10 text-custom-primary border border-custom-primary/30 hover:bg-custom-primary/20"}`}
+                        className={`mt-6 w-full cursor-pointer px-4 py-3 text-sm font-bold transition-all ${plan.isPopular ? "bg-custom-primary text-[#0d1b12] hover:brightness-110" : "bg-custom-primary/10 text-custom-primary border border-custom-primary/30 hover:bg-custom-primary/20"} ${data.theme.buttonStyle}`}
                       >
                         Quero este plano
                       </button>
@@ -453,113 +674,6 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                 </div>
               </section>
 
-              {/* Depoimentos */}
-              <section className="flex flex-col gap-6" id="depoimentos">
-                <h2 className="text-center text-3xl font-bold tracking-tight text-[#e0f5e7]">
-                  O que meus alunos dizem
-                </h2>
-                <div className="grid grid-cols-1 gap-8 md:grid-cols-2 mt-4">
-                  {data.testimonials.map((testimonial) => (
-                    <div
-                      key={testimonial.id}
-                      className="flex flex-col justify-between gap-4 rounded-xl bg-[#182c1e] p-6 shadow-sm border border-transparent hover:border-[var(--primary)]/20 transition-colors"
-                    >
-                      <p className="text-[#8fc5a4] italic">
-                        "{testimonial.text}"
-                      </p>
-                      <div className="flex items-center gap-3 mt-4">
-                        <div
-                          className="h-12 w-12 rounded-full bg-cover bg-center border border-[var(--primary)]/30"
-                          style={{
-                            backgroundImage: `url("${testimonial.image}")`,
-                          }}
-                        ></div>
-                        <div>
-                          <p className="font-bold text-[#e0f5e7]">
-                            {testimonial.name}
-                          </p>
-                          <p className="text-sm text-[#8fc5a4]">
-                            {testimonial.role}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Galeria */}
-              <section className="flex flex-col gap-6" id="galeria">
-                <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
-                  Galeria de Resultados
-                </h2>
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mt-2">
-                  {data.results.map((res) => (
-                    <div
-                      key={res.id}
-                      className="aspect-square w-full rounded-lg bg-cover bg-center border border-[var(--primary)]/20 shadow-sm hover:scale-105 transition-transform duration-300"
-                      style={{ backgroundImage: `url("${res.image}")` }}
-                    ></div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Contato */}
-              <section
-                className="flex flex-col gap-6 rounded-xl bg-[#182c1e] p-6 md:p-8 shadow-sm border border-[var(--primary)]/10"
-                id="contato"
-              >
-                <div className="text-center">
-                  <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
-                    Fale Comigo
-                  </h2>
-                  <p className="mt-2 text-[#8fc5a4]">
-                    Preencha o formulário abaixo para tirar dúvidas ou agendar
-                    sua primeira aula.
-                  </p>
-                </div>
-                <form className="mx-auto w-full max-w-xl space-y-4 mt-4">
-                  <div>
-                    <label className="sr-only" htmlFor="name">
-                      Nome
-                    </label>
-                    <input
-                      className="w-full rounded-lg border-[var(--primary)]/30 bg-[#102216] p-3 text-sm text-[#e0f5e7] focus:border-[var(--primary)] focus:ring-[var(--primary)] outline-none"
-                      id="name"
-                      placeholder="Seu nome"
-                      type="text"
-                    />
-                  </div>
-                  <div>
-                    <label className="sr-only" htmlFor="email">
-                      Email
-                    </label>
-                    <input
-                      className="w-full rounded-lg border-[var(--primary)]/30 bg-[#102216] p-3 text-sm text-[#e0f5e7] focus:border-[var(--primary)] focus:ring-[var(--primary)] outline-none"
-                      id="email"
-                      placeholder="Seu melhor email"
-                      type="email"
-                    />
-                  </div>
-                  <div>
-                    <label className="sr-only" htmlFor="message">
-                      Mensagem
-                    </label>
-                    <textarea
-                      className="w-full rounded-lg border-[var(--primary)]/30 bg-[#102216] p-3 text-sm text-[#e0f5e7] focus:border-[var(--primary)] focus:ring-[var(--primary)] outline-none resize-none"
-                      id="message"
-                      placeholder="Sua mensagem..."
-                      rows={5}
-                    ></textarea>
-                  </div>
-                  <button
-                    className="w-full cursor-pointer rounded-lg bg-custom-primary px-5 py-3 font-bold text-[#0d1b12] transition-transform hover:scale-[1.02]"
-                    type="submit"
-                  >
-                    Enviar Mensagem
-                  </button>
-                </form>
-              </section>
             </main>
 
             {/* Footer */}

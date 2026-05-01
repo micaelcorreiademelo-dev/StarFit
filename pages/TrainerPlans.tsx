@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { trainerService } from "../services/trainerService";
+import { User } from "../types";
 
 interface Plan {
   id: number;
@@ -10,35 +12,29 @@ interface Plan {
   isPopular?: boolean;
 }
 
-const defaultPlans: Plan[] = [
-  {
-    id: 1,
-    name: "Consultoria Online",
-    price: "R$150",
-    interval: "/mês",
-    description:
-      "Planejamento completo de treino para fazer em qualquer lugar.",
-    features: ["Treino Mensal", "Suporte via WhatsApp", "Acesso ao App"],
-    isPopular: false,
-  },
-  {
-    id: 2,
-    name: "Acompanhamento Premium",
-    price: "R$300",
-    interval: "/mês",
-    description: "Para quem busca resultados rápidos com supervisão.",
-    features: [
-      "Avaliação Física Mensal",
-      "Treino Individualizado",
-      "Suporte Prioritário",
-      "Acesso ao App",
-    ],
-    isPopular: true,
-  },
-];
+interface TrainerPlansProps {
+  user: User;
+}
 
-const TrainerPlans: React.FC = () => {
-  const [plans, setPlans] = useState<Plan[]>(defaultPlans);
+const TrainerPlans: React.FC<TrainerPlansProps> = ({ user }) => {
+  // Use user id or name as username for storage. For simplicity in this demo, we'll use a fixed slug if user is Carlos Sousa.
+  const username = user.name === "Carlos Sousa" ? "carlossousa" : user.id;
+  
+  const [plans, setPlans] = useState<Plan[]>(() => {
+    const data = trainerService.getTrainerData(username);
+    return data.plans.length > 0 ? data.plans : [];
+  });
+
+  useEffect(() => {
+    // Initial sync in case it's empty
+    if (plans.length === 0) {
+      const data = trainerService.getTrainerData(username);
+      if (data.plans.length > 0) {
+        setPlans(data.plans);
+      }
+    }
+  }, [username]);
+
   const [isEditing, setIsEditing] = useState<number | null>(null);
 
   // Form State
@@ -63,21 +59,21 @@ const TrainerPlans: React.FC = () => {
     const featureList = features.split("\n").filter((f) => f.trim() !== "");
 
     if (isEditing) {
-      setPlans(
-        plans.map((p) =>
-          p.id === isEditing
-            ? {
-                ...p,
-                name,
-                price,
-                interval,
-                description,
-                features: featureList,
-                isPopular,
-              }
-            : p,
-        ),
+      const updatedPlans = plans.map((p) =>
+        p.id === isEditing
+          ? {
+              ...p,
+              name,
+              price,
+              interval,
+              description,
+              features: featureList,
+              isPopular,
+            }
+          : p,
       );
+      setPlans(updatedPlans);
+      trainerService.savePlans(username, updatedPlans);
     } else {
       const newPlan: Plan = {
         id: Date.now(),
@@ -88,14 +84,18 @@ const TrainerPlans: React.FC = () => {
         features: featureList,
         isPopular,
       };
-      setPlans([...plans, newPlan]);
+      const updatedPlans = [...plans, newPlan];
+      setPlans(updatedPlans);
+      trainerService.savePlans(username, updatedPlans);
     }
     resetForm();
   };
 
   const handleDelete = (id: number) => {
     if (confirm("Tem certeza que deseja excluir este plano?")) {
-      setPlans(plans.filter((p) => p.id !== id));
+      const updatedPlans = plans.filter((p) => p.id !== id);
+      setPlans(updatedPlans);
+      trainerService.savePlans(username, updatedPlans);
       if (isEditing === id) resetForm();
     }
   };
