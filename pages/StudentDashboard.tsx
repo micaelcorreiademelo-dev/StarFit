@@ -365,15 +365,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     </div>
   );
 
+  const handleTabChange = (tab: string) => {
+    if (tab === activeTab && activeTab === 'my-workouts') {
+      setIsTraining(false);
+    }
+    setActiveTab(tab);
+  };
+
   const renderWorkoutDetails = () => (
     <div className="max-w-7xl mx-auto pb-20">
       <div className="flex items-center gap-4 mb-8">
-        <button 
-          onClick={() => setIsTraining(false)}
-          className="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-        >
-          <span className="material-symbols-outlined text-text-light-primary dark:text-text-dark-primary">arrow_back</span>
-        </button>
         <div className="flex flex-col gap-1">
           <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">Treino A - Peito e Tríceps</h1>
           <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">Siga os exercícios abaixo para completar seu treino.</p>
@@ -1177,7 +1178,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       return renderLinkageFlow();
     }
     
-    if (isTraining) return renderWorkoutDetails();
+    if (isTraining && activeTab === 'my-workouts') return renderWorkoutDetails();
     
     switch (activeTab) {
       case 'dashboard':
@@ -1203,7 +1204,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         user={user} 
         onLogout={onLogout} 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={handleTabChange} 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
