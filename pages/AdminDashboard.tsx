@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import AdminTrainers from '../components/AdminTrainers';
 import AdminPlans from '../components/AdminPlans';
@@ -10,6 +10,8 @@ import AdminSettings from '../components/AdminSettings';
 import { User } from '../types';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { MOCK_MRR_DATA } from '../constants';
+import { db } from '../services/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 interface AdminDashboardProps {
   user: User;
@@ -17,15 +19,47 @@ interface AdminDashboardProps {
 }
 
 const COLORS = ['#13ec5b', '#00C49F', '#FFBB28', '#FF8042'];
-const PIE_DATA = [
-  { name: 'Starter', value: 400 },
-  { name: 'Pro', value: 300 },
-  { name: 'Premium', value: 300 },
-];
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [stats, setStats] = useState({
+    trainers: 0,
+    students: 0,
+    subscriptions: 0,
+    mrr: 0
+  });
+
+  useEffect(() => {
+    // Listen for Trainer count
+    const qTrainers = query(collection(db, 'users'), where('role', '==', 'TRAINER'));
+    const unsubTrainers = onSnapshot(qTrainers, (snapshot) => {
+      setStats(prev => ({ ...prev, trainers: snapshot.size }));
+    }, (error) => console.error("AdminDashboard trainers listener error: ", error));
+
+    // Listen for Student count
+    const qStudents = query(collection(db, 'users'), where('role', '==', 'STUDENT'));
+    const unsubStudents = onSnapshot(qStudents, (snapshot) => {
+      setStats(prev => ({ ...prev, students: snapshot.size }));
+    }, (error) => console.error("AdminDashboard students listener error: ", error));
+
+    return () => {
+      unsubTrainers();
+      unsubStudents();
+    };
+  }, []);
+
+  const PIE_DATA = [
+    { name: 'Personais', value: stats.trainers },
+    { name: 'Alunos', value: stats.students },
+  ];
+
+  const kpis = [
+    { label: 'MRR Atual', val: `R$ ${stats.mrr.toLocaleString()}`, change: '+0%', up: true },
+    { label: 'Assinaturas Ativas', val: stats.students.toString(), change: '+0%', up: true },
+    { label: 'Alunos Totais', val: stats.students.toString(), change: '+0%', up: true },
+    { label: 'Personal Trainers', val: stats.trainers.toString(), change: '+0%', up: true }
+  ];
 
   return (
     <div className="flex h-screen bg-background-dark overflow-hidden">
@@ -70,12 +104,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             </header>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { label: 'MRR Atual', val: 'R$ 45.870', change: '+5.2%', up: true },
-                { label: 'Churn Rate', val: '2.1%', change: '-0.5%', up: false },
-                { label: 'Novas Assinaturas', val: '123', change: '+10.1%', up: true },
-                { label: 'Personal Trainers', val: '850', change: '+2.3%', up: true }
-              ].map((kpi, i) => (
+              {kpis.map((kpi, i) => (
                 <div key={i} className="bg-card-dark p-6 rounded-2xl border border-border-dark shadow-sm">
                   <p className="text-sm text-text-secondary mb-1">{kpi.label}</p>
                   <p className="text-3xl font-bold text-white mb-2">{kpi.val}</p>
@@ -91,50 +120,62 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               <div className="lg:col-span-2 bg-card-dark p-6 rounded-2xl border border-border-dark h-auto min-h-[400px]">
                 <h3 className="text-lg font-bold text-white mb-6">Crescimento do MRR</h3>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={MOCK_MRR_DATA}>
-                      <defs>
-                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#3a5543" vertical={false} opacity={0.3} />
-                      <XAxis dataKey="date" stroke="#a1bfaa" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#a1bfaa" fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1a2c20', border: '1px solid #3a5543', borderRadius: '8px' }}
-                        itemStyle={{ color: '#13ec5b' }}
-                      />
-                      <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {stats.students === 0 && stats.trainers === 0 ? (
+                    <div className="h-full flex items-center justify-center text-text-secondary">
+                      Aguardando dados para gerar gráfico...
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={MOCK_MRR_DATA}>
+                        <defs>
+                          <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#3a5543" vertical={false} opacity={0.3} />
+                        <XAxis dataKey="date" stroke="#a1bfaa" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke="#a1bfaa" fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#1a2c20', border: '1px solid #3a5543', borderRadius: '8px' }}
+                          itemStyle={{ color: '#13ec5b' }}
+                        />
+                        <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
 
               <div className="bg-card-dark p-6 rounded-2xl border border-border-dark h-auto min-h-[400px]">
-                <h3 className="text-lg font-bold text-white mb-6">Distribuição de Planos</h3>
+                <h3 className="text-lg font-bold text-white mb-6">Distribuição de Usuários</h3>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={PIE_DATA}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {PIE_DATA.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1a2c20', border: '1px solid #3a5543', borderRadius: '8px', color: '#fff' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {stats.students === 0 && stats.trainers === 0 ? (
+                    <div className="h-full flex items-center justify-center text-text-secondary">
+                      Nenhum usuário cadastrado.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={PIE_DATA}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {PIE_DATA.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#1a2c20', border: '1px solid #3a5543', borderRadius: '8px', color: '#fff' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
             </div>
@@ -149,28 +190,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                   <thead className="bg-background-dark/50 text-text-secondary text-xs uppercase tracking-widest">
                     <tr>
                       <th className="px-6 py-4 font-bold">Usuário</th>
-                      <th className="px-6 py-4 font-bold">Ação</th>
-                      <th className="px-6 py-4 font-bold hidden sm:table-cell">Data/Hora</th>
-                      <th className="px-6 py-4 font-bold">Status</th>
+                      <th className="px-6 py-4 font-bold">Papel</th>
+                      <th className="px-6 py-4 font-bold">E-mail</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border-dark">
-                    {[
-                      { user: 'personal.trainer@email.com', action: 'Cadastro de Aluno', time: '15/07/2024 14:35', status: 'Sucesso', sColor: 'bg-green-500/20 text-green-400' },
-                      { user: 'master.admin@starfit.com', action: 'Alteração de Plano', time: '15/07/2024 11:20', status: 'Concluído', sColor: 'bg-blue-500/20 text-blue-400' },
-                      { user: 'outro.personal@email.com', action: 'Exclusão de Treino', time: '14/07/2024 09:15', status: 'Pendente', sColor: 'bg-yellow-500/20 text-yellow-400' }
-                    ].map((log, i) => (
-                      <tr key={i} className="hover:bg-white/5 transition-colors cursor-default">
-                        <td className="px-6 py-4 text-white font-medium">{log.user}</td>
-                        <td className="px-6 py-4 text-text-secondary">{log.action}</td>
-                        <td className="px-6 py-4 text-text-secondary text-sm hidden sm:table-cell">{log.time}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${log.sColor}`}>
-                            {log.status}
-                          </span>
+                  <tbody className="divide-y divide-border-dark text-white">
+                    {stats.students === 0 && stats.trainers === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-6 py-10 text-center text-text-secondary">
+                          Nenhuma atividade recente registrada.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      <tr className="hover:bg-white/5 transition-colors">
+                        <td colSpan={3} className="px-6 py-4 text-center text-text-secondary">
+                          Consulte a aba de usuários para mais detalhes.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

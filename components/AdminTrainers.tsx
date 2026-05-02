@@ -1,46 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../services/firebase';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 
 const AdminTrainers: React.FC = () => {
-  const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'personal'>('all');
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   
-  // Real-world logic: normally we'd fetch this. 
-  // For the demo, we use state so expiration dates are editable.
-  const [users, setUsers] = useState([
-    { id: 1, name: 'Ana Costa', email: 'ana.costa@email.com', status: 'Ativo', regDate: '2023-01-15', expDate: '2024-01-15', type: 'personal', phone: '5511999999999', sColor: 'bg-green-500/20 text-green-400' },
-    { id: 2, name: 'Bruno Lima', email: 'bruno.lima@email.com', status: 'Inativo', regDate: '2023-02-20', expDate: '2024-02-20', type: 'personal', phone: '5511999999999', sColor: 'bg-gray-500/20 text-gray-400' },
-    { id: 4, name: 'Carlos Souza', email: 'carlos.souza@email.com', status: 'Ativo', regDate: '2023-03-10', expDate: '2024-03-10', type: 'personal', phone: '5511999999999', sColor: 'bg-green-500/20 text-green-400' },
-    { id: 6, name: 'Daniela Ferraz', email: 'daniela.ferraz@email.com', status: 'Ativo', regDate: '2023-04-05', expDate: '2024-04-05', type: 'personal', phone: '5511999999999', sColor: 'bg-green-500/20 text-green-400' },
-    { id: 7, name: 'Eduardo Martins', email: 'eduardo.martins@email.com', status: 'Pendente', regDate: '2023-05-21', expDate: '2024-05-21', type: 'personal', phone: '5511999999999', sColor: 'bg-yellow-500/20 text-yellow-400' },
-    { id: 8, name: 'Fernanda Alves', email: 'fernanda.alves@email.com', status: 'Ativo', regDate: '2023-06-12', expDate: '2024-06-12', type: 'personal', phone: '5511999999999', sColor: 'bg-green-500/20 text-green-400' },
-  ]);
+  useEffect(() => {
+    const q = query(collection(db, 'users'), where('role', '==', 'TRAINER'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const usersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setUsers(usersData);
+      setLoading(false);
+    }, (error) => {
+      console.error("AdminTrainers snapshot error:", error);
+      setLoading(false);
+    });
 
-  const handleUpdateExpDate = (id: number, newDate: string) => {
-    setUsers(users.map(u => u.id === id ? { ...u, expDate: newDate } : u));
+    return () => unsubscribe();
+  }, []);
+
+  const handleUpdateExpDate = async (id: string, newDate: string) => {
+    try {
+      await updateDoc(doc(db, 'users', id), { expDate: newDate });
+    } catch (error) {
+      console.error("Error updating exp date:", error);
+    }
   };
 
-  const handleDeleteUser = (id: number) => {
+  const handleDeleteUser = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este usuário?')) {
-      setUsers(users.filter(u => u.id !== id));
+      try {
+        await deleteDoc(doc(db, 'users', id));
+      } catch (error) {
+        console.error("Error deleting user:", error);
+      }
     }
   };
 
   const filteredUsers = users.filter(user => {
-    if (userTypeFilter === 'all') return true;
-    return user.type === userTypeFilter;
+    return user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || user.email?.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-text-secondary">
+        Carregando usuários...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       {/* PageHeading */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter">Gestão de Usuários</h1>
-          <p className="text-text-secondary">Acompanhe, edite e gerencie o acesso de todos os clientes da plataforma.</p>
+          <h1 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter">Personais Cadastrados</h1>
+          <p className="text-text-secondary">Acompanhe, edite e gerencie o acesso de todos os personais da plataforma.</p>
         </div>
-        <button className="flex items-center justify-center gap-2 h-10 px-6 bg-primary text-background-dark rounded-lg text-sm font-black shadow-[0_4px_20px_rgba(var(--color-primary),0.3)] hover:scale-105 transition-transform w-full md:w-auto">
-          <span className="material-symbols-outlined font-bold">add</span>
-          <span>NOVO CADASTRO</span>
-        </button>
       </div>
 
       {/* Filters */}
@@ -51,28 +72,11 @@ const AdminTrainers: React.FC = () => {
               <span className="material-symbols-outlined">search</span>
             </div>
             <input 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
               className="w-full bg-transparent border-none text-white focus:ring-0 px-3 text-sm font-medium placeholder:text-text-secondary/50" 
-              placeholder="Buscar por nome, e-mail ou identificador..." 
+              placeholder="Buscar por nome ou e-mail..." 
             />
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <div className="relative group">
-            <button className="flex h-12 items-center gap-x-2 rounded-xl bg-card-dark border border-border-dark px-4 hover:bg-white/5 transition-all text-sm font-bold text-white">
-              {userTypeFilter === 'all' ? 'Todos os Tipos' : 'Personal'}
-              <span className="material-symbols-outlined text-text-secondary">expand_more</span>
-            </button>
-            <div className="absolute top-full right-0 mt-2 w-48 bg-card-dark border border-border-dark rounded-xl shadow-2xl z-20 hidden group-hover:block overflow-hidden animate-in fade-in slide-in-from-top-2">
-              {['all', 'personal'].map((t) => (
-                <button 
-                  key={t}
-                  onClick={() => setUserTypeFilter(t as any)}
-                  className="w-full px-4 py-3 text-left text-xs font-bold text-text-secondary hover:text-white hover:bg-white/5 transition-colors uppercase tracking-widest"
-                >
-                  {t === 'all' ? 'Todos' : 'Personal'}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -85,71 +89,58 @@ const AdminTrainers: React.FC = () => {
               <tr>
                 <th className="px-4 py-5 font-black text-center w-12">#</th>
                 <th className="px-6 py-5 font-black">Cadastro</th>
-                <th className="px-6 py-5 font-black">Usuário</th>
-                <th className="px-6 py-5 font-black">Expiração</th>
-                <th className="px-6 py-5 font-black">Tipo</th>
+                <th className="px-6 py-5 font-black">Personal</th>
+                <th className="px-6 py-5 font-black">Expiração Plano</th>
                 <th className="px-6 py-5 font-black">Status</th>
                 <th className="px-6 py-5 font-black text-center">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-dark">
-              {filteredUsers.map((user, i) => (
-                <tr key={user.id} className="group hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-4 text-center font-mono text-text-secondary">
-                    {i + 1}
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-text-secondary">
+                    Nenhum personal encontrado.
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="text-white font-bold">{new Date(user.regDate).toLocaleDateString('pt-BR')}</span>
-                      <span className="text-[10px] text-text-secondary uppercase">Registro</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="text-white font-black uppercase tracking-tight">{user.name}</span>
-                      <span className="text-xs text-text-secondary">{user.email}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1">
-                      <input 
-                        type="date"
-                        value={user.expDate}
-                        onChange={(e) => handleUpdateExpDate(user.id, e.target.value)}
-                        className="bg-background-dark/50 border border-border-dark rounded-md px-2 py-1 text-xs text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer"
-                      />
-                      <span className="text-[10px] text-text-secondary uppercase">Validade do Plano</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary">
-                      Personal
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${user.sColor}`}>
-                      {user.status}
-                    </span>
-                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((user, i) => (
+                  <tr key={user.id} className="group hover:bg-white/[0.02] transition-colors">
+                    <td className="px-4 py-4 text-center font-mono text-text-secondary">
+                      {i + 1}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-white font-bold">
+                          {user.regDate ? 
+                            (typeof user.regDate === 'string' ? new Date(user.regDate).toLocaleDateString('pt-BR') : user.regDate.toDate().toLocaleDateString('pt-BR'))
+                            : 'N/A'}
+                        </span>
+                        <span className="text-[10px] text-text-secondary uppercase">Registro</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-white font-black uppercase tracking-tight">{user.name}</span>
+                        <span className="text-xs text-text-secondary">{user.email}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <input 
+                          type="date"
+                          value={user.expDate || ''}
+                          onChange={(e) => handleUpdateExpDate(user.id, e.target.value)}
+                          className="bg-background-dark/50 border border-border-dark rounded-md px-2 py-1 text-xs text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${user.status === 'Inativo' ? 'bg-gray-500/20 text-gray-400' : 'bg-green-500/20 text-green-400'}`}>
+                        {user.status || 'Ativo'}
+                      </span>
+                    </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
-                      {/* User Info */}
-                      <button 
-                        title="Informações do Usuário"
-                        className="size-8 flex items-center justify-center rounded-lg bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white transition-all transform hover:scale-110"
-                      >
-                        <span className="material-symbols-outlined text-lg">visibility</span>
-                      </button>
-                      
-                      {/* Admin Access */}
-                      <button 
-                        title="Acessar Painel Admin"
-                        className="size-8 flex items-center justify-center rounded-lg bg-white/5 text-text-secondary hover:bg-primary/20 hover:text-primary transition-all transform hover:scale-110"
-                      >
-                        <span className="material-symbols-outlined text-lg">admin_panel_settings</span>
-                      </button>
-                      
-                      {/* WhatsApp */}
                       <a 
                         href={`https://wa.me/${user.phone}`}
                         target="_blank"
@@ -159,8 +150,6 @@ const AdminTrainers: React.FC = () => {
                       >
                         <span className="material-symbols-outlined text-lg">chat</span>
                       </a>
-                      
-                      {/* Delete */}
                       <button 
                         onClick={() => handleDeleteUser(user.id)}
                         title="Excluir Usuário"
@@ -171,8 +160,9 @@ const AdminTrainers: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
+              ))
+            )}
+          </tbody>
           </table>
         </div>
       </div>

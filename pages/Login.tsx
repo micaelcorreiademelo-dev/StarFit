@@ -1,30 +1,36 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { UserRole } from '../types';
+import { loginWithGoogle } from '../services/firebase';
 
-interface LoginProps {
-  onLogin: (role: UserRole) => void;
-}
+const Login: React.FC = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showRedirectOption, setShowRedirectOption] = useState(false);
+  const navigate = useNavigate();
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-
-  const handleProfileClick = (role: UserRole) => {
-    setSelectedRole(role);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedRole) {
-      onLogin(selectedRole);
+  const handleGoogleLogin = async (useRedirect = false) => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (useRedirect) {
+        await loginWithGoogleRedirect();
+      } else {
+        await loginWithGoogle();
+      }
+      // On success, App.tsx will handle the navigation via state change
+    } catch (err: any) {
+      if (err.code === 'auth/popup-blocked') {
+        setError('O navegador bloqueou a janela de login. Tente usar o botão abaixo ou verifique as permissões de popup.');
+        setShowRedirectOption(true);
+      } else {
+        setError('Ocorreu um erro ao entrar com o Google. Tente novamente.');
+      }
+      console.error(err);
+    } finally {
+      if (!useRedirect) setLoading(false);
     }
-  };
-
-  const roleLabels = {
-    STUDENT: 'Aluno',
-    TRAINER: 'Personal',
-    ADMIN: 'Administrador'
   };
 
   return (
@@ -38,105 +44,50 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-white">Bem-vindo de volta!</h1>
             <p className="text-text-secondary mt-2">
-              {selectedRole ? `Entrando como ${roleLabels[selectedRole]}` : 'Escolha seu perfil para entrar'}
+              Acesse sua conta para continuar evoluindo.
             </p>
           </div>
 
           <div className="bg-card-dark p-8 rounded-2xl border border-border-dark shadow-2xl space-y-6">
-            <div className={`grid grid-cols-1 gap-4 ${selectedRole ? 'opacity-50 pointer-events-none scale-95' : ''} transition-all duration-300`}>
-              <button 
-                onClick={() => handleProfileClick('STUDENT')}
-                className={`flex items-center gap-4 p-4 rounded-xl border border-border-dark hover:border-primary/50 bg-background-dark/50 transition-all text-left group ${selectedRole === 'STUDENT' ? 'border-primary' : ''}`}
-              >
-                <div className="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-background-dark transition-colors shrink-0">
-                  <span className="material-symbols-outlined text-3xl">sports_gymnastics</span>
-                </div>
-                <div>
-                  <p className="font-bold text-white">Sou Aluno</p>
-                  <p className="text-xs text-text-secondary">Quero treinar e evoluir</p>
-                </div>
-              </button>
-
-              <button 
-                onClick={() => handleProfileClick('TRAINER')}
-                className={`flex items-center gap-4 p-4 rounded-xl border border-border-dark hover:border-primary/50 bg-background-dark/50 transition-all text-left group ${selectedRole === 'TRAINER' ? 'border-primary' : ''}`}
-              >
-                <div className="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-background-dark transition-colors shrink-0">
-                  <span className="material-symbols-outlined text-3xl">assignment_ind</span>
-                </div>
-                <div>
-                  <p className="font-bold text-white">Sou Personal</p>
-                  <p className="text-xs text-text-secondary">Gerenciar meus alunos e treinos</p>
-                </div>
-              </button>
-
-              <button 
-                onClick={() => handleProfileClick('ADMIN')}
-                className={`flex items-center gap-4 p-4 rounded-xl border border-border-dark hover:border-primary/50 bg-background-dark/50 transition-all text-left group ${selectedRole === 'ADMIN' ? 'border-primary' : ''}`}
-              >
-                <div className="size-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-background-dark transition-colors shrink-0">
-                  <span className="material-symbols-outlined text-3xl">admin_panel_settings</span>
-                </div>
-                <div>
-                  <p className="font-bold text-white">Sou Administrador</p>
-                  <p className="text-xs text-text-secondary">Gestão global do ecossistema</p>
-                </div>
-              </button>
-            </div>
-
-            {selectedRole && (
-              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="relative flex items-center justify-center mb-6">
-                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-dark"></div></div>
-                  <span className="relative px-3 bg-card-dark text-xs text-text-secondary uppercase">Informe suas credenciais</span>
-                </div>
-
-                <form className="space-y-2" onSubmit={handleSubmit}>
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-1">E-mail</label>
-                    <input 
-                      type="email" 
-                      required
-                      className="w-full bg-background-dark border-border-dark rounded-lg focus:ring-primary focus:border-primary text-white"
-                      placeholder="seu@email.com"
-                    />
-                  </div>
-                  
-                  <div className="text-right">
-                    <Link to="/forgot-password" title="Esqueceu sua senha?" className="text-xs font-medium text-primary hover:underline">
-                      Esqueceu sua senha?
-                    </Link>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-1">Senha</label>
-                    <input 
-                      type="password" 
-                      required
-                      className="w-full bg-background-dark border-border-dark rounded-lg focus:ring-primary focus:border-primary text-white"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  
-                  <div className="pt-4 flex flex-col gap-3">
-                    <button className="w-full bg-primary text-background-dark font-bold py-3 rounded-lg hover:opacity-90 transition-all">
-                      Entrar
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => setSelectedRole(null)}
-                      className="text-text-secondary text-sm hover:text-white transition-colors"
-                    >
-                      Trocar perfil
-                    </button>
-                  </div>
-                </form>
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-sm text-center">
+                {error}
               </div>
             )}
+
+            <div className="flex flex-col gap-4">
+              {!showRedirectOption ? (
+                <button 
+                  onClick={() => handleGoogleLogin(false)}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-3 bg-white text-background-dark font-bold py-3 rounded-lg hover:bg-white/90 transition-all disabled:opacity-50"
+                >
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="size-5" />
+                  {loading ? 'Entrando...' : 'Entrar com Google'}
+                </button>
+              ) : (
+                <button 
+                  onClick={() => handleGoogleLogin(true)}
+                  className="w-full flex items-center justify-center gap-3 bg-primary text-background-dark font-bold py-3 rounded-lg hover:brightness-110 transition-all"
+                >
+                  <span className="material-symbols-outlined">login</span>
+                  Entrar via Redirecionamento
+                </button>
+              )}
+            </div>
+
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-dark"></div></div>
+              <span className="relative px-3 bg-card-dark text-xs text-text-secondary">OU</span>
+            </div>
+
+            <p className="text-center text-xs text-text-secondary px-6">
+              Ao continuar, você concorda com nossos Termos de Serviço e Política de Privacidade.
+            </p>
           </div>
 
           <p className="text-center text-sm text-text-secondary mt-6">
-            Não tem uma conta? <Link to="/register" className="text-primary font-bold hover:underline">Registre-se aqui</Link>
+            Ainda não tem conta? <Link to="/register" className="text-primary font-bold hover:underline">Registre-se aqui</Link>
           </p>
         </div>
       </div>

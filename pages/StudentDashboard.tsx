@@ -1,10 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { User } from '../types';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { MOCK_WEIGHT_DATA } from '../constants';
 import { useNavigate } from 'react-router-dom';
+import { dataService } from '../services/dataService';
+import { db } from '../services/firebase';
+import { doc, getDoc, query, collection, where, onSnapshot } from 'firebase/firestore';
+import UserSupport from '../components/UserSupport';
 
 interface StudentDashboardProps {
   user: User;
@@ -42,6 +46,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const [trainerLinkStatus, setTrainerLinkStatus] = useState<'initial' | 'search' | 'pending' | 'linked' | 'none'>('initial');
   const [searchQuery, setSearchQuery] = useState('');
   const [foundTrainer, setFoundTrainer] = useState<any>(null);
+  const [trainer, setTrainer] = useState<any>(null);
+
+  // Data State
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [workouts, setWorkouts] = useState<any[]>([]);
+  const [studentStats, setStudentStats] = useState({
+    weightHistory: [] as any[],
+    fatHistory: [] as any[],
+    lastWeight: 0,
+    lastFat: 0
+  });
 
   // Settings State
   const [notifications, setNotifications] = useState({
@@ -53,40 +68,85 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     publicProfile: false
   });
 
-  const trainerAvatar = "https://lh3.googleusercontent.com/aida-public/AB6AXuDh3sKyxIscQSTcVYzpbvBpwxtGhjFuev5z-SqC6X9ZlIkdn6Z-RKI2R3qbUNcCjUwSp3vO-QCGDup9_JR5VNiTc_HHaVdxRWKLj9EaqZkviQlmBC1YXkOE5iQOS9-URfVv-HIyw7O-uZLwSS8Sjd4tPMl1voM0dfjpUGAcTU7IcwHjQ255XGKg2a0sqdNGoxHry3z-05V6VlzXNjT1FvVfrRFH3QZt7-gGzetpTTZwEODxaZ1sTQT-4nY63_0Z8cltTma9OdS084I";
+  useEffect(() => {
+    if (!user) return;
 
-  const initialMessages: ChatMessage[] = [
-    {
-      id: '1',
-      sender: 'trainer',
-      text: 'E aí, Carlos! Como foi o treino de peito hoje? Sentiu alguma dificuldade no supino inclinado?',
-      time: '10:30 AM',
-      avatar: trainerAvatar
-    },
-    {
-      id: '2',
-      sender: 'student',
-      text: 'Fala Ricardo! O treino foi ótimo, peguei pesado. No supino senti um pouco o ombro, acho que a pegada estava muito aberta. Alguma dica?',
-      time: '10:32 AM',
-      avatar: user.avatar
-    },
-    {
-      id: '3',
-      sender: 'trainer',
-      text: 'Boa! Tenta fechar um pouco a pegada na próxima vez, na linha dos ombros. E foca em manter as escápulas bem juntas, vai ajudar a proteger o ombro e isolar mais o peitoral. Me avisa como se sente.',
-      time: '10:35 AM',
-      avatar: trainerAvatar
-    },
-    {
-      id: '4',
-      sender: 'student',
-      text: 'Show, vou testar no próximo treino! Valeu pela dica, Ricardo!',
-      time: '10:36 AM',
-      avatar: user.avatar
+    const unsubWorkouts = dataService.subscribeToStudentWorkouts(user.id, setWorkouts);
+    
+    // Listen for progress data
+    const qProgress = query(
+      collection(db, 'progress'), 
+      where('studentId', '==', user.id)
+    );
+    const unsubProgress = onSnapshot(qProgress, (snapshot) => {
+      const history = snapshot.docs.map(doc => ({
+        dateString: doc.data().date?.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) || '',
+        weight: doc.data().weight,
+        fat: doc.data().bodyFat,
+        timestamp: doc.data().date?.toMillis() || 0
+      })).sort((a, b) => a.timestamp - b.timestamp);
+
+      if (history.length > 0) {
+        const last = history[history.length - 1];
+        setStudentStats({
+          weightHistory: history.map(h => ({ date: h.dateString, value: h.weight })),
+          fatHistory: history.map(h => ({ date: h.dateString, value: h.fat })),
+          lastWeight: last.weight,
+          lastFat: last.fat
+        });
+      }
+    }, (error) => {
+      console.error("Progress listener error: ", error);
+    });
+
+    // Check for linked trainer
+    let unsubTrainer: () => void = () => {};
+    let unsubRequests: () => void = () => {};
+
+    if (user.trainerId) {
+      setTrainerLinkStatus('linked');
+      unsubTrainer = dataService.subscribeToUserById(user.trainerId, setTrainer);
+    } else {
+      // Check if there's a pending request
+      unsubRequests = dataService.subscribeToStudentLinkRequests(user.id, (requests) => {
+        if (requests.length > 0) {
+          setTrainerLinkStatus('pending');
+          dataService.getUserById(requests[0].trainerId).then(t => setFoundTrainer(t));
+        } else {
+          setTrainerLinkStatus('none');
+        }
+      });
     }
-  ];
 
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+    return () => {
+      unsubWorkouts();
+      unsubProgress();
+      unsubTrainer();
+      unsubRequests();
+    };
+  }, [user]);
+
+  const handleSearchTrainer = async () => {
+    if (!searchQuery.trim()) return;
+    try {
+      const result = await dataService.searchTrainerByCode(searchQuery);
+      setFoundTrainer(result);
+      if (result) setTrainerLinkStatus('search');
+    } catch (error) {
+      console.error("Trainer not found");
+      setFoundTrainer(null);
+    }
+  };
+
+  const handleRequestLink = async () => {
+    if (!foundTrainer || !user) return;
+    try {
+      await dataService.requestLink(user.id, foundTrainer.id);
+      setTrainerLinkStatus('pending');
+    } catch (error) {
+      console.error("Error requesting link:", error);
+    }
+  };
 
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
@@ -146,48 +206,115 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     );
   };
 
-  const renderDashboard = () => (
-    <div className="pb-20">
-      <div className="flex flex-wrap justify-between gap-3 mb-6">
-        <div className="flex min-w-72 flex-col gap-2">
-          <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">
-            Olá, {user.name.split(' ')[0]}!
-          </h1>
-          <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">
-            Pronto para o treino de hoje?
+  const renderDashboard = () => {
+    if (trainerLinkStatus !== 'linked') {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark shadow-xl max-w-2xl mx-auto mt-10">
+          <div className="bg-primary/10 p-6 rounded-full mb-6">
+            <span className="material-symbols-outlined text-primary text-6xl">person_search</span>
+          </div>
+          <h2 className="text-3xl font-black text-text-light-primary dark:text-text-dark-primary mb-4">Bem-vindo ao FitLife!</h2>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary text-lg mb-8 max-w-md">
+            Para começar sua jornada, você precisa vincular sua conta ao seu Personal Trainer. peça o código exclusivo dele.
           </p>
-        </div>
-      </div>
+          
+          {trainerLinkStatus === 'pending' ? (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 w-full flex flex-col items-center">
+              <span className="material-symbols-outlined text-yellow-500 text-4xl mb-2">pending</span>
+              <p className="text-yellow-600 dark:text-yellow-400 font-bold mb-1">Solicitação Enviada!</p>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">Aguardando aprovação de {foundTrainer?.name || 'seu treinador'}.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 w-full max-w-md">
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Ex: PUMP-123"
+                  className="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl py-4 px-6 text-text-light-primary dark:text-text-dark-primary focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-mono tracking-widest uppercase"
+                />
+                <button 
+                  onClick={handleSearchTrainer}
+                  className="absolute right-2 top-2 bottom-2 bg-primary text-background-dark font-bold px-6 rounded-lg hover:brightness-110 transition-all"
+                >
+                  Buscar
+                </button>
+              </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="p-4 bg-card-light dark:bg-card-dark rounded-xl shadow-[0_0_12px_rgba(0,0,0,0.05)] border border-border-light dark:border-border-dark">
-            <div className="flex flex-col items-stretch justify-start">
-              <div 
-                className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-lg" 
-                style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDh3sKyxIscQSTcVYzpbvBpwxtGhjFuev5z-SqC6X9ZlIkdn6Z-RKI2R3qbUNcCjUwSp3vO-QCGDup9_JR5VNiTc_HHaVdxRWKLj9EaqZkviQlmBC1YXkOE5iQOS9-URfVv-HIyw7O-uZLwSS8Sjd4tPMl1voM0dfjpUGAcTU7IcwHjQ255XGKg2a0sqdNGoxHry3z-05V6VlzXNjT1FvVfrRFH3QZt7-gGzetpTTZwEODxaZ1sTQT-4nY63_0Z8cltTma9OdS084I")' }}
-              ></div>
-              <div className="flex w-full flex-col items-stretch justify-center gap-1 py-4">
-                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Treino do Dia</p>
-                <p className="text-text-light-primary dark:text-text-dark-primary text-xl font-bold leading-tight tracking-[-0.015em]">Treino A - Peito e Tríceps</p>
-                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 justify-between mt-2">
-                  <div className="flex flex-col gap-1">
-                    <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">Duração estimada de 60 minutos.</p>
-                    <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">5 exercícios</p>
+              {trainerLinkStatus === 'search' && foundTrainer && (
+                <div className="animate-in fade-in zoom-in duration-300 mt-4 p-4 border border-primary/30 rounded-xl bg-primary/5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={foundTrainer.avatar} alt="" className="size-12 rounded-full border-2 border-primary" />
+                    <div className="text-left">
+                      <p className="text-text-light-primary dark:text-text-dark-primary font-bold">{foundTrainer.name}</p>
+                      <p className="text-text-light-secondary dark:text-text-dark-secondary text-xs">Personal Trainer</p>
+                    </div>
                   </div>
                   <button 
-                    onClick={() => {
-                      setActiveTab('my-workouts');
-                      setIsTraining(true);
-                    }}
-                    className="flex min-w-[140px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/30 hover:brightness-110 transition-all"
+                    onClick={handleRequestLink}
+                    className="bg-primary text-background-dark text-sm font-bold py-2 px-4 rounded-lg hover:brightness-110 transition-all border border-primary"
                   >
-                    Iniciar Treino
+                    Vincular
                   </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const todayWorkout = workouts.length > 0 ? workouts[0] : null;
+
+    return (
+      <div className="pb-20">
+        <div className="flex flex-wrap justify-between gap-3 mb-6">
+          <div className="flex min-w-72 flex-col gap-2">
+            <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">
+              Olá, {user.name.split(' ')[0]}!
+            </h1>
+            <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">
+              {todayWorkout ? 'Pronto para o treino de hoje?' : 'Aguardando seu treinador atribuir um treino.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <div className="p-4 bg-card-light dark:bg-card-dark rounded-xl shadow-[0_0_12px_rgba(0,0,0,0.05)] border border-border-light dark:border-border-dark">
+              <div className="flex flex-col items-stretch justify-start">
+                <div 
+                  className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-lg" 
+                  style={{ backgroundImage: `url(${todayWorkout?.coverImage || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop'})` }}
+                ></div>
+                <div className="flex w-full flex-col items-stretch justify-center gap-1 py-4">
+                  <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Treino do Dia</p>
+                  <p className="text-text-light-primary dark:text-text-dark-primary text-xl font-bold leading-tight tracking-[-0.015em]">
+                    {todayWorkout?.title || 'Nenhum treino hoje'}
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 justify-between mt-2">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">
+                        {todayWorkout?.description || 'Curta seu dia de descanso ou faça uma atividade leve.'}
+                      </p>
+                      {todayWorkout && <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">{todayWorkout.exercises?.length || 0} exercícios</p>}
+                    </div>
+                    {todayWorkout && (
+                      <button 
+                        onClick={() => {
+                          setActiveTab('my-workouts');
+                          setIsTraining(true);
+                        }}
+                        className="flex min-w-[140px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/30 hover:brightness-110 transition-all"
+                      >
+                        Iniciar Treino
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
           <h2 className="text-text-light-primary dark:text-text-dark-primary text-[22px] font-bold leading-tight tracking-[-0.015em] pt-2">
             Evolução Corporal
@@ -196,53 +323,69 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2 rounded-xl border border-border-light dark:border-border-dark p-6 bg-card-light dark:bg-card-dark shadow-[0_0_12px_rgba(0,0,0,0.05)]">
               <p className="text-text-light-primary dark:text-text-dark-primary text-base font-medium leading-normal">Peso Corporal (kg)</p>
-              <p className="text-text-light-primary dark:text-text-dark-primary tracking-light text-[32px] font-bold leading-tight truncate">82.5 kg</p>
+              <p className="text-text-light-primary dark:text-text-dark-primary tracking-light text-[32px] font-bold leading-tight truncate">
+                {studentStats.lastWeight || '--'} kg
+              </p>
               <div className="flex gap-1 items-center">
-                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Últimos 30 dias</p>
-                <p className="text-red-500 dark:text-red-400 text-sm font-medium leading-normal flex items-center gap-1">
-                  <span className="material-symbols-outlined text-base">arrow_downward</span>-1.5kg
-                </p>
+                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Histórico Recente</p>
               </div>
               <div className="h-[180px] w-full mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={MOCK_WEIGHT_DATA}>
-                    <defs>
-                      <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1a2c20', border: 'none', borderRadius: '8px', color: '#fff' }}
-                      itemStyle={{ color: '#13ec5b' }}
-                    />
-                    <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorWeight)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {studentStats.weightHistory.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={studentStats.weightHistory}>
+                      <defs>
+                        <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" hide />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1a2c20', border: 'none', borderRadius: '8px', color: '#fff' }}
+                        itemStyle={{ color: '#13ec5b' }}
+                      />
+                      <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorWeight)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-text-light-secondary dark:text-text-dark-secondary text-xs opacity-50 text-center">
+                    Aguardando primeiros dados de progresso...
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="flex flex-col gap-2 rounded-xl border border-border-light dark:border-border-dark p-6 bg-card-light dark:bg-card-dark shadow-[0_0_12px_rgba(0,0,0,0.05)]">
               <p className="text-text-light-primary dark:text-text-dark-primary text-base font-medium leading-normal">Gordura Corporal (%)</p>
-              <p className="text-text-light-primary dark:text-text-dark-primary tracking-light text-[32px] font-bold leading-tight truncate">18.2 %</p>
+              <p className="text-text-light-primary dark:text-text-dark-primary tracking-light text-[32px] font-bold leading-tight truncate">
+                {studentStats.lastFat || '--'} %
+              </p>
               <div className="flex gap-1 items-center">
-                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Últimos 30 dias</p>
-                <p className="text-green-500 dark:text-green-400 text-sm font-medium leading-normal flex items-center gap-1">
-                  <span className="material-symbols-outlined text-base">arrow_upward</span>+0.5%
-                </p>
+                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Histórico Recente</p>
               </div>
               <div className="h-[180px] w-full mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={MOCK_WEIGHT_DATA}>
-                     <defs>
-                      <linearGradient id="colorFat" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorFat)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {studentStats.fatHistory.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={studentStats.fatHistory}>
+                      <defs>
+                        <linearGradient id="colorFat" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" hide />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1a2c20', border: 'none', borderRadius: '8px', color: '#fff' }}
+                        itemStyle={{ color: '#13ec5b' }}
+                      />
+                      <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorFat)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-text-light-secondary dark:text-text-dark-secondary text-xs opacity-50 text-center">
+                    Aguardando primeiros dados de progresso...
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -299,8 +442,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       </div>
     </div>
   );
+};
 
-  const renderWorkouts = () => (
+const renderWorkouts = () => (
     <div className="max-w-7xl mx-auto pb-20">
       <div className="flex flex-col gap-2 mb-8">
         <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">Meus Treinos</h1>
@@ -323,23 +467,24 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       </div>
 
       <div className="flex flex-col gap-4">
-        {[
-          { title: "Treino A - Peito e Tríceps", date: "Atribuído em 15 de Julho, 2024" },
-          { title: "Treino B - Costas e Bíceps", date: "Atribuído em 16 de Julho, 2024" },
-          { title: "Treino C - Pernas e Ombros", date: "Atribuído em 17 de Julho, 2024" }
-        ].map((workout, idx) => (
-          <div key={idx} className="flex items-center justify-between p-4 bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark shadow-sm">
+        {workouts.map((workout, idx) => (
+          <div key={workout.id} className="flex items-center justify-between p-4 bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark shadow-sm">
             <div className="flex items-center gap-4">
               <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
                 <span className="material-symbols-outlined text-primary text-2xl">fitness_center</span>
               </div>
               <div>
                 <h3 className="text-text-light-primary dark:text-text-dark-primary font-bold text-lg">{workout.title}</h3>
-                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">{workout.date}</p>
+                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">
+                  Atribuído em {workout.createdAt?.toDate().toLocaleDateString() || 'Recentemente'}
+                </p>
               </div>
             </div>
             <button 
-              onClick={() => setIsTraining(true)}
+              onClick={() => {
+                // Set as active workout if needed
+                setIsTraining(true);
+              }}
               className="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/30 hover:brightness-110 transition-all"
             >
               Iniciar Treino
@@ -347,20 +492,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           </div>
         ))}
 
-        <div className="flex items-center justify-between p-4 bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark shadow-sm opacity-60">
-          <div className="flex items-center gap-4">
-            <div className="bg-gray-200 dark:bg-gray-700 p-3 rounded-full hidden sm:block">
-              <span className="material-symbols-outlined text-gray-500 dark:text-gray-400 text-2xl">check_circle</span>
-            </div>
-            <div>
-              <h3 className="text-text-light-primary dark:text-text-dark-primary font-bold text-lg">Treino de Mobilidade</h3>
-              <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">Realizado em 14 de Julho, 2024</p>
-            </div>
+        {workouts.length === 0 && (
+          <div className="text-center py-20 opacity-50">
+            <span className="material-symbols-outlined text-6xl mb-4">fitness_center</span>
+            <p className="text-lg">Nenhum treino disponível no momento.</p>
           </div>
-          <button className="flex min-w-[120px] items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-gray-300 dark:bg-gray-600 text-text-light-primary dark:text-text-dark-primary text-sm font-medium leading-normal cursor-not-allowed" disabled>
-            Concluído
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -376,34 +513,43 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     <div className="max-w-7xl mx-auto pb-20">
       <div className="flex items-center gap-4 mb-8">
         <div className="flex flex-col gap-1">
-          <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">Treino A - Peito e Tríceps</h1>
-          <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">Siga os exercícios abaixo para completar seu treino.</p>
+          <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">
+            {workouts[0]?.title || 'Treino não encontrado'}
+          </h1>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">
+            Siga os exercícios abaixo para completar seu treino.
+          </p>
         </div>
       </div>
 
       <div className="space-y-6">
-        {workoutExercises.map((ex, index) => (
+        {(workouts[0]?.exercises || []).map((ex: any, index: number) => (
           <div 
-            key={ex.id} 
-            className={`bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark shadow-sm p-6 flex flex-col gap-4 transition-opacity ${ex.completed ? 'opacity-60' : ''}`}
+            key={index} 
+            className={`bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark shadow-sm p-6 flex flex-col gap-4 transition-opacity ${completedExercises.includes(index.toString()) ? 'opacity-60' : ''}`}
           >
             <div className="flex justify-between items-start">
               <div>
                 <h2 className="text-xl font-bold text-text-light-primary dark:text-text-dark-primary">{ex.name}</h2>
-                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm mt-1">Exercício {index + 1} de {workoutExercises.length}</p>
+                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm mt-1">Exercício {index + 1} de {workouts[0].exercises.length}</p>
               </div>
               <button 
-                onClick={() => toggleExercise(ex.id)}
+                onClick={() => {
+                  const id = index.toString();
+                  setCompletedExercises(prev => 
+                    prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+                  );
+                }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                  ex.completed 
+                  completedExercises.includes(index.toString())
                     ? 'bg-primary/20 text-primary cursor-default' 
                     : 'border border-primary text-primary hover:bg-primary/10'
                 }`}
               >
-                <span className={`material-symbols-outlined ${ex.completed ? 'fill' : ''}`}>
-                  {ex.completed ? 'check_circle' : 'check'}
+                <span className={`material-symbols-outlined ${completedExercises.includes(index.toString()) ? 'fill' : ''}`}>
+                  {completedExercises.includes(index.toString()) ? 'check_circle' : 'check'}
                 </span>
-                {ex.completed ? 'Concluído' : 'Marcar como concluído'}
+                {completedExercises.includes(index.toString()) ? 'Concluído' : 'Marcar como concluído'}
               </button>
             </div>
 
@@ -428,11 +574,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                 <p className="text-sm text-text-light-secondary dark:text-text-dark-secondary">{ex.notes}</p>
               </div>
             )}
-
-            <button className="flex items-center gap-2 text-sm font-medium text-primary hover:underline self-start">
-              <span className="material-symbols-outlined">play_circle</span>
-              Ver vídeo demonstrativo
-            </button>
           </div>
         ))}
       </div>
@@ -445,13 +586,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         <div className="relative">
           <div 
             className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-12" 
-            style={{ backgroundImage: `url(${trainerAvatar})` }}
+            style={{ backgroundImage: `url(${trainer?.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'})` }}
           ></div>
           <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-card-light dark:ring-card-dark"></span>
         </div>
         <div className="flex flex-col">
-          <h2 className="text-text-light-primary dark:text-text-dark-primary text-xl font-bold">Ricardo "PUMP" Ferraz</h2>
-          <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">Personal Trainer</p>
+          <h2 className="text-text-light-primary dark:text-text-dark-primary text-xl font-bold">{trainer?.name || 'Seu Personal'}</h2>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-mono tracking-tight uppercase text-[10px]">@{trainer?.trainerCode || 'TRAINER'}</p>
         </div>
       </div>
 
@@ -1042,10 +1183,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         </div>
         <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4 w-full md:w-auto">
-            <img src={trainerAvatar} alt="Treinador" className="size-16 rounded-full border-2 border-primary/20 object-cover" />
+            <img src={trainer?.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'} alt="Treinador" className="size-16 rounded-full border-2 border-primary/20 object-cover" />
             <div>
-              <h3 className="font-bold text-text-light-primary dark:text-text-dark-primary text-lg">Ricardo "PUMP" Ferraz</h3>
-              <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">@ricardopump</p>
+              <h3 className="font-bold text-text-light-primary dark:text-text-dark-primary text-lg">{trainer?.name || 'Ricardo "PUMP" Ferraz'}</h3>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">@{trainer?.trainerCode || 'ricardopump'}</p>
               <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary">Vínculo Ativo</span>
             </div>
           </div>
@@ -1121,7 +1262,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                   username: '@flaylima', 
                   specialty: 'Musculação e Hipertrofia', 
                   desc: 'Com mais de 10 anos de experiência...', 
-                  avatar: trainerAvatar 
+                  avatar: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'
                 })}
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary text-background-dark px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all text-sm"
               >
@@ -1193,6 +1334,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         return renderSubscription();
       case 'settings':
         return renderSettings();
+      case 'support':
+        return <UserSupport user={user} />;
       default:
         return <div className="p-8 text-center text-text-secondary">Página em construção...</div>;
     }

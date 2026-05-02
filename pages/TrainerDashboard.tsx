@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import { User } from "../types";
 import {
@@ -14,8 +14,10 @@ import TrainerChat from "./TrainerChat";
 import TrainerLandingPage from "./TrainerLandingPage";
 import TrainerSettings from "./TrainerSettings";
 import TrainerPlans from "./TrainerPlans";
+import UserSupport from "../components/UserSupport";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, startOfWeek, endOfWeek, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfDay, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { dataService } from "../services/dataService";
 
 interface TrainerDashboardProps {
   user: User;
@@ -155,195 +157,76 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [linkingWorkoutStudent, setLinkingWorkoutStudent] = useState<any>(null);
   const [selectedWorkoutToLink, setSelectedWorkoutToLink] = useState<string>("");
 
-  // Dummy events
-  const [events] = useState<AgendaEvent[]>([
-    {
-      id: "1",
-      title: "Ana Beatriz",
-      type: "Avaliação Presencial",
-      date: addDays(new Date(), -1),
-      time: "09:00",
-      status: "Concluído",
-      color: "bg-primary/10 text-primary border-primary/20",
-    },
-    {
-      id: "2",
-      title: "Juliano Souza",
-      type: "Avaliação Online",
-      date: addDays(new Date(), -2),
-      time: "14:00",
-      status: "Cancelado",
-      color: "bg-red-500/10 text-red-500 border-red-500/20",
-    },
-    {
-      id: "3",
-      title: "Marcos Felipe",
-      type: "Consultoria",
-      date: new Date(),
-      time: "10:00",
-      status: "Agendado",
-      color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    },
-    {
-      id: "4",
-      title: "Paula Lima",
-      type: "Retorno",
-      date: new Date(),
-      time: "18:00",
-      status: "Agendado",
-      color: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    },
-    {
-      id: "5",
-      title: "Ricardo Alves",
-      type: "Treino Online",
-      date: addDays(new Date(), 1),
-      time: "08:00",
-      status: "Agendado",
-      color: "bg-green-500/10 text-green-400 border-green-500/20",
-    },
-    {
-      id: "6",
-      title: "Fernanda Costa",
-      type: "Avaliação Presencial",
-      date: addDays(new Date(), 2),
-      time: "15:00",
-      status: "Agendado",
-      color: "bg-primary/10 text-primary border-primary/20",
-    }
-  ]);
+  const [events, setEvents] = useState<AgendaEvent[]>([]);
+  const [linkRequests, setLinkRequests] = useState<any[]>([]);
+  const [studentsData, setStudentsData] = useState<any[]>([]);
+  const [workouts, setWorkouts] = useState<any[]>([]);
+  const [platformPlans, setPlatformPlans] = useState<any[]>([]);
 
-  const [linkRequests, setLinkRequests] = useState([
-    {
-      id: 1,
-      studentName: "Roberto Almeida",
-      img: "https://i.pravatar.cc/150?u=40",
-      goal: "Hipertrofia",
-      date: "Hoje",
-      time: "09:30",
-      age: 28,
-      city: "São Paulo, SP",
-      experience: "Intermediário",
-      observation:
-        "Tenho lesão no joelho direito, preciso de cuidado no agachamento.",
-      status: "pending",
-    },
-    {
-      id: 2,
-      studentName: "Carla Dias",
-      img: "https://i.pravatar.cc/150?u=41",
-      goal: "Emagrecimento",
-      date: "Ontem",
-      time: "15:45",
-      age: 34,
-      city: "Rio de Janeiro, RJ",
-      experience: "Iniciante",
-      observation: "Quero emagrecer e melhorar meu condicionamento físico.",
-      status: "pending",
-    },
-  ]);
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubEvents = dataService.subscribeToAgenda(user.id, setEvents);
+    const unsubRequests = dataService.subscribeToLinkRequests(user.id, setLinkRequests);
+    const unsubStudents = dataService.subscribeToStudents(user.id, setStudentsData);
+    const unsubWorkouts = dataService.subscribeToWorkouts(user.id, setWorkouts);
+    const unsubPlatformPlans = dataService.subscribeToPlatformPlans(setPlatformPlans);
+
+    return () => {
+      unsubEvents();
+      unsubRequests();
+      unsubStudents();
+      unsubWorkouts();
+      unsubPlatformPlans();
+    };
+  }, [user]);
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
     null,
   );
 
-  const handleApproveRequest = (id: number) => {
-    setLinkRequests((prev) => prev.filter((req) => req.id !== id));
-    // Implementation to add to actual students list
+  const handleApproveRequest = async (requestId: string) => {
+    try {
+      await dataService.approveLinkRequest(requestId);
+    } catch (error) {
+      console.error("Error approving request:", error);
+    }
   };
 
-  const handleRejectRequest = (id: number) => {
-    setLinkRequests((prev) => prev.filter((req) => req.id !== id));
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await dataService.rejectLinkRequest(requestId);
+    } catch (error) {
+      console.error("Error rejecting request:", error);
+    }
   };
 
   // Manage students in state to allow editable fields
-  const [studentsData, setStudentsData] = useState([
-    {
-      id: 1,
-      name: "Ana Beatriz",
-      status: "Ativa",
-      plan: "Plano Premium Mensal",
-      regDate: "2023-12-25",
-      expDate: "2024-12-25",
-      phone: "5511999999999",
-      weight: "65kg",
-      frequency: "3x/semana",
-      lastActivity: "Hoje, 10:00",
-      goal: "Hipertrofia",
-      img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDq9Y3K_8j4mXCO9yLEon9jWQasYzWTwdDNMyolL5wSMb0gEcsFaEBLbw-5dClOs8cY2ZRN_7jNzOHxQd9S6arle1Uwpt8ZiXN8hWssfX_w8_y8RIAaRfBrMwbyP3OmS-u7irdsDdGpwthobADynTEojbEM5qjhkKnAvlhj0a7nZUXFxlP0tD64ddm6RtYEFZqukYYKlB1t2sA9GTIWoppzp2KOQhr3ndYKIyEHk6zg-1kmHvrB_3aXU6_1AqNwVIdyoGv_KkylAdo",
-      engagement: "green",
-    },
-    {
-      id: 2,
-      name: "Carlos Silva",
-      status: "Vencida",
-      plan: "Consultoria Trimestral",
-      regDate: "2023-11-30",
-      expDate: "2024-11-30",
-      phone: "5511999999999",
-      weight: "82kg",
-      frequency: "0x/semana",
-      lastActivity: "Há 15 dias",
-      goal: "Emagrecimento",
-      img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCKml4Lh9q6qx_fB2O34cbfMM1adYhNMYVDIxwIaSDA9Ir-7T-Mw91BLMb310wE2d8jCxam0E7FNNef1_1q-Ph-kyFi8f-7dxo1svu8Ov_xZcPs5olbO4F1icCY9jMsjRSrhJd5ZA0tqdECn7gJxY6-AzT_q5hBWHuptw_sjU8pEmHNJFxzL251eWoRFVPfz1seIwUEi7G3vY5-QiItAgDMCICxNmXDmDX7y5jvzfP0rtAZrErj2mvxXy3pAFkb4LraDBKWnB6XQCs",
-      engagement: "red",
-    },
-    {
-      id: 3,
-      name: "Juliana Ferreira",
-      status: "Ativa",
-      plan: "Plano Básico Mensal",
-      regDate: "2024-01-10",
-      expDate: "2025-01-10",
-      phone: "5511999999999",
-      weight: "58kg",
-      frequency: "2x/semana",
-      lastActivity: "Ontem, 18:30",
-      goal: "Hipertrofia",
-      img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDsCHiLgVvlKcSw9NBqj9Cl6my6opdwluzUB3GRMOMjG3h35_Q-XZklPG40OafsIc_y9KowVVh_ahahMb1h6j1D9xtwU32WxnLQAD8zB3WS65GwPz4fLZdNxpGjrIuDTa02YFhQ4QIPSfpBn3EHYgrwBhaDh1kQiCqJwMC5stOf4KPsZVSB5trCenKFMtGbOFlLsLNpZ_gics-F7Mf5w2xou389F_5lP8A0gL4brsM97KfgyZR1ILzNcHqKVY3Ur3wdrO4DOHBKOx8",
-      engagement: "yellow",
-    },
-    {
-      id: 4,
-      name: "Marcos Oliveira",
-      status: "Cancelada",
-      plan: "Plano Premium Mensal",
-      regDate: "2023-11-15",
-      expDate: "2024-11-15",
-      phone: "5511999999999",
-      weight: "90kg",
-      frequency: "0x/semana",
-      lastActivity: "Há 2 meses",
-      goal: "Fortalecimento",
-      img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCnhL2HoqlkbuANj1WakFsqbjUPblxY2ualVeOxKK4ONQHuwCzhR642eBMa1paRtBwwlkrJ-aE9f_Y6ABTbXDfdfrOqOlyc3f4BKvbwK0UU3UmrsuN--GT6ki4zqGZ6PbRo8jseFzR9IxGAIFi4k4qYlJLnWmF8l0E5zGx7GK-PtHOkZyt3LhMZXjE3rHGJewwdE5a0wfrYO3SwFk40YKmBKzedyAqkvBqVPdaOdVs5yJgODyco8chVmwYvxpxkxkkQ8azEGe08fvk",
-      engagement: "red",
-    },
-    {
-      id: 5,
-      name: "Rafaela Costa",
-      status: "Ativa",
-      plan: "Consultoria Trimestral",
-      regDate: "2023-12-05",
-      expDate: "2024-12-05",
-      phone: "5511999999999",
-      weight: "62kg",
-      frequency: "4x/semana",
-      lastActivity: "Hoje, 07:00",
-      goal: "Condicionamento",
-      img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBjnHpprZvL_2awfgTck-M4npFnl8lw7XmB72vpPsYlKVGYIgalsyZuoiiC_UlBecnlYoCe56r19JTKQebpI9k51JUK4HRp9P_STerYSfQIosz-COYcAtGfNPnpomZ0BTAB3ojtAOmT0sq2gxmr3V_93boft9E_REPVN8fC1epKDU5AKa46kUwK_8wxn0qoJnwQXuN_UortbG6H4FNXmGG5SqVRrublRUZNUbhd9XgsXrgs-YKzatB7liPoKanb8n8XkAO67RLPG3Q",
-      engagement: "green",
-    },
-  ]);
-
-  const handleUpdateStudentExpDate = (id: number, newDate: string) => {
-    setStudentsData(
-      studentsData.map((s) => (s.id === id ? { ...s, expDate: newDate } : s)),
-    );
+  const handleUpdateStudentExpDate = async (id: string, newDate: string) => {
+    try {
+      await dataService.updateUser(id, { expDate: newDate });
+    } catch (error) {
+      console.error("Error updating student exp date:", error);
+    }
   };
 
-  const handleDeleteStudent = (id: number) => {
+  const handleDeleteStudent = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este aluno?")) {
-      setStudentsData(studentsData.filter((s) => s.id !== id));
+      try {
+        await dataService.updateUser(id, { trainerId: null });
+      } catch (error) {
+        console.error("Error removing student:", error);
+      }
+    }
+  };
+
+  const handleSelectPlan = async (planName: string) => {
+    try {
+      await dataService.updateUser(user.id, { plan: planName });
+      alert(`Plano alterado para ${planName}.`);
+    } catch (error) {
+      console.error("Error updating plan:", error);
+      alert('Erro ao atualizar plano.');
     }
   };
 
@@ -429,32 +312,32 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         {[
           {
             label: "Alunos Ativos",
-            value: "42",
-            detail: "+2 esta semana",
+            value: studentsData.length.toString(),
+            detail: "Total vinculado",
             color: "text-primary",
           },
           {
-            label: "Novos Alunos (Mês)",
-            value: "5",
-            detail: "+5%",
+            label: "Solicitações",
+            value: linkRequests.length.toString(),
+            detail: "Aguardando aprovação",
+            color: linkRequests.length > 0 ? "text-orange-400" : "text-primary",
+          },
+          {
+            label: "Treinos Criados",
+            value: workouts.length.toString(),
+            detail: "Biblioteca de treinos",
             color: "text-primary",
           },
           {
-            label: "Inativos/Cancelados",
-            value: "2",
-            detail: "+1 este mês",
-            color: "text-red-400",
-          },
-          {
-            label: "Frequência Semanal",
-            value: "72%",
-            detail: "Treinaram esta semana",
+            label: "Eventos na Agenda",
+            value: events.length.toString(),
+            detail: "Agendamentos totais",
             color: "text-primary",
           },
           {
             label: "Receita Estimada",
-            value: "R$4.250",
-            detail: "+R$500",
+            value: `R$ ${(studentsData.length * 150).toLocaleString()}`,
+            detail: "Baseado em R$150/aluno",
             color: "text-primary",
           },
         ].map((kpi, idx) => (
@@ -1962,56 +1845,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          {
-            name: "Bronze",
-            price: "R$ 49,90",
-            period: "/mês",
-            students: "Até 10 alunos",
-            features: [
-              "Gestão de Treinos",
-              "Agenda Básica",
-              "Suporte por E-mail",
-              "App do Aluno",
-            ],
-            current: false,
-            color: "border-orange-500/30",
-          },
-          {
-            name: "Prata",
-            price: "R$ 89,90",
-            period: "/mês",
-            students: "Até 50 alunos",
-            features: [
-              "Gestão de Treinos Ilimitada",
-              "Agenda Completa",
-              "Suporte Prioritário",
-              "Chat com Alunos",
-              "Landing Page Personalizada",
-            ],
-            current: true,
-            color: "border-primary shadow-[0_0_20px_rgba(19,236,91,0.15)]",
-          },
-          {
-            name: "Ouro",
-            price: "R$ 149,90",
-            period: "/mês",
-            students: "Alunos Ilimitados",
-            features: [
-              "Todas as funções Prata",
-              "Consultoria VIP",
-              "Remoção de marca StarFit",
-              "Relatórios Avançados",
-            ],
-            current: false,
-            color: "border-yellow-500/30",
-          },
-        ].map((plan, idx) => (
+        {platformPlans.length > 0 ? platformPlans.map((plan, idx) => {
+          const isCurrent = user.plan === plan.name;
+          return (
           <div
             key={idx}
-            className={`bg-card-dark rounded-2xl p-8 border-2 flex flex-col gap-6 relative overflow-hidden transition-all hover:scale-[1.02] ${plan.color}`}
+            className={`bg-card-dark rounded-2xl p-8 border-2 flex flex-col gap-6 relative overflow-hidden transition-all hover:scale-[1.02] ${plan.color || 'border-white/10'}`}
           >
-            {plan.current && (
+            {isCurrent && (
               <div className="absolute top-0 left-0 right-0 flex justify-center">
                 <div className="bg-primary text-background-dark text-xs font-black px-6 py-1.5 uppercase tracking-wider rounded-b-xl shadow-[0_4px_12px_rgba(19,236,91,0.3)] animate-pulse">
                   Plano Atual
@@ -2034,7 +1875,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </div>
 
             <ul className="flex flex-col gap-3 my-2">
-              {plan.features.map((feature, fIdx) => (
+              {(plan.features || []).map((feature: string, fIdx: number) => (
                 <li
                   key={fIdx}
                   className="flex items-center gap-2 text-text-secondary text-sm"
@@ -2048,12 +1889,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </ul>
 
             <button
-              className={`mt-auto w-full py-4 rounded-xl font-bold transition-all ${plan.current ? "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20" : "bg-primary text-background-dark shadow-lg shadow-primary/20 hover:brightness-110"}`}
+              onClick={() => handleSelectPlan(plan.name)}
+              disabled={isCurrent}
+              className={`mt-auto w-full py-4 rounded-xl font-bold transition-all ${isCurrent ? "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 cursor-default" : "bg-primary text-background-dark shadow-lg shadow-primary/20 hover:brightness-110"}`}
             >
-              {plan.current ? "Renovar Plano" : "Escolher Plano"}
+              {isCurrent ? "Plano Ativo" : "Escolher Plano"}
             </button>
           </div>
-        ))}
+        )}) : (
+          <div className="col-span-3 py-10 text-center text-text-secondary">
+            Nenhum plano disponível no momento.
+          </div>
+        )}
       </div>
 
       <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-6 flex items-start gap-4 mt-4">
@@ -2098,6 +1945,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         return <TrainerLandingPage />;
       case "settings":
         return <TrainerSettings />;
+      case "support":
+        return <UserSupport user={user} />;
       default:
         return (
           <div className="text-center py-20 text-text-secondary">

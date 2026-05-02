@@ -38,6 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: "plans", icon: "local_activity", label: "Planos" },
     { id: "landing-page", icon: "web", label: "Landing Page" },
     { id: "subscription", icon: "credit_card", label: "Minha Assinatura" },
+    { id: "support", icon: "support_agent", label: "Suporte" },
   ];
 
   const studentLinks = [
@@ -46,6 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: "progress", icon: "trending_up", label: "Progresso" },
     { id: "messages", icon: "chat", label: "Mensagens" },
     { id: "subscription", icon: "credit_card", label: "Assinatura" },
+    { id: "support", icon: "support_agent", label: "Suporte" },
   ];
 
   const links =

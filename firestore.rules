@@ -1,0 +1,157 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'micaelcorreiademelo@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Users ---
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && (isAdmin() || resource.data.role == 'TRAINER' || resource.data.trainerId == request.auth.uid || resource.data.email == request.auth.token.email);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && (
+        (isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'bio', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount'])) && 
+        (isAdmin() || incoming().role == existing().role)
+      );
+
+      function isValidUser(data) {
+        return data.keys().hasAll(['id', 'name', 'email', 'role']) &&
+               data.id == userId &&
+               data.email == request.auth.token.email &&
+               data.role in ['ADMIN', 'TRAINER', 'STUDENT'] &&
+               data.name is string && data.name.size() > 0 && data.name.size() < 100;
+      }
+    }
+
+    // --- Trainers ---
+    match /trainers/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+
+    // --- Students ---
+    match /students/{userId} {
+      allow read: if isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER');
+      allow write: if isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER');
+    }
+
+    // --- Workouts ---
+    match /workouts/{workoutId} {
+      allow read: if isSignedIn() && (resource.data.trainerId == request.auth.uid || resource.data.studentId == request.auth.uid || (request.auth.uid in resource.data.studentIds));
+      allow create: if isSignedIn() && incoming().trainerId == request.auth.uid;
+      allow update: if isSignedIn() && existing().trainerId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().trainerId == request.auth.uid;
+    }
+
+    // --- Agenda Events ---
+    match /agendaEvents/{eventId} {
+      allow read: if isSignedIn() && resource.data.trainerId == request.auth.uid;
+      allow write: if isSignedIn() && incoming().trainerId == request.auth.uid;
+    }
+
+    // --- Link Requests ---
+    match /linkRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // --- Chats ---
+    match /chats/{chatId} {
+      allow read, write: if isSignedIn() && (chatId.contains(request.auth.uid));
+      
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn() && (get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]));
+      }
+    }
+
+    // --- Progress ---
+    match /progress/{progressId} {
+      allow read: if isSignedIn() && (resource.data.studentId == request.auth.uid || resource.data.trainerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().studentId == request.auth.uid;
+      allow update: if isSignedIn() && existing().studentId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().studentId == request.auth.uid;
+    }
+    // --- Platform Plans ---
+    match /platformPlans/{planId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // --- Support Tickets ---
+    match /supportTickets/{ticketId} {
+      allow read: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+    // --- Settings ---
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // --- Security ---
+    match /securityPolicies/{policyId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /securityLogs/{logId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /loginHistory/{logId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /systemChanges/{changeId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /blockedEntities/{entityId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // --- Announcements ---
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

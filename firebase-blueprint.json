@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Core profile for all users (Admin, Trainer, Student)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "TRAINER", "STUDENT"] },
+        "avatar": { "type": "string" },
+        "phone": { "type": "string" },
+        "username": { "type": "string" },
+        "bio": { "type": "string" },
+        "onboardingCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "TrainerProfile": {
+      "title": "Trainer Profile",
+      "description": "Extended information for trainers",
+      "type": "object",
+      "properties": {
+        "expertise": { "type": "string" },
+        "price": { "type": "number" },
+        "instagram": { "type": "string" },
+        "website": { "type": "string" },
+        "location": { "type": "string" }
+      }
+    },
+    "StudentStats": {
+      "title": "Student Stats",
+      "description": "Current metrics for a student",
+      "type": "object",
+      "properties": {
+        "trainerId": { "type": "string" },
+        "goal": { "type": "string" },
+        "weight": { "type": "string" },
+        "height": { "type": "string" },
+        "bodyFat": { "type": "string" },
+        "frequency": { "type": "string" },
+        "lastActivity": { "type": "string", "format": "date-time" },
+        "engagement": { "type": "string", "enum": ["green", "yellow", "red"] }
+      }
+    },
+    "Workout": {
+      "title": "Workout",
+      "description": "A workout template or assigned workout",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trainerId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "name": { "type": "string" },
+        "exercises": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "AgendaEvent": {
+      "title": "Agenda Event",
+      "description": "An appointment scheduled in the trainer's calendar",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trainerId": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["Concluido", "Cancelado", "Agendado"] },
+        "color": { "type": "string" }
+      }
+    },
+    "LinkRequest": {
+      "title": "Link Request",
+      "description": "Request to link a student to a trainer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trainerId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentEmail": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "A message in a chat between trainer and student",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "Users collection" },
+    "/trainers/{userId}": { "schema": "TrainerProfile", "description": "Trainers profile collection" },
+    "/students/{userId}": { "schema": "StudentStats", "description": "Students stats collection" },
+    "/workouts/{workoutId}": { "schema": "Workout", "description": "Workouts collection" },
+    "/agendaEvents/{eventId}": { "schema": "AgendaEvent", "description": "Agenda events collection" },
+    "/linkRequests/{requestId}": { "schema": "LinkRequest", "description": "Link requests collection" },
+    "/chats/{chatId}/messages/{messageId}": { "schema": "ChatMessage", "description": "Chat messages collection" }
+  }
+}
