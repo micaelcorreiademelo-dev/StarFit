@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../services/firebase';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'motion/react';
 
 const AdminTrainers: React.FC = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   
   useEffect(() => {
     const q = query(collection(db, 'users'), where('role', '==', 'TRAINER'));
@@ -141,6 +145,20 @@ const AdminTrainers: React.FC = () => {
                     </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => setSelectedUser(user)}
+                        title="Informações do Usuário"
+                        className="size-8 flex items-center justify-center rounded-lg bg-white/5 text-text-secondary hover:bg-primary/20 hover:text-primary transition-all transform hover:scale-110"
+                      >
+                        <span className="material-symbols-outlined text-lg">info</span>
+                      </button>
+                      <button 
+                        onClick={() => navigate(`/impersonate/${user.id}`)}
+                        title="Acessar Painel (Impersonate)"
+                        className="size-8 flex items-center justify-center rounded-lg bg-white/5 text-text-secondary hover:bg-blue-500/20 hover:text-blue-400 transition-all transform hover:scale-110"
+                      >
+                        <span className="material-symbols-outlined text-lg">login</span>
+                      </button>
                       <a 
                         href={`https://wa.me/${user.phone}`}
                         target="_blank"
@@ -166,6 +184,92 @@ const AdminTrainers: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* User Info Modal */}
+      <AnimatePresence>
+        {selectedUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card-dark border border-border-dark rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Detalhes do Personal</h3>
+                <button 
+                  onClick={() => setSelectedUser(null)}
+                  className="text-text-secondary hover:text-white transition-colors"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div className="space-y-4 text-sm">
+                <div className="flex flex-col gap-1">
+                  <span className="text-text-secondary text-xs uppercase font-bold tracking-widest">ID</span>
+                  <span className="text-white font-mono bg-background-dark/50 p-2 rounded border border-border-dark select-all">{selectedUser.id}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-text-secondary text-xs uppercase font-bold tracking-widest">Nome</span>
+                    <span className="text-white font-black">{selectedUser.name || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-text-secondary text-xs uppercase font-bold tracking-widest">Status</span>
+                    <span className={`inline-flex items-center w-fit px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${selectedUser.status === 'Inativo' ? 'bg-gray-500/20 text-gray-400' : 'bg-green-500/20 text-green-400'}`}>
+                      {selectedUser.status || 'Ativo'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-text-secondary text-xs uppercase font-bold tracking-widest">E-mail</span>
+                  <span className="text-white bg-background-dark/50 p-2 rounded border border-border-dark select-all">{selectedUser.email}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-text-secondary text-xs uppercase font-bold tracking-widest">Telefone</span>
+                  <span className="text-white bg-background-dark/50 p-2 rounded border border-border-dark select-all">{selectedUser.phone || 'Não informado'}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-text-secondary text-xs uppercase font-bold tracking-widest">Plano</span>
+                    <span className="text-white">{selectedUser.plan || 'N/A'}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-text-secondary text-xs uppercase font-bold tracking-widest">Expiração</span>
+                    <span className="text-white">
+                      {selectedUser.expDate ? new Date(selectedUser.expDate).toLocaleDateString('pt-BR') : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-text-secondary text-xs uppercase font-bold tracking-widest">Data de Cadastro</span>
+                  <span className="text-white">
+                    {selectedUser.regDate ? 
+                      (typeof selectedUser.regDate === 'string' ? new Date(selectedUser.regDate).toLocaleDateString('pt-BR') : selectedUser.regDate.toDate().toLocaleDateString('pt-BR'))
+                      : 'N/A'}
+                  </span>
+                </div>
+                {selectedUser.trainerCode && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-text-secondary text-xs uppercase font-bold tracking-widest">Código de Convite</span>
+                    <span className="text-white font-mono font-bold bg-primary/10 text-primary p-2 rounded border border-primary/20 select-all">{selectedUser.trainerCode}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-8 flex justify-end">
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="bg-card-dark border border-border-dark text-white px-6 py-2 rounded-xl font-bold hover:bg-white/5 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

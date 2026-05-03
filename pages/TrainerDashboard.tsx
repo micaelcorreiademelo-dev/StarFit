@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import { User } from "../types";
+import { motion, AnimatePresence } from "motion/react";
 import {
   AreaChart,
   Area,
@@ -18,6 +19,10 @@ import UserSupport from "../components/UserSupport";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, startOfWeek, endOfWeek, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfDay, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { dataService } from "../services/dataService";
+import { trainerService } from "../services/trainerService";
+import { db } from "../services/firebase";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { QRCodeSVG } from 'qrcode.react';
 
 interface TrainerDashboardProps {
   user: User;
@@ -151,6 +156,50 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todas");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+  const [showAnnouncements, setShowAnnouncements] = useState(false);
+
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAnnouncements(data);
+      
+      const lastSeen = localStorage.getItem('last_seen_announcement');
+      const unread = lastSeen 
+        ? data.filter(a => a.createdAt?.seconds > (parseInt(lastSeen) || 0))
+        : data;
+
+      setUnreadAnnouncements(unread.length);
+
+      // Simulate push if unread count increased and notification allowed
+      if (unread.length > 0 && !snapshot.metadata.fromCache) {
+         if (Notification.permission === 'granted') {
+           new Notification("Novo Comunicado StarFit", {
+              body: unread[0].title,
+           });
+         }
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  const markAnnouncementsRead = () => {
+    if (announcements.length > 0) {
+      const latest = announcements[0].createdAt?.seconds || Math.floor(Date.now() / 1000);
+      localStorage.setItem('last_seen_announcement', latest.toString());
+      setUnreadAnnouncements(0);
+    }
+    setShowAnnouncements(true);
+  };
   const [agendaView, setAgendaView] = useState<"Mês" | "Semana" | "Dia">("Semana");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null);
@@ -162,9 +211,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [platformPlans, setPlatformPlans] = useState<any[]>([]);
+  const [trainerCustomPlans, setTrainerCustomPlans] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
+
+    const username = (user.username || user.id).replace('@', '');
+    trainerService.getTrainerData(username).then(data => {
+      setTrainerCustomPlans(data.plans || []);
+    });
 
     const unsubEvents = dataService.subscribeToAgenda(user.id, setEvents);
     const unsubRequests = dataService.subscribeToLinkRequests(user.id, setLinkRequests);
@@ -207,6 +262,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       await dataService.updateUser(id, { expDate: newDate });
     } catch (error) {
       console.error("Error updating student exp date:", error);
+    }
+  };
+
+  const handleUpdateStudentPlan = async (id: string, newPlanName: string) => {
+    try {
+      await dataService.updateUser(id, { plan: newPlanName });
+    } catch (error) {
+      console.error("Error updating student plan:", error);
     }
   };
 
@@ -273,6 +336,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     setExercises(exercises.filter((ex) => ex.id !== id));
   };
 
+  // QR Code state
+  const [showQRCode, setShowQRCode] = useState(false);
+
+  const [copied, setCopied] = useState(false);
+
+  // Helper inside renderDashboard
   const renderDashboard = () => (
     <div className="flex flex-col gap-6 pb-20">
       {/* Header Section */}
@@ -280,23 +349,40 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         <div className="flex flex-col gap-1">
           <p className="text-white text-3xl font-bold tracking-tight">Painel</p>
           <p className="text-text-secondary text-base font-normal">
-            Bem-vindo de volta, Treinador!
+            Bem-vindo de volta, {user.name}!
           </p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => {
-              // Simulating copy link functionality
-              navigator.clipboard.writeText("seudominio.com/@flaylima");
-              alert("Link do seu perfil copiado: seudominio.com/@flaylima");
-            }}
-            className="flex items-center justify-center h-10 px-4 bg-card-dark border border-primary/30 text-primary rounded-lg text-sm font-bold gap-2 hover:bg-primary/10 transition-colors"
+          <motion.button
+            onClick={markAnnouncementsRead}
+            animate={unreadAnnouncements > 0 ? {
+              borderColor: ["rgba(34, 197, 94, 0.2)", "#22c55e", "rgba(34, 197, 94, 0.2)"],
+              backgroundColor: ["rgba(34, 197, 94, 0)", "rgba(34, 197, 94, 0.1)", "rgba(34, 197, 94, 0)"],
+            } : {}}
+            transition={unreadAnnouncements > 0 ? { repeat: Infinity, duration: 1.5 } : {}}
+            className="flex items-center justify-center size-10 bg-card-dark border border-border-dark text-text-secondary hover:text-white rounded-lg transition-all relative group"
+            title="Comunicados da Plataforma"
           >
-            <span className="material-symbols-outlined text-base">
-              qr_code_2
+            <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">
+              notifications
             </span>
-            Meu QRCode
-          </button>
+            {unreadAnnouncements > 0 && (
+              <span className="absolute -top-1 -right-1 bg-primary text-background-dark text-[10px] font-black min-w-[18px] h-4.5 rounded-full flex items-center justify-center border-2 border-background-dark shadow-lg shadow-primary/20">
+                {unreadAnnouncements}
+              </span>
+            )}
+          </motion.button>
+          
+          {user.username && (
+             <button
+                onClick={() => setShowQRCode(true)}
+                className="flex items-center gap-2 h-10 px-4 bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 rounded-lg font-bold text-sm transition-all"
+             >
+                <span className="material-symbols-outlined text-[18px]">qr_code</span>
+                Meu QR Code
+             </button>
+          )}
+
           <button
             onClick={() => setActiveTab("add-student")}
             className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-background-dark text-sm font-bold gap-2 hover:brightness-110 transition-all shadow-lg shadow-primary/20"
@@ -1151,7 +1237,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           colSpan={5}
                           className="border-b border-border-dark p-6 bg-white/[0.01]"
                         >
-                          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="grid grid-cols-2 md:grid-cols-6 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="flex flex-col gap-1">
                               <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1">
                                 Peso Atual
@@ -1184,7 +1270,24 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                 {student.goal}
                               </p>
                             </div>
-                            <div className="flex flex-col justify-center items-center md:items-end gap-2">
+                            <div className="flex flex-col gap-1 md:col-span-1">
+                              <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1">
+                                Atribuir Plano
+                              </p>
+                              <select 
+                                value={student.plan || ''}
+                                onChange={(e) => handleUpdateStudentPlan(student.id, e.target.value)}
+                                className="bg-background-dark/50 border border-border-dark rounded-md px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary transition-colors w-full cursor-pointer truncate"
+                              >
+                                <option value="">Nenhum plano</option>
+                                {trainerCustomPlans.map(tp => (
+                                  <option key={tp.id} value={tp.name}>
+                                    {tp.name} {tp.hiddenGlobal ? '(Oculto)' : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex flex-col justify-center items-center md:items-end gap-2 md:col-span-1">
                               <button 
                                 onClick={() => setLinkingWorkoutStudent(student)}
                                 className="flex items-center justify-center gap-2 w-full h-9 px-4 bg-blue-500/10 text-blue-400 rounded-lg font-bold text-xs hover:bg-blue-500 transition-colors border border-blue-500/20"
@@ -1942,9 +2045,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       case "chat":
         return <TrainerChat />;
       case "landing-page":
-        return <TrainerLandingPage />;
+        return <TrainerLandingPage user={user} />;
       case "settings":
-        return <TrainerSettings />;
+        return <TrainerSettings user={user} />;
       case "support":
         return <UserSupport user={user} />;
       default:
@@ -1985,12 +2088,175 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               </span>
             </div>
           </div>
+          <motion.button 
+            onClick={markAnnouncementsRead}
+            animate={unreadAnnouncements > 0 ? {
+              borderColor: ["rgba(34, 197, 94, 0)", "#22c55e", "rgba(34, 197, 94, 0)"],
+              backgroundColor: ["rgba(34, 197, 94, 0)", "rgba(34, 197, 94, 0.1)", "rgba(34, 197, 94, 0)"],
+            } : {}}
+            transition={unreadAnnouncements > 0 ? { repeat: Infinity, duration: 2 } : {}}
+            className="relative p-2 text-text-secondary hover:text-white border border-transparent rounded-lg transition-all"
+          >
+            <span className="material-symbols-outlined">notifications</span>
+            {unreadAnnouncements > 0 && (
+              <span className="absolute top-1 right-1 bg-primary text-background-dark text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-background-dark">
+                {unreadAnnouncements}
+              </span>
+            )}
+          </motion.button>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-7xl mx-auto">{renderContent()}</div>
         </div>
       </main>
+
+      {/* Announcements Modal */}
+      <AnimatePresence>
+        {showAnnouncements && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAnnouncements(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-card-dark border border-border-dark rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="p-6 border-b border-border-dark flex justify-between items-center bg-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/20 p-2 rounded-lg">
+                    <span className="material-symbols-outlined text-primary">notifications</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white tracking-tight">Comunicados Oficiais</h3>
+                </div>
+                <button 
+                  onClick={() => setShowAnnouncements(false)}
+                  className="text-text-secondary hover:text-white transition-colors"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                {announcements.length === 0 ? (
+                  <div className="text-center py-10 text-text-secondary">
+                    Nenhum comunicado disponível no momento.
+                  </div>
+                ) : (
+                  announcements.map((ann) => (
+                    <div key={ann.id} className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
+                       <p className="text-[10px] text-primary font-black uppercase tracking-widest">
+                         {ann.createdAt?.seconds ? new Date(ann.createdAt.seconds * 1000).toLocaleDateString() : '—'}
+                       </p>
+                       <h4 className="text-white font-bold">{ann.title}</h4>
+                       <div className="text-text-secondary text-sm leading-relaxed whitespace-pre-wrap">
+                         {ann.message}
+                       </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showQRCode && user.username && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowQRCode(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-sm rounded-xl border border-border-dark bg-card-dark p-6 shadow-2xl flex flex-col items-center gap-6"
+            >
+              <button
+                onClick={() => setShowQRCode(false)}
+                className="absolute right-4 top-4 text-text-secondary hover:text-white"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+
+              <div className="flex flex-col items-center gap-2 text-center mt-2">
+                <h3 className="text-2xl font-black text-white italic">Seu QR Code</h3>
+                <p className="text-text-secondary text-sm">Mostre isso aos seus alunos para acessarem sua Landing Page!</p>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl shadow-inner">
+                <QRCodeSVG
+                  value={`${window.location.origin}/#/${user.username}`}
+                  size={200}
+                  bgColor={"#ffffff"}
+                  fgColor={"#000000"}
+                  level={"Q"}
+                  includeMargin={false}
+                />
+              </div>
+
+              <div className="w-full flex flex-col gap-3">
+                <div className="w-full bg-background-dark border border-border-dark rounded-lg p-3 text-center flex flex-col gap-1 select-none cursor-pointer group hover:border-primary/50 transition-colors"
+                     onClick={() => {
+                        const link = `${window.location.origin}/#/${user.username}`;
+                        navigator.clipboard.writeText(link);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                     }}
+                >
+                  <span className="text-[10px] text-text-secondary uppercase tracking-widest font-bold">Seu link público</span>
+                  <span className="text-primary font-bold text-sm truncate">{`${window.location.host}/#/${user.username}`}</span>
+                  <span className={`text-[9px] mt-1 transition-all whitespace-nowrap font-bold ${copied ? 'text-green-400 opacity-100' : 'text-text-secondary opacity-0 group-hover:opacity-100'}`}>
+                    {copied ? '✓ Link copiado para a área de transferência!' : 'Clique para copiar'}
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      const link = `${window.location.origin}/#/${user.username}`;
+                      if (navigator.share) {
+                        navigator.share({
+                          title: 'Minha Landing Page - StarFit',
+                          text: 'Confira meu perfil profissional no StarFit!',
+                          url: link
+                        }).catch(console.error);
+                      } else {
+                        navigator.clipboard.writeText(link);
+                        alert("Link copiado! (Seu navegador não suporta compartilhamento direto)");
+                      }
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 bg-primary text-background-dark font-bold py-3 rounded-lg hover:brightness-110 active:scale-95 transition-all text-sm"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">share</span>
+                    Compartilhar
+                  </button>
+                  <a 
+                    href={`${window.location.origin}/#/${user.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center size-12 bg-card-light/10 border border-border-dark text-white rounded-lg hover:bg-white/5 transition-all"
+                    title="Ver Link Público"
+                  >
+                    <span className="material-symbols-outlined">open_in_new</span>
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

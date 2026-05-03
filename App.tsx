@@ -12,9 +12,12 @@ import Checkout from './pages/Checkout';
 import PaymentConfirmation from './pages/PaymentConfirmation';
 import SubscriptionManagement from './pages/SubscriptionManagement';
 import PublicLandingPage from './pages/PublicLandingPage';
+import PaymentSuccess from './pages/PaymentSuccess';
+import ImpersonateWrapper from './pages/ImpersonateWrapper';
 import { User, UserRole } from './types';
-import { auth, syncUserToFirestore, logoutUser } from './services/firebase';
+import { auth, syncUserToFirestore, logoutUser, db } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -22,16 +25,60 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
+    let userUnsubscribe: (() => void) | null = null;
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
           // If we have a firebase user, sync it to firestore
-          const cachedRole = localStorage.getItem('pending_role') as UserRole || 'STUDENT';
-          const syncedUser = await syncUserToFirestore(firebaseUser, cachedRole);
-          setUser(syncedUser);
+          const cachedRole = (localStorage.getItem('pending_role') as UserRole) || 'STUDENT';
+          const cachedUsername = localStorage.getItem('pending_username');
+          await syncUserToFirestore(firebaseUser, cachedRole, cachedUsername || undefined);
+          
+          // Setup real-time listener for the user document
+          if (userUnsubscribe) userUnsubscribe();
+          userUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), (doc) => {
+            if (doc.exists()) {
+              setUser({ id: doc.id, ...doc.data() } as User);
+            }
+          });
+
           localStorage.removeItem('pending_role');
+          localStorage.removeItem('pending_username');
+
+          // Auto-link logic for pending requests from PublicLandingPage
+          const pendingTrainerId = localStorage.getItem('pending_link_trainer_id');
+          const pendingConsultMsg = localStorage.getItem('pending_consult_plan_message');
+          if (pendingTrainerId) {
+             const uid = firebaseUser.uid;
+             const q = query(collection(db, 'linkRequests'), where('studentId', '==', uid), where('trainerId', '==', pendingTrainerId));
+             const res = await getDocs(q);
+             if (res.empty) {
+                const requestData: any = {
+                  studentId: uid,
+                  studentName: firebaseUser.displayName || 'Novo Aluno',
+                  studentEmail: firebaseUser.email,
+                  trainerId: pendingTrainerId,
+                  status: 'pending',
+                  createdAt: serverTimestamp()
+                };
+                if (pendingConsultMsg) {
+                  requestData.observation = pendingConsultMsg;
+                }
+                await addDoc(collection(db, 'linkRequests'), requestData);
+             }
+             localStorage.removeItem('pending_link_trainer_id');
+             localStorage.removeItem('pending_link_trainer_name');
+             if (pendingConsultMsg) {
+               alert("Sua solicitação de consulta de valor foi enviada! Após o personal aceitar seu vínculo, você poderá verificar os valores na aba Planos ou pelo Chat.");
+               localStorage.removeItem('pending_consult_plan_message');
+             }
+          }
         } else {
           setUser(null);
+          if (userUnsubscribe) {
+            (userUnsubscribe as () => void)();
+            userUnsubscribe = null;
+          }
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
@@ -41,7 +88,10 @@ const App: React.FC = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (userUnsubscribe) (userUnsubscribe as () => void)();
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -83,6 +133,10 @@ const App: React.FC = () => {
           user && user.role === 'STUDENT' ? <SubscriptionManagement user={user} onLogout={handleLogout} /> : <Navigate to="/" />
         } />
 
+        <Route path="/impersonate/:userId" element={
+          user && user.role === 'ADMIN' ? <ImpersonateWrapper adminUser={user} /> : <Navigate to="/" />
+        } />
+
         <Route path="/" element={
           !user ? <Navigate to="/login" /> : 
           showOnboarding ? <Navigate to="/onboarding" /> :
@@ -90,6 +144,8 @@ const App: React.FC = () => {
           user.role === 'TRAINER' ? <TrainerDashboard user={user} onLogout={handleLogout} /> :
           <StudentDashboard user={user} onLogout={handleLogout} />
         } />
+        
+        <Route path="/payment-success" element={<PaymentSuccess />} />
         
         <Route path="/@:username" element={<PublicLandingPage />} />
         <Route path="/:username" element={<PublicLandingPage />} />

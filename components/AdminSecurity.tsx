@@ -78,10 +78,17 @@ const AdminSecurity: React.FC = () => {
     try {
       await setDoc(doc(db, 'securityPolicies', 'master'), newPolicies);
       
+      const policyLabels: Record<string, string> = {
+        twoFactor: 'Autenticação de Dois Fatores (2FA)',
+        strongPassword: 'Política de Senha Forte',
+        concurrentSession: 'Sessão Concorrente',
+        geoBackup: 'Backup Georedundante'
+      };
+
       // Auto register change
       await addDoc(collection(db, 'systemChanges'), {
         author: auth.currentUser?.email || 'Admin',
-        type: 'Política de Segurança',
+        type: `Política de Segurança - ${policyLabels[key] || key}`,
         from: policies[key] ? 'Ativado' : 'Desativado',
         to: newPolicies[key] ? 'Ativado' : 'Desativado',
         createdAt: serverTimestamp()

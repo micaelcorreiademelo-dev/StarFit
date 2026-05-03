@@ -1,11 +1,30 @@
 
 import { LandingPageData, defaultLandingPageData } from '../pages/PublicLandingPage';
+import { db } from './firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const STORAGE_KEY_PREFIX = 'starfit_trainer_';
 
 export const trainerService = {
-  getTrainerData: (username: string): LandingPageData => {
-    const savedData = localStorage.getItem(`${STORAGE_KEY_PREFIX}${username}`);
+  getTrainerData: async (username: string): Promise<LandingPageData> => {
+    // Try Firestore first for real data
+    try {
+      const docRef = doc(db, 'landingPages', username.startsWith('@') ? username : `@${username}`);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() as LandingPageData;
+        return {
+          ...defaultLandingPageData,
+          ...data,
+          username: data.username || username,
+        } as LandingPageData;
+      }
+    } catch (err) {
+      console.error('Error fetching trainer landing page from Firestore', err);
+    }
+
+    // Fallback to localStorage for immediate feedback or legacy
+    const savedData = localStorage.getItem(`${STORAGE_KEY_PREFIX}${username.replace('@', '')}`);
     let parsedData = null;
     if (savedData) {
       try {
@@ -46,19 +65,37 @@ export const trainerService = {
     return { ...defaultLandingPageData, username };
   },
 
-  saveTrainerData: (username: string, data: Partial<LandingPageData>) => {
-    const currentData = trainerService.getTrainerData(username);
-    const newData = { ...currentData, ...data };
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${username}`, JSON.stringify(newData));
+  saveTrainerData: async (username: string, data: Partial<LandingPageData>) => {
+    // Save to Firestore
+    const formattedUsername = username.startsWith('@') ? username : `@${username}`;
+    const docRef = doc(db, 'landingPages', formattedUsername);
+    
+    // Get current data to merge
+    const currentData = await trainerService.getTrainerData(username);
+    const newData = { 
+      ...currentData, 
+      ...data, 
+      updatedAt: serverTimestamp() 
+    };
+    
+    try {
+      await setDoc(docRef, newData);
+    } catch (err) {
+      console.error("Error saving landing page to Firestore", err);
+      // Still save to localStorage as backup/local state
+    }
+    
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${username.replace('@', '')}`, JSON.stringify(newData));
     // Dispatch a custom event so other components (like landing page in same app) can update
     window.dispatchEvent(new CustomEvent('trainer_data_updated', { detail: { username, data: newData } }));
   },
 
-  getPlans: (username: string) => {
-    return trainerService.getTrainerData(username).plans;
+  getPlans: async (username: string) => {
+    const data = await trainerService.getTrainerData(username);
+    return data.plans;
   },
 
-  savePlans: (username: string, plans: any[]) => {
-    trainerService.saveTrainerData(username, { plans });
+  savePlans: async (username: string, plans: any[]) => {
+    await trainerService.saveTrainerData(username, { plans });
   }
 };

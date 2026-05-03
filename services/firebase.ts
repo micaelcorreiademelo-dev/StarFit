@@ -17,6 +17,35 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
+
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+
+export const loginWithEmail = async (email: string, pass: string) => {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, pass);
+    return result.user;
+  } catch (error) {
+    console.error('Error logging in with Email', error);
+    throw error;
+  }
+};
+
+export const registerWithEmail = async (email: string, pass: string, name: string) => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, pass);
+    if (result.user) {
+      await updateProfile(result.user, { displayName: name });
+    }
+    return result.user;
+  } catch (error) {
+    console.error('Error registering with Email', error);
+    throw error;
+  }
+};
+
 
 export enum OperationType {
   CREATE = 'create',
@@ -75,17 +104,37 @@ export async function testConnection() {
   }
 }
 
-export const syncUserToFirestore = async (firebaseUser: FirebaseUser, role: UserRole = 'STUDENT'): Promise<User> => {
+export const syncUserToFirestore = async (firebaseUser: FirebaseUser, role: UserRole = 'STUDENT', username?: string): Promise<User> => {
   const userDocRef = doc(db, 'users', firebaseUser.uid);
   const userDoc = await getDoc(userDocRef);
 
   if (userDoc.exists()) {
     const existingData = userDoc.data() as User;
     // Force promotion if it's the master email but role isn't ADMIN
+    let needsUpdate = false;
+    let updates: any = {};
     if (firebaseUser.email === 'micaelcorreiademelo@gmail.com' && existingData.role !== 'ADMIN') {
-      await updateDoc(userDocRef, { role: 'ADMIN' });
-      return { ...existingData, role: 'ADMIN' };
+      updates.role = 'ADMIN';
+      needsUpdate = true;
     }
+    
+    // Auto-migrate trainers who don't have a username yet by assigning a random one if username isn't passed
+    // But if username is explicitly passed during registration flow, we use it.
+    if (existingData.role === 'TRAINER') {
+        if (username && !existingData.username) {
+            updates.username = username;
+            needsUpdate = true;
+        } else if (!existingData.username) {
+            updates.username = `@trainer_${firebaseUser.uid.substring(0, 5).toLowerCase()}`;
+            needsUpdate = true;
+        }
+    }
+
+    if (needsUpdate) {
+      await updateDoc(userDocRef, updates);
+      return { ...existingData, ...updates };
+    }
+
     return existingData;
   }
 
@@ -102,6 +151,11 @@ export const syncUserToFirestore = async (firebaseUser: FirebaseUser, role: User
     role: finalRole,
     avatar: firebaseUser.photoURL || `https://i.pravatar.cc/150?u=${firebaseUser.uid}`,
   };
+
+  if (finalRole === 'TRAINER') {
+      // If trainer, set username
+      newUser.username = username || `@trainer_${firebaseUser.uid.substring(0, 5).toLowerCase()}`;
+  }
 
   await setDoc(userDocRef, {
     ...newUser,

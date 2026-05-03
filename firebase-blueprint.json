@@ -13,7 +13,10 @@
         "phone": { "type": "string" },
         "username": { "type": "string" },
         "bio": { "type": "string" },
+        "specialty": { "type": "string" },
         "onboardingCompleted": { "type": "boolean" },
+        "financialSettings": { "type": "object" },
+        "notifications": { "type": "object" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "name", "email", "role"]
@@ -96,11 +99,31 @@
         "text": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" }
       }
+    },
+    "LandingPage": {
+      "title": "Landing Page Configuration",
+      "description": "Customization data for a trainer's public landing page",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "theme": { "type": "object" },
+        "sections": { "type": "object" },
+        "hero": { "type": "object" },
+        "about": { "type": "object" },
+        "services": { "type": "array" },
+        "plans": { "type": "array" },
+        "results": { "type": "object" },
+        "testimonials": { "type": "object" },
+        "contact": { "type": "object" },
+        "social": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
     "/users/{userId}": { "schema": "User", "description": "Users collection" },
     "/trainers/{userId}": { "schema": "TrainerProfile", "description": "Trainers profile collection" },
+    "/landingPages/{username}": { "schema": "LandingPage", "description": "Landing page data keyed by username" },
     "/students/{userId}": { "schema": "StudentStats", "description": "Students stats collection" },
     "/workouts/{workoutId}": { "schema": "Workout", "description": "Workouts collection" },
     "/agendaEvents/{eventId}": { "schema": "AgendaEvent", "description": "Agenda events collection" },

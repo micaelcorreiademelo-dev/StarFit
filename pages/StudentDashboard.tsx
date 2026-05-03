@@ -207,6 +207,31 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   };
 
   const renderDashboard = () => {
+    // Check for subscription
+    const isExpired = user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date();
+    const isPending = user.paymentStatus !== 'paid';
+    const isBlocked = (isPending || isExpired) && user.role === 'STUDENT';
+
+    if (isBlocked && user.trainerId) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark shadow-xl max-w-2xl mx-auto mt-10">
+          <div className="bg-red-500/10 p-6 rounded-full mb-6">
+            <span className="material-symbols-outlined text-red-500 text-6xl">payments</span>
+          </div>
+          <h2 className="text-3xl font-black text-text-light-primary dark:text-text-dark-primary mb-4">Acesso Bloqueado</h2>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary text-lg mb-8 max-w-md">
+            Sua assinatura expirou ou o pagamento ainda não foi confirmado. Por favor, realize o pagamento para continuar acessando seus treinos e falando com seu personal.
+          </p>
+          <button 
+            onClick={() => navigate(`/@${trainer?.username?.replace('@', '') || trainer?.trainerCode || ''}?planToRenew=${encodeURIComponent(user.plan || '')}#planos`)}
+            className="bg-primary text-background-dark font-bold py-4 px-8 rounded-xl hover:brightness-110 transition-all shadow-lg shadow-primary/30"
+          >
+            Renovar Assinatura
+          </button>
+        </div>
+      );
+    }
+
     if (trainerLinkStatus !== 'linked') {
       return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark shadow-xl max-w-2xl mx-auto mt-10">
@@ -1315,6 +1340,18 @@ const renderWorkouts = () => (
   };
 
   const renderContent = () => {
+    // Check for subscription gating
+    const isExpired = user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date();
+    const isPending = user.paymentStatus !== 'paid';
+    const isBlocked = (isPending || isExpired) && user.role === 'STUDENT' && !!user.trainerId;
+
+    // Allow settings and support even if blocked
+    const isPublicTab = activeTab === 'settings' || activeTab === 'support';
+
+    if (isBlocked && !isPublicTab) {
+      return renderDashboard(); // renderDashboard already handles blocked UI
+    }
+
     if (trainerLinkStatus === 'initial' || trainerLinkStatus === 'search' || trainerLinkStatus === 'pending') {
       return renderLinkageFlow();
     }

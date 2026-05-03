@@ -61,29 +61,40 @@ const ColorPickerField = ({ label, color, onChange }: { label: string, color: st
   );
 };
 
-const TrainerLandingPage: React.FC = () => {
+import { User } from "../types";
+
+const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
   const [editorTab, setEditorTab] = useState<
     "visual" | "imagens" | "textos" | "secoes" | "social"
   >("visual");
-  const [trainerURL, setTrainerURL] = useState("carlossousa");
+  const [trainerURL, setTrainerURL] = useState(user.username?.replace('@', '') || "");
   
-  const [data, setData] = useState<LandingPageData>(() => {
-    return trainerService.getTrainerData("carlossousa");
-  });
+  const [data, setData] = useState<LandingPageData>(defaultLandingPageData);
+  const [loading, setLoading] = useState(true);
+
+  const fetchInitialData = async () => {
+    if (user.username) {
+      setLoading(true);
+      const fetchedData = await trainerService.getTrainerData(user.username.replace('@', ''));
+      setData(fetchedData);
+      setTrainerURL(user.username.replace('@', ''));
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setData(trainerService.getTrainerData("carlossousa"));
-  }, []);
+    fetchInitialData();
+  }, [user.username]);
 
   useEffect(() => {
     const handleUpdate = (e: any) => {
-      if (e.detail.username === "carlossousa") {
+      if (e.detail.username === user.username?.replace('@', '')) {
         setData(prev => ({ ...prev, ...e.detail.data }));
       }
     };
     window.addEventListener("trainer_data_updated", handleUpdate);
     return () => window.removeEventListener("trainer_data_updated", handleUpdate);
-  }, []);
+  }, [user.username]);
 
   const [saved, setSaved] = useState(false);
 
@@ -95,11 +106,24 @@ const TrainerLandingPage: React.FC = () => {
     alert("Link copiado!");
   };
 
-  const handleSave = () => {
-    trainerService.saveTrainerData("carlossousa", data);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    if (user.username) {
+      await trainerService.saveTrainerData(user.username.replace('@', ''), data);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background-dark">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-white font-medium italic">Carregando Editor...</p>
+        </div>
+      </div>
+    );
+  }
 
   const updateData = (
     section: keyof LandingPageData,

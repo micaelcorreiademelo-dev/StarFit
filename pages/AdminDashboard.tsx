@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import AdminTrainers from '../components/AdminTrainers';
 import AdminPlans from '../components/AdminPlans';
@@ -21,14 +23,25 @@ interface AdminDashboardProps {
 const COLORS = ['#13ec5b', '#00C49F', '#FFBB28', '#FF8042'];
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'dashboard';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
   const [stats, setStats] = useState({
     trainers: 0,
     students: 0,
     subscriptions: 0,
     mrr: 0
   });
+  const [pendingTickets, setPendingTickets] = useState(0);
 
   useEffect(() => {
     // Listen for Trainer count
@@ -43,9 +56,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       setStats(prev => ({ ...prev, students: snapshot.size }));
     }, (error) => console.error("AdminDashboard students listener error: ", error));
 
+    // Listen for Pending Support Tickets
+    const qSupport = query(collection(db, 'supportTickets'), where('status', '!=', 'resolvido'));
+    const unsubSupport = onSnapshot(qSupport, (snapshot) => {
+      setPendingTickets(snapshot.size);
+    }, (error) => console.error("AdminDashboard support listener error: ", error));
+
     return () => {
       unsubTrainers();
       unsubStudents();
+      unsubSupport();
     };
   }, []);
 
@@ -87,6 +107,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               <span className="font-black text-xl tracking-tighter text-white">StarFit</span>
             </div>
           </div>
+          <motion.button 
+            onClick={() => setActiveTab('support')}
+            animate={pendingTickets > 0 ? {
+              borderColor: ["rgba(34, 197, 94, 0)", "#22c55e", "rgba(34, 197, 94, 0)"],
+              backgroundColor: ["rgba(34, 197, 94, 0)", "rgba(34, 197, 94, 0.1)", "rgba(34, 197, 94, 0)"],
+            } : {}}
+            transition={pendingTickets > 0 ? {
+              repeat: Infinity,
+              duration: 2,
+            } : {}}
+            className="relative p-2 text-text-secondary hover:text-white border border-transparent rounded-lg transition-all"
+          >
+            <span className="material-symbols-outlined">notifications</span>
+            {pendingTickets > 0 && (
+              <span className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-background-dark">
+                {pendingTickets}
+              </span>
+            )}
+          </motion.button>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -97,10 +136,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 <h1 className="text-3xl md:text-4xl font-black text-white">Dashboard Geral</h1>
                 <p className="text-text-secondary">Visão administrativa global da plataforma.</p>
               </div>
-              <button className="bg-primary text-background-dark font-bold px-6 py-2 rounded-lg hover:scale-105 transition-transform flex items-center gap-2 w-full sm:w-auto justify-center">
-                <span className="material-symbols-outlined">download</span>
-                Exportar Relatório
-              </button>
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <motion.button 
+                  onClick={() => setActiveTab('support')}
+                  animate={pendingTickets > 0 ? {
+                    borderColor: ["rgba(34, 197, 94, 0.2)", "#22c55e", "rgba(34, 197, 94, 0.2)"],
+                    backgroundColor: ["rgba(34, 197, 94, 0)", "rgba(34, 197, 94, 0.2)", "rgba(34, 197, 94, 0)"],
+                  } : {}}
+                  transition={pendingTickets > 0 ? {
+                    repeat: Infinity,
+                    duration: 1.5,
+                  } : {}}
+                  className="relative h-[52px] w-[52px] flex items-center justify-center bg-card-dark border border-border-dark rounded-xl text-text-secondary hover:text-white hover:border-primary transition-all group"
+                  title="Chamados de Suporte"
+                >
+                  <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">notifications</span>
+                  {pendingTickets > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black min-w-[20px] h-5 rounded-full flex items-center justify-center border-2 border-background-dark animate-pulse">
+                      {pendingTickets}
+                    </span>
+                  )}
+                </motion.button>
+                <button className="bg-primary text-background-dark font-bold px-6 h-[52px] rounded-xl hover:scale-105 transition-transform flex items-center gap-2 flex-1 sm:flex-none justify-center">
+                  <span className="material-symbols-outlined">download</span>
+                  Exportar Relatório
+                </button>
+              </div>
             </header>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { trainerService } from "../services/trainerService";
+import { collection, query, where, getDocs, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
+import { db, auth } from '../services/firebase';
 
 export interface SectionConfig {
   visible: boolean;
@@ -8,6 +10,7 @@ export interface SectionConfig {
   backgroundColor: string;
 }
 
+// ... unchanged parts
 export interface LandingPageData {
   username: string;
   theme: {
@@ -53,7 +56,7 @@ export interface LandingPageData {
     id: number;
     name: string;
     price: string;
-    interval: string;
+    durationDays: number;
     description: string;
     features: string[];
     isPopular?: boolean;
@@ -152,7 +155,7 @@ export const defaultLandingPageData: LandingPageData = {
       id: 1,
       name: "Plano Bronze",
       price: "R$150",
-      interval: "/mês",
+      durationDays: 30,
       description: "",
       features: [
         "Consultoria Online",
@@ -165,7 +168,7 @@ export const defaultLandingPageData: LandingPageData = {
       id: 2,
       name: "Plano Prata",
       price: "R$300",
-      interval: "/mês",
+      durationDays: 30,
       description: "",
       features: [
         "Acompanhamento Presencial 2x",
@@ -179,7 +182,7 @@ export const defaultLandingPageData: LandingPageData = {
       id: 3,
       name: "Plano Ouro",
       price: "R$500",
-      interval: "/mês",
+      durationDays: 30,
       description: "",
       features: [
         "Acompanhamento Presencial 4x",
@@ -251,24 +254,50 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
   previewData,
 }) => {
   const { username: urlUsername } = useParams<{ username: string }>();
+  const [searchParams] = useSearchParams();
+  const renewingPlanName = searchParams.get('planToRenew');
   // Default to a specific username if none provided in URL
   const username = urlUsername || "carlossousa";
+  const navigate = useNavigate();
 
-  const [data, setData] = useState<LandingPageData>(() => {
-    if (previewData) return previewData;
-    return trainerService.getTrainerData(username);
-  });
+  const [data, setData] = useState<LandingPageData>(previewData || defaultLandingPageData);
+  const [trainerId, setTrainerId] = useState<string | null>(null);
+  const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [loading, setLoading] = useState(!previewData);
 
   useEffect(() => {
-    if (!previewData) {
-      setData(trainerService.getTrainerData(username));
-    }
+    const fetchTrainerInfo = async () => {
+       if (!username) return;
+       const u = username.replace('@', '');
+       const q = query(collection(db, 'users'), where('username', '==', '@' + u.toLowerCase()));
+       try {
+         const snap = await getDocs(q);
+         if (!snap.empty) {
+            setTrainerId(snap.docs[0].id);
+         }
+       } catch (err) {
+         console.error("Error fetching trainer ID", err);
+       }
+    };
+    fetchTrainerInfo();
+  }, [username]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!previewData && username) {
+        setLoading(true);
+        const fetchedData = await trainerService.getTrainerData(username.replace('@', ''));
+        setData(fetchedData);
+        setLoading(false);
+      }
+    };
+    loadData();
   }, [username, previewData]);
 
   // Listen for real-time updates if in the same session
   useEffect(() => {
     const handleUpdate = (e: any) => {
-      if (e.detail.username === username && !previewData) {
+      if (e.detail.username === username.replace('@', '') && !previewData) {
         setData(e.detail.data);
       }
     };
@@ -279,6 +308,159 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
   useEffect(() => {
     document.title = `${data.hero.name} - Personal Trainer`;
   }, [data.hero.name]);
+
+  const handleRequestLink = async () => {
+     if (!trainerId) return;
+     if (!auth.currentUser) {
+        // Redirect to register saving the trainer ref
+        localStorage.setItem('pending_link_trainer_id', trainerId);
+        localStorage.setItem('pending_link_trainer_name', data.hero.name);
+        navigate('/register');
+        return;
+     }
+
+     setRequestStatus('loading');
+     try {
+        const uid = auth.currentUser.uid;
+        const userDocRef = doc(db, 'users', uid);
+        const userDoc = await getDoc(userDocRef);
+        const userData = userDoc.exists() ? userDoc.data() : { name: 'Usuário sem Nome' };
+
+        // check if already requested
+        const q = query(collection(db, 'linkRequests'), where('studentId', '==', uid), where('trainerId', '==', trainerId));
+        const res = await getDocs(q);
+        if (!res.empty) {
+           setRequestStatus('success'); // already exists
+           return;
+        }
+
+        await addDoc(collection(db, 'linkRequests'), {
+          studentId: uid,
+          studentName: userData.name || auth.currentUser.displayName || 'Novo Aluno',
+          studentEmail: auth.currentUser.email,
+          trainerId: trainerId,
+          status: 'pending',
+          createdAt: serverTimestamp()
+        });
+        setRequestStatus('success');
+     } catch (err) {
+        console.error(err);
+        setRequestStatus('error');
+     }
+  };
+
+  const [paymentLoading, setPaymentLoading] = useState<number | null>(null);
+
+  const handleJoinPlan = async (plan: any) => {
+    if (!trainerId) return;
+    
+    // 1. Fetch trainer's MP credentials
+    const trainerDoc = await getDoc(doc(db, 'users', trainerId));
+    if (!trainerDoc.exists()) return;
+    const trainerData = trainerDoc.data();
+    
+    if (!trainerData.financialSettings?.mpAccessToken) {
+      alert("Este personal ainda não configurou as chaves de pagamento do Mercado Pago.");
+      return;
+    }
+
+    if (!auth.currentUser) {
+      localStorage.setItem('pending_plan_checkout', JSON.stringify({ 
+        trainerId, 
+        planId: plan.id, 
+        planName: plan.name, 
+        price: plan.price.replace('R$', '').trim(),
+        durationDays: plan.durationDays || 30
+      }));
+      navigate('/register');
+      return;
+    }
+
+    setPaymentLoading(plan.id);
+    try {
+      const response = await fetch('/api/payments/create-preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trainerAccessToken: trainerData.financialSettings.mpAccessToken,
+          studentEmail: auth.currentUser.email,
+          planName: plan.name,
+          price: plan.price.replace('R$', '').trim(),
+          studentId: auth.currentUser.uid,
+          trainerId: trainerId,
+          metadata: {
+            durationDays: plan.durationDays || 30
+          }
+        })
+      });
+
+      const result = await response.json();
+      if (result.init_point) {
+        window.location.href = result.init_point;
+      } else {
+        throw new Error(result.error || 'Erro ao gerar checkout');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Erro ao iniciar pagamento: ' + err.message);
+    } finally {
+      setPaymentLoading(null);
+    }
+  };
+
+  const handleConsultPlan = async (plan: any) => {
+     if (!trainerId) return;
+     if (!auth.currentUser) {
+        localStorage.setItem('pending_link_trainer_id', trainerId);
+        localStorage.setItem('pending_link_trainer_name', data.hero.name);
+        localStorage.setItem('pending_consult_plan_message', `Consulta de Valor Landing Page (Plano: ${plan.name})`);
+        navigate('/register');
+        return;
+     }
+
+     setPaymentLoading(plan.id); 
+     try {
+        const uid = auth.currentUser.uid;
+        const userDocRef = doc(db, 'users', uid);
+        const userDoc = await getDoc(userDocRef);
+        const userData = userDoc.exists() ? userDoc.data() : { name: 'Usuário sem Nome' };
+
+        const q = query(collection(db, 'linkRequests'), where('studentId', '==', uid), where('trainerId', '==', trainerId));
+        const res = await getDocs(q);
+        
+        if (res.empty) {
+           await addDoc(collection(db, 'linkRequests'), {
+             studentId: uid,
+             studentName: userData.name || auth.currentUser.displayName || 'Novo Aluno',
+             studentEmail: auth.currentUser.email,
+             trainerId: trainerId,
+             status: 'pending',
+             observation: `Consulta de Valor Landing Page (Plano: ${plan.name})`,
+             createdAt: serverTimestamp()
+           });
+        } else {
+           // Se já existe e tá pending ou se já foi aceito, a gente só avisa o usuário
+        }
+        
+        alert("Sua solicitação de consulta foi enviada! Após o personal aceitar seu vínculo, você poderá verificar os valores pelo sistema e entrar em contato pelo Chat.");
+     } catch (err: any) {
+        console.error(err);
+        alert('Erro ao enviar solicitação: ' + err.message);
+     } finally {
+        setPaymentLoading(null);
+     }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background-dark flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-white font-medium italic">Carregando Landing Page...</p>
+        </div>
+      </div>
+    );
+  }
 
   const primaryStyle = {
     "--primary-color": data.theme.primaryColor,
@@ -407,12 +589,34 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                       {data.hero.subSlogan}
                     </h2>
                   </div>
-                  <a
-                    className={`mt-4 flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden h-12 px-6 bg-custom-primary text-[#0d1b12] text-base font-bold tracking-wide transition-transform hover:scale-105 ${data.theme.buttonStyle}`}
-                    href="#planos"
-                  >
-                    <span className="truncate">{data.hero.ctaText}</span>
-                  </a>
+                  <div className="flex flex-col sm:flex-row gap-4 mt-4 items-center animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-300">
+                    <a
+                      className={`flex min-w-[150px] cursor-pointer items-center justify-center overflow-hidden h-12 px-6 bg-custom-primary text-[#0d1b12] text-base font-bold tracking-wide transition-transform hover:scale-105 ${data.theme.buttonStyle}`}
+                      href="#planos"
+                    >
+                      <span className="truncate">{data.hero.ctaText}</span>
+                    </a>
+                    <button
+                      onClick={handleRequestLink}
+                      disabled={requestStatus === 'loading' || requestStatus === 'success'}
+                      className={`flex min-w-[150px] cursor-pointer items-center justify-center overflow-hidden h-12 px-6 bg-white/10 backdrop-blur-md border border-white/20 text-white text-base font-bold tracking-wide transition-transform ${requestStatus === 'idle' ? 'hover:scale-105 hover:bg-white/20' : ''} ${data.theme.buttonStyle}`}
+                    >
+                      {requestStatus === 'idle' && (
+                        <>
+                          <span className="material-symbols-outlined mr-2 text-[20px]">link</span>
+                          Solicitar Vínculo
+                        </>
+                      )}
+                      {requestStatus === 'loading' && 'Enviando...'}
+                      {requestStatus === 'success' && (
+                        <>
+                          <span className="material-symbols-outlined mr-2 text-[20px]">check_circle</span>
+                          Solicitado!
+                        </>
+                      )}
+                      {requestStatus === 'error' && 'Erro! Tentar de novo'}
+                    </button>
+                  </div>
                 </div>
               </section>
 
@@ -630,7 +834,21 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                   Escolha seu Plano
                 </h2>
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-3 mt-4">
-                  {data.plans.map((plan) => (
+                  {data.plans.filter(p => {
+                    const isTargetToRenew = renewingPlanName && p.name === renewingPlanName;
+
+                    if (p.hiddenGlobal) {
+                      if (isTargetToRenew && p.allowHiddenRenewal) {
+                        return true;
+                      }
+                      return false;
+                    }
+                    if (p.displayOnLandingPage === false) {
+                      if (isTargetToRenew) return true;
+                      return false;
+                    }
+                    return true;
+                  }).map((plan) => (
                     <div
                       key={plan.id}
                       className={`flex flex-col bg-[#182c1e] p-6 text-left transition-transform ${plan.isPopular ? "border-2 border-custom-primary shadow-[0_0_20px_rgba(var(--primary),0.2)] scale-105 z-10 hover:scale-110" : "border border-[var(--primary)]/30 hover:scale-[1.02]"} ${data.theme.cardStyle}`}
@@ -645,11 +863,21 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                       >
                         {plan.name}
                       </h3>
-                      <p className="mt-1 text-4xl font-black text-[#e0f5e7]">
-                        {plan.price}
-                        <span className="text-base font-medium text-[#8fc5a4]">
-                          {plan.interval}
-                        </span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="material-symbols-outlined text-[var(--primary)] text-sm opacity-70">schedule</span>
+                        <span className="text-[#8fc5a4] text-xs font-bold uppercase tracking-widest">{plan.durationDays} Dias de acesso</span>
+                      </div>
+                      <p className="mt-3 text-4xl font-black text-[#e0f5e7]">
+                        {plan.showPriceOnLandingPage === false ? (
+                           <span className="text-2xl tracking-normal">Consultar Valor</span>
+                        ) : (
+                           <>
+                             {plan.price}
+                             <span className="text-base font-medium text-[#8fc5a4]">
+                               /total
+                             </span>
+                           </>
+                        )}
                       </p>
                       <ul className="mt-6 flex-grow space-y-3">
                         {plan.features.map((feature, idx) => (
@@ -665,9 +893,11 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                         ))}
                       </ul>
                       <button
-                        className={`mt-6 w-full cursor-pointer px-4 py-3 text-sm font-bold transition-all ${plan.isPopular ? "bg-custom-primary text-[#0d1b12] hover:brightness-110" : "bg-custom-primary/10 text-custom-primary border border-custom-primary/30 hover:bg-custom-primary/20"} ${data.theme.buttonStyle}`}
+                        onClick={() => plan.showPriceOnLandingPage === false ? handleConsultPlan(plan) : handleJoinPlan(plan)}
+                        disabled={paymentLoading === plan.id}
+                        className={`mt-6 w-full cursor-pointer px-4 py-3 text-sm font-bold transition-all ${plan.isPopular ? "bg-custom-primary text-[#0d1b12] hover:brightness-110" : "bg-custom-primary/10 text-custom-primary border border-custom-primary/30 hover:bg-custom-primary/20"} ${data.theme.buttonStyle} disabled:opacity-50`}
                       >
-                        Quero este plano
+                        {paymentLoading === plan.id ? 'Aguarde...' : (plan.showPriceOnLandingPage === false ? 'Consultar Valor' : 'Quero este plano')}
                       </button>
                     </div>
                   ))}

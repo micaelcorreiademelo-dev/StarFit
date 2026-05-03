@@ -1,16 +1,74 @@
 
-import React, { useState } from 'react';
+// Registration file logic edited down here
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { loginWithGoogle, loginWithGoogleRedirect } from '../services/firebase';
+import { loginWithGoogle, loginWithGoogleRedirect, registerWithEmail } from '../services/firebase';
 
 const Register: React.FC = () => {
   const [profileType, setProfileType] = useState<'STUDENT' | 'TRAINER'>('STUDENT');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRedirectOption, setShowRedirectOption] = useState(false);
+
+  // New fields
+  const [username, setUsername] = useState('');
+  const [suggestedUsernames, setSuggestedUsernames] = useState<string[]>([]);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+
+  // Email/Password fields
+  const [useEmail, setUseEmail] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const pendingLinkTrainerName = localStorage.getItem('pending_link_trainer_name');
+
   const navigate = useNavigate();
 
+  // Generating suggestions based on any username the user tries to type
+  const isValidUsername = (u: string) => /^[a-zA-Z0-9_]{3,20}$/.test(u);
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let raw = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
+    setUsername(raw);
+    if (raw && !isValidUsername(raw)) {
+      setUsernameError('Use 3 a 20 caracteres (letras, números e _)');
+    } else {
+      setUsernameError(null);
+    }
+
+    if (raw.length > 3) {
+      setSuggestedUsernames([
+        raw,
+        `coach${raw}`,
+        `team${raw}`,
+        `personal${raw}`
+      ]);
+    } else {
+      setSuggestedUsernames([]);
+    }
+  };
+
+  const validateTrainer = () => {
+    if (profileType === 'TRAINER') {
+      if (!username) {
+         setError('Por favor, escolha um username.');
+         return false;
+      }
+      if (!isValidUsername(username)) {
+         setError('Username inválido. Use 3 a 20 caracteres (letras, números e _)');
+         return false;
+      }
+      localStorage.setItem('pending_username', `@${username.toLowerCase()}`);
+    } else {
+      localStorage.removeItem('pending_username');
+    }
+    return true;
+  }
+
   const handleGoogleRegister = async (useRedirect = false) => {
+    if (!validateTrainer()) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -31,8 +89,41 @@ const Register: React.FC = () => {
       }
       console.error(err);
       localStorage.removeItem('pending_role');
+      localStorage.removeItem('pending_username');
     } finally {
       if (!useRedirect) setLoading(false);
+    }
+  };
+
+  const handleEmailRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateTrainer()) return;
+    if (!name || !email || !password) {
+      setError('Preencha todos os campos.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      localStorage.setItem('pending_role', profileType);
+      await registerWithEmail(email, password, name);
+      // App.tsx handles nav state
+    } catch (err: any) {
+       console.error(err);
+       if (err.code === 'auth/email-already-in-use') {
+         setError('E-mail já está em uso.');
+       } else {
+         setError('Ocorreu um erro ao registrar. Tente novamente.');
+       }
+       localStorage.removeItem('pending_role');
+       localStorage.removeItem('pending_username');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,6 +134,13 @@ const Register: React.FC = () => {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-black tracking-tighter text-white">Crie sua conta StarFit</h1>
             <p className="text-base text-text-secondary mt-2">Comece sua jornada fitness hoje mesmo.</p>
+            
+            {pendingLinkTrainerName && (
+               <div className="mt-4 px-4 py-3 bg-primary/10 border border-primary text-primary rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined">link</span>
+                  Ao finalizar o cadastro, você solicitará vínculo com {pendingLinkTrainerName}!
+               </div>
+            )}
           </div>
 
           <div className="bg-card-dark p-8 rounded-xl border border-border-dark shadow-lg space-y-8">
@@ -81,25 +179,139 @@ const Register: React.FC = () => {
               </div>
             </div>
 
+            {profileType === 'TRAINER' && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                <label className="text-lg font-bold text-white block">Escolha seu username</label>
+                <div className="text-xs text-text-secondary -mt-3 mb-2">
+                  Seu username será utilizado para:
+                  <ul className="list-disc list-inside mt-1 ml-1 opacity-80">
+                    <li>divulgar seu perfil</li>
+                    <li>gerar sua landing page pública</li>
+                    <li>gerar seu QR Code</li>
+                    <li>permitir que alunos encontrem você no sistema</li>
+                  </ul>
+                </div>
+                
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary font-bold select-none">@</span>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={handleUsernameChange}
+                    className={`w-full bg-background-dark border ${usernameError ? 'border-red-500/50' : 'border-border-dark'} rounded-lg pl-8 pr-4 py-3 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all`}
+                    placeholder="seunome"
+                  />
+                </div>
+                
+                {usernameError && (
+                   <p className="text-red-400 text-xs mt-1">{usernameError}</p>
+                )}
+
+                {suggestedUsernames.length > 0 && !usernameError && (
+                  <div className="mt-3">
+                    <p className="text-xs text-text-secondary mb-2">Sugestões:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedUsernames.map(sug => (
+                        <button
+                          key={sug}
+                          onClick={() => {
+                            setUsername(sug);
+                            setUsernameError(null);
+                            setSuggestedUsernames([]);
+                          }}
+                          className="bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                        >
+                          @{sug}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-4">
               <label className="text-lg font-bold text-white block">2. Crie sua conta</label>
-              {!showRedirectOption ? (
-                <button 
-                  onClick={() => handleGoogleRegister(false)}
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 bg-white text-background-dark font-bold py-4 rounded-lg hover:bg-white/90 transition-all disabled:opacity-50"
-                >
-                  <img src="https://www.google.com/favicon.ico" alt="Google" className="size-6" />
-                  {loading ? 'Criando conta...' : 'Registrar com Google'}
-                </button>
+              
+              {!useEmail ? (
+                 <>
+                   {!showRedirectOption ? (
+                     <button 
+                       onClick={() => handleGoogleRegister(false)}
+                       disabled={loading}
+                       className="w-full flex items-center justify-center gap-3 bg-white text-background-dark font-bold py-4 rounded-lg hover:bg-white/90 transition-all disabled:opacity-50"
+                     >
+                       <img src="https://www.google.com/favicon.ico" alt="Google" className="size-6" />
+                       {loading ? 'Criando conta...' : 'Registrar com Google'}
+                     </button>
+                   ) : (
+                     <button 
+                       onClick={() => handleGoogleRegister(true)}
+                       className="w-full flex items-center justify-center gap-3 bg-primary text-background-dark font-bold py-4 rounded-lg hover:brightness-110 transition-all"
+                     >
+                       <span className="material-symbols-outlined text-background-dark">login</span>
+                       Registrar via Redirecionamento
+                     </button>
+                   )}
+
+                   <div className="relative flex items-center justify-center my-4">
+                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-dark"></div></div>
+                     <span className="relative px-3 bg-card-dark text-xs text-text-secondary">OU</span>
+                   </div>
+
+                   <button
+                     onClick={() => setUseEmail(true)}
+                     className="w-full flex items-center justify-center gap-2 bg-transparent border border-border-dark text-white font-bold py-4 rounded-lg hover:bg-white/5 transition-all"
+                   >
+                     <span className="material-symbols-outlined">mail</span>
+                     Usar E-mail e Senha
+                   </button>
+                 </>
               ) : (
-                <button 
-                  onClick={() => handleGoogleRegister(true)}
-                  className="w-full flex items-center justify-center gap-3 bg-primary text-background-dark font-bold py-4 rounded-lg hover:brightness-110 transition-all"
-                >
-                  <span className="material-symbols-outlined text-background-dark">login</span>
-                  Registrar via Redirecionamento
-                </button>
+                 <form onSubmit={handleEmailRegister} className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4">
+                    <input 
+                      type="text" 
+                      placeholder="Nome completo" 
+                      value={name} 
+                      onChange={e => setName(e.target.value)}
+                      className="w-full bg-background-dark border border-border-dark rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary" 
+                    />
+                    <input 
+                      type="email" 
+                      placeholder="E-mail" 
+                      value={email} 
+                      onChange={e => setEmail(e.target.value)}
+                      className="w-full bg-background-dark border border-border-dark rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary" 
+                    />
+                    <input 
+                      type="password" 
+                      placeholder="Senha (mínimo 6 caracteres)" 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)}
+                      className="w-full bg-background-dark border border-border-dark rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary" 
+                    />
+
+                    <div className="flex gap-2 mt-2">
+                       <button
+                         type="button"
+                         onClick={() => setUseEmail(false)}
+                         className="flex-1 bg-transparent border border-border-dark text-text-secondary py-3 rounded-lg hover:bg-white/5"
+                       >
+                         Voltar
+                       </button>
+                       <button
+                         type="submit"
+                         disabled={loading}
+                         className="flex-[2] bg-primary text-background-dark font-bold py-3 rounded-lg hover:scale-105 transition-all disabled:opacity-50"
+                       >
+                         {loading ? 'Criando...' : 'Finalizar Registro'}
+                       </button>
+                    </div>
+                    
+                    <p className="text-xs text-text-secondary text-center mt-2">
+                       Para esta opção funcionar, o Administrador precisa ativar E-mail/Senha no Firebase Console.
+                    </p>
+                 </form>
               )}
             </div>
 

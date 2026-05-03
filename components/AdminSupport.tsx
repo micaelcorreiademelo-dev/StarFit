@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
-import { collection, onSnapshot, query, addDoc, updateDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, updateDoc, doc, serverTimestamp, orderBy, arrayUnion } from 'firebase/firestore';
 import AdminAnnouncements from './AdminAnnouncements';
 
 const AdminSupport: React.FC = () => {
@@ -37,16 +37,32 @@ const AdminSupport: React.FC = () => {
     if (!replyText.trim()) return;
     try {
       await updateDoc(doc(db, 'supportTickets', ticketId), {
-        status: 'resolvido',
-        adminReply: replyText,
+        replies: arrayUnion({
+          text: replyText,
+          createdAt: new Date().toISOString(),
+          sender: 'admin'
+        }),
         updatedAt: serverTimestamp()
       });
       setReplyText('');
-      setActiveTicketId(null);
       alert('Resposta enviada com sucesso!');
     } catch (e) {
       console.error('Erro ao enviar resposta:', e);
       alert('Erro ao enviar resposta. Tente novamente.');
+    }
+  };
+
+  const handleResolve = async (ticketId: string) => {
+    try {
+      await updateDoc(doc(db, 'supportTickets', ticketId), {
+        status: 'resolvido',
+        updatedAt: serverTimestamp()
+      });
+      setActiveTicketId(null);
+      alert('Chamado marcado como resolvido!');
+    } catch (e) {
+      console.error('Erro ao resolver chamado:', e);
+      alert('Erro ao marcar como resolvido.');
     }
   };
 
@@ -158,12 +174,12 @@ const AdminSupport: React.FC = () => {
                                   setActiveTicketId(null);
                                 } else {
                                   setActiveTicketId(ticket.id);
-                                  setReplyText(ticket.adminReply || '');
+                                  setReplyText('');
                                 }
                               }}
                               className="bg-primary/20 text-primary px-3 py-1 rounded text-[10px] font-bold hover:bg-primary/30 uppercase tracking-widest"
                             >
-                              {ticket.status === 'resolvido' ? 'Ver Mais' : 'Responder'}
+                              {ticket.status === 'resolvido' ? 'Ver Detalhes' : 'Responder'}
                             </button>
                           </td>
                         </tr>
@@ -171,26 +187,58 @@ const AdminSupport: React.FC = () => {
                           <tr className="bg-background-dark/50">
                             <td colSpan={5} className="px-6 py-4">
                               <div className="p-4 bg-card-dark rounded-xl border border-border-dark">
-                                <p className="text-sm text-white font-bold mb-2">Mensagem do Usuário:</p>
-                                <div className="p-3 bg-background-dark rounded border border-border-dark text-text-secondary text-sm mb-4">
-                                  {ticket.message}
+                                <div className="space-y-4 mb-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                  {/* User Message */}
+                                  <div className="bg-background-dark p-3 rounded-lg border border-border-dark">
+                                    <p className="text-[10px] font-black text-primary uppercase mb-1">Mensagem Inicial (Usuário)</p>
+                                    <p className="text-sm text-text-secondary">{ticket.message}</p>
+                                  </div>
+
+                                  {/* Previous Replies (Array) */}
+                                  {Array.isArray(ticket.replies) && ticket.replies.map((r: any, idx: number) => (
+                                    <div key={idx} className="bg-white/5 p-3 rounded-lg border border-white/5 ml-4">
+                                      <p className="text-[10px] font-black text-green-400 uppercase mb-1">Admin</p>
+                                      <p className="text-sm text-text-secondary">{r.text}</p>
+                                    </div>
+                                  ))}
+
+                                  {/* Legacy Support (if any) */}
+                                  {ticket.adminReply && (!ticket.replies || ticket.replies.length === 0) && (
+                                    <div className="bg-white/5 p-3 rounded-lg border border-white/5 ml-4">
+                                      <p className="text-[10px] font-black text-green-400 uppercase mb-1">Admin (Anterior)</p>
+                                      <p className="text-sm text-text-secondary">{ticket.adminReply}</p>
+                                    </div>
+                                  )}
                                 </div>
-                                <p className="text-sm text-white font-bold mb-2">Sua Resposta (Admin):</p>
+
+                                <p className="text-sm text-white font-bold mb-2">Sua Nova Resposta (Admin):</p>
                                 <textarea
                                   value={replyText}
                                   onChange={(e) => setReplyText(e.target.value)}
-                                  disabled={ticket.status === 'resolvido' && replyText === ticket.adminReply} // Se já foi resolvido e não mudou o texto
                                   placeholder="Escreva a resposta aqui..."
                                   rows={3}
                                   className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-white text-sm focus:border-primary outline-none resize-none mb-3"
                                 />
                                 <div className="flex justify-end gap-2">
                                   <button onClick={() => setActiveTicketId(null)} className="px-4 py-2 font-bold text-text-secondary hover:text-white transition-colors text-sm">
-                                    Cancelar
+                                    Fechar
                                   </button>
-                                  <button onClick={() => handleReply(ticket.id)} disabled={!replyText.trim() || (ticket.status === 'resolvido' && replyText === ticket.adminReply)} className="bg-primary text-background-dark font-bold px-6 py-2 rounded-lg hover:scale-105 transition-transform disabled:opacity-50 text-sm">
-                                    Salvar Resposta
+                                  <button 
+                                    onClick={() => handleReply(ticket.id)} 
+                                    disabled={!replyText.trim()} 
+                                    className="bg-primary/20 text-primary font-bold px-6 py-2 rounded-lg hover:bg-primary/30 transition-colors disabled:opacity-50 text-sm"
+                                  >
+                                    Enviar Resposta
                                   </button>
+                                  {ticket.status !== 'resolvido' && (
+                                    <button 
+                                      onClick={() => handleResolve(ticket.id)} 
+                                      className="bg-green-500 text-white font-bold px-6 py-2 rounded-lg hover:scale-105 transition-transform text-sm flex items-center gap-2"
+                                    >
+                                      <span className="material-symbols-outlined text-lg">check_circle</span>
+                                      Marcar como Resolvido
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </td>

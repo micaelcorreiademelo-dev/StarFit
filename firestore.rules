@@ -21,8 +21,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'micaelcorreiademelo@gmail.com' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN'
+        (request.auth.token != null && request.auth.token.email == 'micaelcorreiademelo@gmail.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN')
       );
     }
 
@@ -43,17 +43,24 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn() && (isAdmin() || resource.data.role == 'TRAINER' || resource.data.trainerId == request.auth.uid || resource.data.email == request.auth.token.email);
       allow create: if isOwner(userId) && isValidUser(incoming());
-      allow update: if isOwner(userId) && (
-        (isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'bio', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount'])) && 
+      allow update: if (isOwner(userId) || isAdmin()) && (
+        (isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications'])) && 
         (isAdmin() || incoming().role == existing().role)
       );
 
       function isValidUser(data) {
         return data.keys().hasAll(['id', 'name', 'email', 'role']) &&
                data.id == userId &&
-               data.email == request.auth.token.email &&
+               (isAdmin() || data.email == request.auth.token.email || (resource != null && data.email == resource.data.email)) &&
                data.role in ['ADMIN', 'TRAINER', 'STUDENT'] &&
-               data.name is string && data.name.size() > 0 && data.name.size() < 100;
+               data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+               (!('username' in data) || (data.username is string && data.username.size() <= 50)) &&
+               (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
+               (!('specialty' in data) || (data.specialty is string && data.specialty.size() <= 200)) &&
+               (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 1000)) &&
+               (!('phone' in data) || (data.phone is string && data.phone.size() <= 50)) &&
+               (!('financialSettings' in data) || data.financialSettings is map) &&
+               (!('notifications' in data) || data.notifications is map);
       }
     }
 
@@ -65,23 +72,26 @@ service cloud.firestore {
 
     // --- Students ---
     match /students/{userId} {
-      allow read: if isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER');
-      allow write: if isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER');
+      allow read: if isAdmin() || isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER');
+      allow write: if isAdmin() || isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER');
     }
 
     // --- Workouts ---
     match /workouts/{workoutId} {
-      allow read: if isSignedIn() && (resource.data.trainerId == request.auth.uid || resource.data.studentId == request.auth.uid || (request.auth.uid in resource.data.studentIds));
-      allow create: if isSignedIn() && incoming().trainerId == request.auth.uid;
-      allow update: if isSignedIn() && existing().trainerId == request.auth.uid;
-      allow delete: if isSignedIn() && existing().trainerId == request.auth.uid;
+      allow read: if isAdmin() || (isSignedIn() && (resource.data.trainerId == request.auth.uid || resource.data.studentId == request.auth.uid || (request.auth.uid in resource.data.studentIds)));
+      allow create: if isSignedIn() && (isAdmin() || incoming().trainerId == request.auth.uid);
+      allow update: if isSignedIn() && (isAdmin() || existing().trainerId == request.auth.uid);
+      allow delete: if isSignedIn() && (isAdmin() || existing().trainerId == request.auth.uid);
     }
 
     // --- Agenda Events ---
     match /agendaEvents/{eventId} {
-      allow read: if isSignedIn() && resource.data.trainerId == request.auth.uid;
-      allow write: if isSignedIn() && incoming().trainerId == request.auth.uid;
+      allow read: if isAdmin() || (isSignedIn() && (resource.data.trainerId == request.auth.uid));
+      allow create: if isSignedIn() && (isAdmin() || incoming().trainerId == request.auth.uid);
+      allow update: if isSignedIn() && (isAdmin() || existing().trainerId == request.auth.uid);
+      allow delete: if isSignedIn() && (isAdmin() || existing().trainerId == request.auth.uid);
     }
+
 
     // --- Link Requests ---
     match /linkRequests/{requestId} {
@@ -93,19 +103,19 @@ service cloud.firestore {
 
     // --- Chats ---
     match /chats/{chatId} {
-      allow read, write: if isSignedIn() && (chatId.contains(request.auth.uid));
+      allow read, write: if isSignedIn() && (isAdmin() || chatId.contains(request.auth.uid));
       
       match /messages/{messageId} {
-        allow read, write: if isSignedIn() && (get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]));
+        allow read, write: if isSignedIn() && (isAdmin() || get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]));
       }
     }
 
     // --- Progress ---
     match /progress/{progressId} {
-      allow read: if isSignedIn() && (resource.data.studentId == request.auth.uid || resource.data.trainerId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && incoming().studentId == request.auth.uid;
-      allow update: if isSignedIn() && existing().studentId == request.auth.uid;
-      allow delete: if isSignedIn() && existing().studentId == request.auth.uid;
+      allow read: if isSignedIn() && (isAdmin() || resource.data.studentId == request.auth.uid || resource.data.trainerId == request.auth.uid);
+      allow create: if isSignedIn() && (isAdmin() || incoming().studentId == request.auth.uid);
+      allow update: if isSignedIn() && (isAdmin() || existing().studentId == request.auth.uid);
+      allow delete: if isSignedIn() && (isAdmin() || existing().studentId == request.auth.uid);
     }
     // --- Platform Plans ---
     match /platformPlans/{planId} {
@@ -152,6 +162,12 @@ service cloud.firestore {
     match /announcements/{announcementId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
+    }
+
+    // --- Landing Pages ---
+    match /landingPages/{username} {
+      allow read: if true; // Public access
+      allow write: if isSignedIn() && (isAdmin() || (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username));
     }
   }
 }
