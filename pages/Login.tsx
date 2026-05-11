@@ -15,6 +15,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGoogleLogin = async (useRedirect = false) => {
+    if (loading) return;
     setLoading(true);
     setError(null);
     try {
@@ -25,13 +26,18 @@ const Login: React.FC = () => {
       }
       // On success, App.tsx will handle the navigation via state change
     } catch (err: any) {
+      console.error(err);
       if (err.code === 'auth/popup-blocked') {
         setError('O navegador bloqueou a janela de login. Tente usar o botão abaixo ou verifique as permissões de popup.');
         setShowRedirectOption(true);
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        // Just ignore this or set a very subtle message, as it often happens on double clicks
+        setError('Uma tentativa de login já está em andamento.');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('O login foi cancelado. Você precisa completar o processo na janela do Google.');
       } else {
         setError('Ocorreu um erro ao entrar com o Google. Tente novamente.');
       }
-      console.error(err);
     } finally {
       if (!useRedirect) setLoading(false);
     }

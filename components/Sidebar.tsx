@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { User } from "../types";
+import { dataService } from "../services/dataService";
 
 interface SidebarProps {
   user: User;
@@ -18,6 +19,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
 }) => {
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  useEffect(() => {
+    if (user.role === 'TRAINER') {
+      const unsub = dataService.subscribeToLinkRequests(user.id, (requests) => {
+        setPendingRequestsCount(requests.length);
+      });
+      return () => unsub();
+    }
+  }, [user]);
+
   const adminLinks = [
     { id: "dashboard", icon: "dashboard", label: "Dashboard" },
     { id: "users", icon: "group", label: "Usuários" },
@@ -45,9 +57,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: "dashboard", icon: "dashboard", label: "Dashboard" },
     { id: "my-workouts", icon: "fitness_center", label: "Meus Treinos" },
     { id: "progress", icon: "trending_up", label: "Progresso" },
-    { id: "messages", icon: "chat", label: "Mensagens" },
+    ...(user.trainerId ? [{ id: "chat", icon: "chat", label: "Chat" }] : []),
     { id: "subscription", icon: "credit_card", label: "Assinatura" },
-    { id: "support", icon: "support_agent", label: "Suporte" },
   ];
 
   const links =
@@ -123,6 +134,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <p className="text-sm font-semibold leading-normal whitespace-nowrap">
                   {link.label}
                 </p>
+                {link.id === 'requests' && pendingRequestsCount > 0 && (
+                  <span className="ml-auto bg-white text-primary text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                    {pendingRequestsCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>

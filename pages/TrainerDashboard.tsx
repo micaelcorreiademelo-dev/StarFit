@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { User } from "../types";
 import { motion, AnimatePresence } from "motion/react";
@@ -20,6 +20,7 @@ import { startOfMonth, endOfMonth, eachDayOfInterval, format, startOfWeek, endOf
 import { ptBR } from "date-fns/locale";
 import { dataService } from "../services/dataService";
 import { trainerService } from "../services/trainerService";
+import { chatService } from "../services/chatService";
 import { db } from "../services/firebase";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { QRCodeSVG } from 'qrcode.react';
@@ -153,6 +154,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   onLogout,
 }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [studentToUnlink, setStudentToUnlink] = useState<{id: string, name: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todas");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -208,10 +210,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [linkRequests, setLinkRequests] = useState<any[]>([]);
+  const [showRequestToast, setShowRequestToast] = useState(false);
+  const prevRequestsCountRef = useRef(0);
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [platformPlans, setPlatformPlans] = useState<any[]>([]);
   const [trainerCustomPlans, setTrainerCustomPlans] = useState<any[]>([]);
+  const [latestChat, setLatestChat] = useState<any>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -222,10 +227,37 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     });
 
     const unsubEvents = dataService.subscribeToAgenda(user.id, setEvents);
-    const unsubRequests = dataService.subscribeToLinkRequests(user.id, setLinkRequests);
+    const unsubRequests = dataService.subscribeToLinkRequests(user.id, (requests) => {
+      console.log(`Trainer ${user.id} has ${requests.length} pending requests`);
+      setLinkRequests(requests);
+      
+      if (requests.length > prevRequestsCountRef.current) {
+        setShowRequestToast(true);
+        // Play a sound or trigger haptic if possible (browser dependent)
+        try {
+          if (Notification.permission === 'granted') {
+            new Notification("Nova Solicitação no StarFit", {
+              body: `Você recebeu uma nova solicitação de vínculo de aluno.`,
+              icon: "/favicon.ico",
+              tag: "new-link-request"
+            });
+          }
+        } catch (e) {
+          console.warn("Notification error:", e);
+        }
+      }
+      prevRequestsCountRef.current = requests.length;
+    });
     const unsubStudents = dataService.subscribeToStudents(user.id, setStudentsData);
     const unsubWorkouts = dataService.subscribeToWorkouts(user.id, setWorkouts);
     const unsubPlatformPlans = dataService.subscribeToPlatformPlans(setPlatformPlans);
+    
+    // Subscribe to latest chat
+    const unsubChats = chatService.subscribeToTrainerChats(user.id, (chats) => {
+      if (chats.length > 0) {
+        setLatestChat(chats[0]);
+      }
+    });
 
     return () => {
       unsubEvents();
@@ -233,18 +265,44 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       unsubStudents();
       unsubWorkouts();
       unsubPlatformPlans();
+      unsubChats();
     };
   }, [user]);
 
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
-    null,
-  );
+  const getStudentName = (studentId: string) => {
+    const student = studentsData.find(s => s.id === studentId);
+    return student?.name || 'Aluno';
+  };
 
-  const handleApproveRequest = async (requestId: string) => {
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentProgress, setSelectedStudentProgress] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (selectedStudentId) {
+      const unsub = dataService.subscribeToStudentProgress(selectedStudentId, (progress) => {
+        // Sort descending
+        const sorted = progress.sort((a,b) => {
+           const timeA = a.date?.toMillis ? a.date.toMillis() : new Date(a.date).getTime();
+           const timeB = b.date?.toMillis ? b.date.toMillis() : new Date(b.date).getTime();
+           return timeB - timeA;
+        });
+        setSelectedStudentProgress(sorted);
+      });
+      return () => unsub();
+    } else {
+      setSelectedStudentProgress([]);
+    }
+  }, [selectedStudentId]);
+
+  const handleApproveRequest = async (requestId: string, trainerId: string, studentId: string) => {
     try {
-      await dataService.approveLinkRequest(requestId);
+      await dataService.approveLinkRequest(requestId, trainerId, studentId);
+      // Create chat immediately after approval
+      await chatService.getOrCreateChat(trainerId, studentId);
+      alert("Solicitação aprovada com sucesso! O aluno já está vinculado e o chat foi criado.");
     } catch (error) {
       console.error("Error approving request:", error);
+      alert("Erro ao aprovar solicitação.");
     }
   };
 
@@ -259,27 +317,43 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   // Manage students in state to allow editable fields
   const handleUpdateStudentExpDate = async (id: string, newDate: string) => {
     try {
-      await dataService.updateUser(id, { expDate: newDate });
+      await dataService.updateUser(id, { 
+        expDate: newDate, 
+        subscriptionExpiry: newDate,
+        status: 'Ativa' 
+      });
     } catch (error) {
       console.error("Error updating student exp date:", error);
     }
   };
 
+  const handleExtendTrial = async (studentId: string) => {
+    try {
+      await dataService.extendTrial(studentId);
+      alert("Acesso prorrogado por mais 24 horas!");
+    } catch (error) {
+      console.error("Error extending trial:", error);
+      alert("Erro ao prorrogado acesso.");
+    }
+  };
+
   const handleUpdateStudentPlan = async (id: string, newPlanName: string) => {
     try {
-      await dataService.updateUser(id, { plan: newPlanName });
+      await dataService.updateUser(id, { 
+        plan: newPlanName,
+        status: 'Ativa'
+      });
     } catch (error) {
       console.error("Error updating student plan:", error);
     }
   };
 
   const handleDeleteStudent = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este aluno?")) {
-      try {
-        await dataService.updateUser(id, { trainerId: null });
-      } catch (error) {
-        console.error("Error removing student:", error);
-      }
+    try {
+      await dataService.updateUser(id, { trainerId: null });
+      setStudentToUnlink(null);
+    } catch (error) {
+      console.error("Error removing student:", error);
     }
   };
 
@@ -407,6 +481,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             value: linkRequests.length.toString(),
             detail: "Aguardando aprovação",
             color: linkRequests.length > 0 ? "text-orange-400" : "text-primary",
+            onClick: () => setActiveTab("requests")
           },
           {
             label: "Treinos Criados",
@@ -429,7 +504,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         ].map((kpi, idx) => (
           <div
             key={idx}
-            className="flex flex-col gap-2 rounded-xl p-6 border border-border-dark bg-card-dark shadow-sm"
+            className={`flex flex-col gap-2 rounded-xl p-6 border border-border-dark bg-card-dark shadow-sm transition-all ${kpi.onClick ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5' : ''}`}
+            onClick={kpi.onClick}
           >
             <p className="text-text-secondary text-sm font-medium">
               {kpi.label}
@@ -599,7 +675,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 <p className="text-red-400 text-sm">Vencido há 2 dias</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 cursor-pointer hover:bg-white/5 p-2 rounded-lg transition-colors" onClick={() => setActiveTab('chat')}>
               <div className="flex items-center justify-center size-10 rounded-full bg-blue-500/10 shrink-0">
                 <span className="material-symbols-outlined text-blue-400">
                   chat_bubble
@@ -607,13 +683,33 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-semibold truncate">
-                  Nova mensagem de Ana
+                  {latestChat ? `Mensagem de ${getStudentName(latestChat.studentId)}` : 'Sem novas mensagens'}
                 </p>
                 <p className="text-text-secondary text-sm truncate">
-                  "Olá, podemos remarcar?"
+                  {latestChat ? `"${latestChat.lastMessage}"` : 'Fale com seus alunos pelo chat'}
                 </p>
               </div>
             </div>
+
+            {linkRequests.length > 0 && (
+              <div 
+                className="flex items-center gap-4 cursor-pointer bg-orange-500/10 hover:bg-orange-500/20 p-3 rounded-lg border border-orange-500/30 transition-all animate-pulse" 
+                onClick={() => setActiveTab('requests')}
+              >
+                <div className="flex items-center justify-center size-10 rounded-full bg-orange-500/20 shrink-0">
+                  <span className="material-symbols-outlined text-orange-400">
+                    person_add
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-bold truncate">
+                    {linkRequests.length} Solicitação{linkRequests.length > 1 ? 'ões' : ''} Pendente{linkRequests.length > 1 ? 's' : ''}
+                  </p>
+                  <p className="text-orange-400 text-xs font-medium">Novos alunos aguardando aprovação</p>
+                </div>
+                <span className="material-symbols-outlined text-orange-400">chevron_right</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -963,7 +1059,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   Selecionar Ficha
                 </label>
                 <select
-                  value={selectedWorkoutToLink}
+                  value={selectedWorkoutToLink || ''}
                   onChange={(e) => setSelectedWorkoutToLink(e.target.value)}
                   className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white focus:border-primary focus:outline-none transition-colors appearance-none"
                   style={{
@@ -974,10 +1070,17 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   }}
                 >
                   <option value="" disabled>Escolha uma ficha...</option>
-                  <option value="Hipertrofia A - Peito">Hipertrofia A - Peito</option>
-                  <option value="Hipertrofia B - Costas">Hipertrofia B - Costas</option>
-                  <option value="Emagrecimento Fullbody">Emagrecimento Fullbody</option>
-                  <option value="Adaptação Iniciante">Adaptação Iniciante</option>
+                  {workouts.map(w => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                  {workouts.length === 0 && (
+                    <>
+                      <option value="Hipertrofia A - Peito">Hipertrofia A - Peito</option>
+                      <option value="Hipertrofia B - Costas">Hipertrofia B - Costas</option>
+                      <option value="Emagrecimento Fullbody">Emagrecimento Fullbody</option>
+                      <option value="Adaptação Iniciante">Adaptação Iniciante</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -999,9 +1102,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               {selectedWorkoutToLink && (
                 <div className="flex flex-col gap-3 mt-2 animate-in fade-in slide-in-from-top-2">
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (selectedWorkoutToLink) {
-                        alert(`Treino '${selectedWorkoutToLink}' vinculado a ${linkingWorkoutStudent.name} com sucesso!`);
+                        await dataService.assignWorkoutToStudent(selectedWorkoutToLink, linkingWorkoutStudent.id);
+                        alert(`Treino vinculado a ${linkingWorkoutStudent.name} com sucesso!`);
                         setLinkingWorkoutStudent(null);
                         setSelectedWorkoutToLink("");
                       }
@@ -1014,9 +1118,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (selectedWorkoutToLink) {
-                        window.open(`https://wa.me/${linkingWorkoutStudent.phone || ''}?text=Olá ${linkingWorkoutStudent.name}, seu novo treino '${selectedWorkoutToLink}' já está disponível no app!`, '_blank');
+                        await dataService.assignWorkoutToStudent(selectedWorkoutToLink, linkingWorkoutStudent.id);
+                        const workoutName = workouts.find(w => w.id === selectedWorkoutToLink)?.name || selectedWorkoutToLink;
+                        window.open(`https://wa.me/${linkingWorkoutStudent.phone || ''}?text=Olá ${linkingWorkoutStudent.name}, seu novo treino '${workoutName}' já está disponível no app!`, '_blank');
                         setLinkingWorkoutStudent(null);
                         setSelectedWorkoutToLink("");
                       }
@@ -1064,7 +1170,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               className="w-full bg-transparent border-none text-white focus:ring-0 px-3 text-sm font-medium placeholder:text-text-secondary/50"
               placeholder="Buscar aluno por nome, e-mail ou identificador..."
               type="text"
-              value={searchTerm}
+              value={searchTerm || ''}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
@@ -1150,21 +1256,46 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           <div className="flex flex-col">
                             <span className="text-white font-black uppercase tracking-tight flex items-center gap-2">
                               {student.name}
-                              <span
-                                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
-                                  student.status === "Ativa"
-                                    ? "bg-green-500/10 text-green-400"
-                                    : student.status === "Vencida"
-                                      ? "bg-red-500/10 text-red-400"
-                                      : "bg-gray-500/10 text-gray-400"
-                                }`}
-                              >
-                                {student.status}
+                              {(() => {
+                                const isTrialExpired = student.status !== "Ativa" && student.trialUntil && new Date() > (student.trialUntil?.toDate ? student.trialUntil.toDate() : new Date(student.trialUntil));
+                                const isTrialActive = student.status !== "Ativa" && student.trialUntil && !isTrialExpired;
+                                
+                                return (
+                                  <span
+                                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ring-1 transition-all ${
+                                      student.status === "Ativa"
+                                        ? "bg-primary/10 text-primary ring-primary/20"
+                                        : isTrialActive
+                                          ? "bg-amber-500/10 text-amber-400 ring-amber-500/20"
+                                          : (isTrialExpired || student.status === "Vencida")
+                                            ? "bg-red-500/10 text-red-400 ring-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.2)]"
+                                            : "bg-white/5 text-text-secondary ring-white/10"
+                                    }`}
+                                  >
+                                    <span className={`size-1 rounded-full ${
+                                      student.status === "Ativa" 
+                                        ? "bg-primary animate-pulse" 
+                                        : isTrialActive 
+                                          ? "bg-amber-400 animate-pulse" 
+                                          : (isTrialExpired || student.status === "Vencida")
+                                            ? "bg-red-400"
+                                            : "bg-text-secondary"
+                                    }`}></span>
+                                    {student.status === "Ativa" ? "Ativa" : isTrialActive ? "Em Trial" : "Bloqueado"}
+                                  </span>
+                                );
+                              })()}
+                            </span>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-text-secondary uppercase truncate max-w-[200px]">
+                                {student.plan || 'Sem plano'}
                               </span>
-                            </span>
-                            <span className="text-[10px] text-text-secondary uppercase truncate max-w-[200px] mt-0.5">
-                              {student.plan}
-                            </span>
+                              {student.trialUntil && student.status !== "Ativa" && (
+                                <span className="text-[8px] text-amber-500 font-bold uppercase tracking-tighter italic">
+                                  Trial expira: {new Date(student.trialUntil?.toDate ? student.trialUntil.toDate() : student.trialUntil).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -1175,7 +1306,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         >
                           <input
                             type="date"
-                            value={student.expDate}
+                            value={student.expDate || ''}
                             onChange={(e) =>
                               handleUpdateStudentExpDate(
                                 student.id,
@@ -1194,6 +1325,19 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           className="flex items-center justify-center gap-2"
                           onClick={(e) => e.stopPropagation()}
                         >
+                          {/* Extend Trial */}
+                          {student.status !== "Ativa" && (
+                            <button
+                              onClick={() => handleExtendTrial(student.id)}
+                              title="Prorrogar 24h de Acesso"
+                              className="size-8 flex items-center justify-center rounded-lg bg-white/5 text-text-secondary hover:bg-amber-500/20 hover:text-amber-400 transition-all transform hover:scale-110"
+                            >
+                              <span className="material-symbols-outlined text-lg">
+                                history
+                              </span>
+                            </button>
+                          )}
+
                           {/* WhatsApp */}
                           <a
                             href={`https://wa.me/${student.phone}`}
@@ -1220,12 +1364,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
                           {/* Delete */}
                           <button
-                            onClick={() => handleDeleteStudent(student.id)}
-                            title="Excluir Usuário"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStudentToUnlink({ id: student.id, name: student.name });
+                            }}
+                            title="Remover Vínculo"
                             className="size-8 flex items-center justify-center rounded-lg bg-white/5 text-text-secondary hover:bg-red-500/20 hover:text-red-500 transition-all transform hover:scale-110"
                           >
                             <span className="material-symbols-outlined text-lg">
-                              delete
+                              person_remove
                             </span>
                           </button>
                         </div>
@@ -1304,6 +1451,52 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                 Abrir Painel
                               </button>
                             </div>
+                          </div>
+                          
+                          {/* Progress Table */}
+                          <div className="mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                              <span className="material-symbols-outlined text-primary">analytics</span>
+                              Histórico de Medidas
+                            </h4>
+                            {selectedStudentProgress.length > 0 ? (
+                              <div className="overflow-x-auto pb-4">
+                                <table className="w-full text-left border-collapse whitespace-nowrap">
+                                  <thead>
+                                    <tr className="border-b border-border-dark text-text-secondary text-xs uppercase tracking-widest font-bold">
+                                      <th className="py-2 px-4">Data</th>
+                                      <th className="py-2 px-4">Peso</th>
+                                      <th className="py-2 px-4">Gordura %</th>
+                                      <th className="py-2 px-4">Peito</th>
+                                      <th className="py-2 px-4">Braços</th>
+                                      <th className="py-2 px-4">Cintura</th>
+                                      <th className="py-2 px-4">Quadril</th>
+                                      <th className="py-2 px-4">Coxas</th>
+                                      <th className="py-2 px-4">Panturrilhas</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {selectedStudentProgress.map((record: any, idx: number) => (
+                                      <tr key={record.id || idx} className="border-b border-border-dark/50 text-white text-sm hover:bg-white/5 transition-colors">
+                                        <td className="py-3 px-4 font-black">{record.date?.toDate ? record.date.toDate().toLocaleDateString('pt-BR') : new Date(record.date).toLocaleDateString('pt-BR')}</td>
+                                        <td className="py-3 px-4 font-bold text-primary">{record.weight ? `${record.weight}kg` : '-'}</td>
+                                        <td className="py-3 px-4">{record.bodyFat ? `${record.bodyFat}%` : '-'}</td>
+                                        <td className="py-3 px-4">{record.chest || '-'}</td>
+                                        <td className="py-3 px-4">{record.arms || '-'}</td>
+                                        <td className="py-3 px-4">{record.waist || '-'}</td>
+                                        <td className="py-3 px-4">{record.hips || '-'}</td>
+                                        <td className="py-3 px-4">{record.thighs || '-'}</td>
+                                        <td className="py-3 px-4">{record.calves || '-'}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="text-center p-8 bg-background-dark/50 rounded-xl border border-border-dark/50">
+                                <p className="text-text-secondary italic">Nenhuma medida registrada para este aluno ainda.</p>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1874,32 +2067,34 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             >
               <div className="flex items-start gap-4">
                 <img
-                  src={req.img}
+                  src={req.studentAvatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'}
                   alt={req.studentName}
                   className="size-16 md:size-20 rounded-full border-2 border-primary/20 object-cover shrink-0"
                 />
                 <div className="flex flex-col flex-1">
                   <h3 className="text-white font-bold text-xl">
-                    {req.studentName}
+                    {req.studentName || 'Novo Aluno'}
                   </h3>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
-                      {req.goal}
+                      {req.goal || 'Meta não definida'}
                     </span>
                     <span className="bg-border-dark text-white px-2 py-1 rounded text-xs font-medium">
-                      {req.experience}
+                      {req.experience || 'Iniciante'}
                     </span>
-                    <span className="bg-border-dark text-text-secondary px-2 py-1 rounded text-xs font-medium">
-                      {req.age} anos
-                    </span>
+                    {req.age && (
+                      <span className="bg-border-dark text-text-secondary px-2 py-1 rounded text-xs font-medium">
+                        {req.age} anos
+                      </span>
+                    )}
                     <span className="text-text-secondary text-xs flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">
                         location_on
                       </span>{" "}
-                      {req.city}
+                      {req.city || 'Localização não informada'}
                     </span>
                     <span className="text-text-secondary text-xs border-l border-border-dark pl-2 ml-1">
-                      {req.date}, {req.time}
+                      {req.createdAt ? new Date(req.createdAt.seconds * 1000).toLocaleDateString() : 'Hoje'}
                     </span>
                   </div>
                   {req.observation && (
@@ -1922,7 +2117,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   Rejeitar
                 </button>
                 <button
-                  onClick={() => handleApproveRequest(req.id)}
+                  onClick={() => handleApproveRequest(req.id, req.trainerId, req.studentId)}
                   className="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-primary text-background-dark font-bold hover:brightness-110 shadow-lg shadow-primary/20 transition-all text-sm"
                 >
                   Aprovar
@@ -2043,7 +2238,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       case "plans":
         return <TrainerPlans user={user} />;
       case "chat":
-        return <TrainerChat />;
+        return <TrainerChat user={user} />;
       case "landing-page":
         return <TrainerLandingPage user={user} />;
       case "settings":
@@ -2098,9 +2293,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             className="relative p-2 text-text-secondary hover:text-white border border-transparent rounded-lg transition-all"
           >
             <span className="material-symbols-outlined">notifications</span>
-            {unreadAnnouncements > 0 && (
+            {(unreadAnnouncements > 0 || linkRequests.length > 0) && (
               <span className="absolute top-1 right-1 bg-primary text-background-dark text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-background-dark">
-                {unreadAnnouncements}
+                {unreadAnnouncements + linkRequests.length}
               </span>
             )}
           </motion.button>
@@ -2257,6 +2452,65 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           </div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showRequestToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            className="fixed bottom-8 left-1/2 z-[100] bg-orange-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 cursor-pointer min-w-[320px] border-2 border-orange-400"
+            onClick={() => {
+              setActiveTab('requests');
+              setShowRequestToast(false);
+            }}
+          >
+            <div className="bg-white/20 p-2 rounded-xl">
+              <span className="material-symbols-outlined text-white">person_add</span>
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg">Nova Solicitação!</p>
+              <p className="text-sm text-orange-50 text-medium">Você tem novas solicitações de alunos aguardando aprovação.</p>
+            </div>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowRequestToast(false); }}
+              className="text-white hover:bg-white/20 p-1 rounded-lg"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Unlink Confirmation Modal */}
+      {studentToUnlink && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card-light dark:bg-card-dark rounded-2xl p-6 lg:p-8 w-full max-w-md shadow-2xl border border-border-light dark:border-border-dark animate-in zoom-in-95 duration-200 text-center">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+              <span className="material-symbols-outlined text-red-500 text-2xl">person_remove</span>
+            </div>
+            <h2 className="text-xl font-bold text-text-light-primary dark:text-text-dark-primary mb-2">Remover Vínculo</h2>
+            <p className="text-text-light-secondary dark:text-text-dark-secondary mb-6">
+              Tem certeza que deseja remover o vínculo com o aluno <span className="font-bold text-text-light-primary dark:text-text-dark-primary">{studentToUnlink.name}</span>? 
+              Ele não será excluído do sistema, mas você não poderá mais ver o progresso dele ou gerenciar seus treinos.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setStudentToUnlink(null)}
+                className="flex-1 py-3 px-4 rounded-xl border border-border-light dark:border-border-dark text-text-light-primary dark:text-text-dark-primary font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteStudent(studentToUnlink.id)}
+                className="flex-1 py-3 px-4 rounded-xl bg-red-500 text-white font-bold hover:brightness-110 shadow-lg shadow-red-500/20 transition-all"
+              >
+                Remover Vínculo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { db, OperationType, handleFirestoreError } from './firebase';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, getDocs, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, getDocs, getDoc, setDoc, runTransaction } from 'firebase/firestore';
 
 export const dataService = {
   // Students
@@ -9,6 +9,44 @@ export const dataService = {
       const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       callback(students);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
+  },
+
+  // Progress
+  subscribeToStudentProgress: (studentId: string, callback: (progress: any[]) => void) => {
+    const q = query(collection(db, 'progress'), where('studentId', '==', studentId));
+    return onSnapshot(q, (snapshot) => {
+      const progress = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Sort by date inside the callback later or here. Better to sort here.
+      // Assuming 'date' is a timestamp.
+      progress.sort((a, b) => {
+        const timeA = a.date?.toMillis ? a.date.toMillis() : a.date;
+        const timeB = b.date?.toMillis ? b.date.toMillis() : b.date;
+        return timeA - timeB; // ascending
+      });
+      callback(progress);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'progress'));
+  },
+
+  addProgress: async (progressData: any) => {
+    try {
+      const payload = {
+        ...progressData,
+        date: progressData.date || serverTimestamp(),
+        createdAt: serverTimestamp()
+      };
+      const docRef = await addDoc(collection(db, 'progress'), payload);
+      
+      // Update student's fast-access weight
+      if (progressData.weight && progressData.studentId) {
+         await updateDoc(doc(db, 'users', progressData.studentId), {
+           weight: progressData.weight,
+           updatedAt: serverTimestamp()
+         });
+      }
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'progress');
+    }
   },
 
   // Workouts
@@ -130,11 +168,47 @@ export const dataService = {
     }
   },
 
-  requestLink: async (studentId: string, trainerId: string) => {
+  searchTrainerByUsername: async (username: string) => {
     try {
+      const u = username.trim().replace('@', '');
+      const variations = [
+        `@${u.toLowerCase()}`, 
+        `@${u}`, 
+        u.toLowerCase(), 
+        u
+      ];
+      const q = query(
+        collection(db, 'users'), 
+        where('role', '==', 'TRAINER'), 
+        where('username', 'in', variations)
+      );
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'users');
+    }
+  },
+
+  requestLink: async (studentId: string, trainerId: string, studentName: string, studentAvatar?: string) => {
+    try {
+      // Avoid duplicate requests
+      const q = query(collection(db, 'linkRequests'), 
+        where('studentId', '==', studentId), 
+        where('trainerId', '==', trainerId),
+        where('status', '==', 'pending')
+      );
+      const res = await getDocs(q);
+      if (!res.empty) return;
+
       await addDoc(collection(db, 'linkRequests'), {
         studentId,
         trainerId,
+        studentName,
+        studentAvatar: studentAvatar || '',
         status: 'pending',
         createdAt: serverTimestamp()
       });
@@ -145,18 +219,63 @@ export const dataService = {
 
   approveLinkRequest: async (requestId: string, trainerId: string, studentId: string) => {
     try {
-      // 1. Update request status
-      await updateDoc(doc(db, 'linkRequests', requestId), { status: 'approved' });
-      // 2. Link student to trainer
-      await updateDoc(doc(db, 'users', studentId), { trainerId });
+      await runTransaction(db, async (transaction) => {
+        const studentRef = doc(db, 'users', studentId);
+        const requestRef = doc(db, 'linkRequests', requestId);
+        
+        // Set trial to 24 hours from now
+        const trialUntil = new Date();
+        trialUntil.setHours(trialUntil.getHours() + 24);
+
+        transaction.update(requestRef, { status: 'approved' });
+        transaction.update(studentRef, { 
+          trainerId: trainerId,
+          trialUntil: trialUntil,
+          updatedAt: serverTimestamp()
+        });
+      });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'linkRequests/users');
+      handleFirestoreError(error, OperationType.WRITE, `linkRequests/${requestId}`);
+    }
+  },
+
+  extendTrial: async (studentId: string, hours: number = 24) => {
+    try {
+      const studentRef = doc(db, 'users', studentId);
+      const studentDoc = await getDoc(studentRef);
+      
+      if (!studentDoc.exists()) throw new Error("Student not found");
+      
+      const currentTrialTime = studentDoc.data().trialUntil?.toDate()?.getTime() || Date.now();
+      const baseTime = Math.max(Date.now(), currentTrialTime);
+      const newTrial = new Date(baseTime + hours * 60 * 60 * 1000);
+      
+      await updateDoc(studentRef, {
+        trialUntil: newTrial,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${studentId}`);
     }
   },
 
   rejectLinkRequest: async (requestId: string) => {
     try {
       await updateDoc(doc(db, 'linkRequests', requestId), { status: 'rejected' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `linkRequests/${requestId}`);
+    }
+  },
+
+  cancelLinkRequest: async (studentId: string) => {
+    try {
+      const q = query(collection(db, 'linkRequests'), 
+        where('studentId', '==', studentId), 
+        where('status', '==', 'pending')
+      );
+      const snapshot = await getDocs(q);
+      const batchUpdates = snapshot.docs.map(d => updateDoc(doc(db, 'linkRequests', d.id), { status: 'cancelled' }));
+      await Promise.all(batchUpdates);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'linkRequests');
     }
@@ -167,6 +286,66 @@ export const dataService = {
       await updateDoc(doc(db, 'users', userId), { ...data, updatedAt: serverTimestamp() });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    }
+  },
+
+  deleteUser: async (userId: string) => {
+    try {
+      await deleteDoc(doc(db, 'users', userId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
+    }
+  },
+
+  completeWorkout: async (userId: string, workoutId: string) => {
+    try {
+      const workoutRef = doc(db, 'workouts', workoutId);
+      await updateDoc(workoutRef, {
+        completed: true,
+        completedAt: serverTimestamp(),
+        completedBy: userId
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `workouts/${workoutId}`);
+    }
+  },
+
+  getTrainerPlans: async (trainerId: string) => {
+    try {
+      const trainerSnap = await getDoc(doc(db, 'users', trainerId));
+      if (!trainerSnap.exists()) return [];
+      
+      const trainerData = trainerSnap.data();
+      const username = (trainerData.username || trainerId).replace('@', '').toLowerCase();
+      
+      const landingRef = doc(db, 'landingPages', `@${username}`);
+      const landingSnap = await getDoc(landingRef);
+      
+      if (landingSnap.exists()) {
+        return landingSnap.data().plans || [];
+      }
+      return [];
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'trainerPlans');
+      return [];
+    }
+  },
+
+  assignWorkoutToStudent: async (workoutId: string, studentId: string) => {
+    try {
+      const workoutRef = doc(db, 'workouts', workoutId);
+      const workoutSnap = await getDoc(workoutRef);
+      if (workoutSnap.exists()) {
+        const data = workoutSnap.data();
+        const currentIds = data.studentIds || [];
+        if (!currentIds.includes(studentId)) {
+          await updateDoc(workoutRef, {
+            studentIds: [...currentIds, studentId]
+          });
+        }
+      }
+    } catch (error) {
+       handleFirestoreError(error, OperationType.UPDATE, `workouts/${workoutId}`);
     }
   }
 };

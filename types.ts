@@ -36,6 +36,18 @@ export interface User {
   subscriptionExpiry?: string;
   activePlan?: string;
   paymentStatus?: 'paid' | 'pending' | 'expired';
+  trainerId?: string | null;
+  trainerCode?: string;
+  onboardingCompleted?: boolean;
+  status?: string;
+  plan?: string;
+  trialUntil?: any;
+  createdAt?: any;
+  updatedAt?: any;
+  studentsCount?: number;
+  privacy?: {
+    publicProfile?: boolean;
+  };
 }
 
 export interface Exercise {
@@ -58,4 +70,22 @@ export interface Workout {
 export interface MetricPoint {
   date: string;
   value: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
+  timestamp: any;
+  avatar?: string;
+}
+
+export interface Chat {
+  id: string;
+  trainerId: string;
+  studentId: string;
+  lastMessage?: string;
+  lastMessageTime?: any;
+  unreadCount?: Record<string, number>;
 }

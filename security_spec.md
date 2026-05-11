@@ -1,27 +1,26 @@
-# Security Specification
+# Security Specification - StarFit
 
-## Data Invariants
-1. A user can only read and write their own profile in `/users/{userId}`.
-2. A trainer can manage their own profile in `/trainers/{userId}`.
-3. A student's stats in `/students/{userId}` can be read by the student and their linked trainer.
-4. Workouts can be read by their creator (trainer) or the assigned student.
-5. Agenda events can only be managed by the trainer who created them.
-6. Link requests can be created by trainers and read/updated by the target student or the creator trainer.
-7. Chat messages can only be read/written by the participants of the chat.
+## 1. Data Invariants
+- A `linkRequest` must have a valid `studentId` and `trainerId`.
+- Only a student can create a `linkRequest`.
+- Only the target trainer can approve/reject a `linkRequest`.
+- A trainer can only update a student's `trainerId` if they have an approved `linkRequest` from that student.
+- Users cannot change their own `role` or `email`.
+- `trainerId` can only be updated by the student (owner) or the trainer being linked via a request.
 
-## The "Dirty Dozen" Payloads
-1. User A trying to update User B's profile.
-2. User attempting to set their role to "ADMIN" without being an admin.
-3. Trainer A trying to delete Trainer B's workouts.
-4. Student attempting to modify their own weight history with a future timestamp.
-5. Unauthorized user trying to read a private chat between Trainer A and Student B.
-6. User trying to create an account with a fake `email_verified` claim.
-7. User trying to inject a 1MB string into a workout name.
-8. Trainer trying to approve a link request for another trainer.
-9. Student trying to change their assigned trainer without a valid request.
-10. Unauthenticated user trying to list any collection.
-11. User trying to update an immutable field like `createdAt`.
-12. User trying to create a document with an invalid ID (e.g., using special characters).
+## 2. The "Dirty Dozen" Payloads (Logical Attack Vectors)
+1. **Identity Spoofing**: Student A creates a request claiming to be Student B.
+2. **Approval Hijacking**: Trainer A approves a request meant for Trainer B.
+3. **Role Escalation**: Student updates their own doc to set `role: 'ADMIN'`.
+4. **Trainer Hijack**: Trainer A updates a student's `trainerId` to their own UID without a request.
+5. **PII Leak**: Student A reads Student B's private data (phone/email).
+6. **Ghost Field Injection**: Adding `isVerified: true` to a user doc during update.
+7. **Timestamp Fraud**: Creating a request with a `createdAt` in the future.
+8. **Orphaned Request**: Creating a request for a non-existent trainer.
+9. **Spam Requests**: Creating 100 requests in 1 second (Rate limiting - rules can't do full rate limiting but can check existence).
+10. **Immutable Field Mutate**: Changing `createdAt` on an existing document.
+11. **Cross-Tenant Write**: Trainer A deleting a workout created by Trainer B.
+12. **Status Skipping**: Student updating request status directly to 'approved'.
 
-## The Test Runner
-A `firestore.rules.test.ts` will verify these cases once implemented.
+## 3. Test Runner (Conceptual)
+The following rules will be tested against these vectors.

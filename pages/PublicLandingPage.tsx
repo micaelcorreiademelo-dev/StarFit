@@ -26,6 +26,7 @@ export interface LandingPageData {
     services: SectionConfig;
     testimonials: SectionConfig;
     gallery: SectionConfig;
+    plans: SectionConfig;
     contact: SectionConfig;
   };
   hero: {
@@ -85,6 +86,7 @@ export interface LandingPageData {
     youtube: string;
     facebook: string;
   };
+  trainerId?: string;
 }
 
 export const defaultLandingPageData: LandingPageData = {
@@ -102,7 +104,8 @@ export const defaultLandingPageData: LandingPageData = {
     services: { visible: true, order: 2, backgroundColor: "transparent" },
     testimonials: { visible: true, order: 3, backgroundColor: "transparent" },
     gallery: { visible: true, order: 4, backgroundColor: "transparent" },
-    contact: { visible: true, order: 5, backgroundColor: "transparent" },
+    plans: { visible: true, order: 5, backgroundColor: "transparent" },
+    contact: { visible: true, order: 6, backgroundColor: "transparent" },
   },
   hero: {
     name: "Alex Lima",
@@ -264,23 +267,37 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
   const [trainerId, setTrainerId] = useState<string | null>(null);
   const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [loading, setLoading] = useState(!previewData);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTrainerInfo = async () => {
        if (!username) return;
+       // If data already has trainerId, we use it (especially for guests)
+       if (data.trainerId) {
+         setTrainerId(data.trainerId);
+         return;
+       }
+
        const u = username.replace('@', '');
-       const q = query(collection(db, 'users'), where('username', '==', '@' + u.toLowerCase()));
+       let q = query(collection(db, 'users'), where('username', 'in', ['@' + u.toLowerCase(), '@' + u, u.toLowerCase(), u]));
        try {
-         const snap = await getDocs(q);
+         // Guests might fail here due to rules, which is why we need trainerId in LandingPageData
+         let snap = await getDocs(q);
+         if (snap.empty) {
+            // Tenta buscar por trainerCode também
+            q = query(collection(db, 'users'), where('trainerCode', '==', u.toUpperCase()));
+            snap = await getDocs(q);
+         }
+         
          if (!snap.empty) {
             setTrainerId(snap.docs[0].id);
          }
        } catch (err) {
-         console.error("Error fetching trainer ID", err);
+         console.warn("Could not fetch trainer ID from users collection (likely guest). Relying on landing page data.", err);
        }
     };
     fetchTrainerInfo();
-  }, [username]);
+  }, [username, data.trainerId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -310,7 +327,10 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
   }, [data.hero.name]);
 
   const handleRequestLink = async () => {
-     if (!trainerId) return;
+     if (!trainerId) {
+        setAlertMessage("Personal não encontrado no sistema. Ele(a) precisa completar o cadastro primeiro.");
+        return;
+     }
      if (!auth.currentUser) {
         // Redirect to register saving the trainer ref
         localStorage.setItem('pending_link_trainer_id', trainerId);
@@ -337,6 +357,7 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
         await addDoc(collection(db, 'linkRequests'), {
           studentId: uid,
           studentName: userData.name || auth.currentUser.displayName || 'Novo Aluno',
+          studentAvatar: userData.avatar || auth.currentUser.photoURL || '',
           studentEmail: auth.currentUser.email,
           trainerId: trainerId,
           status: 'pending',
@@ -352,7 +373,10 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
   const [paymentLoading, setPaymentLoading] = useState<number | null>(null);
 
   const handleJoinPlan = async (plan: any) => {
-    if (!trainerId) return;
+    if (!trainerId) {
+       setAlertMessage("Personal não encontrado no sistema. Ele(a) precisa completar o cadastro primeiro.");
+       return;
+    }
     
     // 1. Fetch trainer's MP credentials
     const trainerDoc = await getDoc(doc(db, 'users', trainerId));
@@ -360,7 +384,7 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
     const trainerData = trainerDoc.data();
     
     if (!trainerData.financialSettings?.mpAccessToken) {
-      alert("Este personal ainda não configurou as chaves de pagamento do Mercado Pago.");
+      setAlertMessage("Este personal ainda não configurou as chaves de pagamento do Mercado Pago.");
       return;
     }
 
@@ -402,14 +426,17 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
       }
     } catch (err: any) {
       console.error(err);
-      alert('Erro ao iniciar pagamento: ' + err.message);
+      setAlertMessage('Erro ao iniciar pagamento: ' + err.message);
     } finally {
       setPaymentLoading(null);
     }
   };
 
   const handleConsultPlan = async (plan: any) => {
-     if (!trainerId) return;
+     if (!trainerId) {
+        setAlertMessage("Personal não encontrado no sistema. Ele(a) precisa completar o cadastro primeiro.");
+        return;
+     }
      if (!auth.currentUser) {
         localStorage.setItem('pending_link_trainer_id', trainerId);
         localStorage.setItem('pending_link_trainer_name', data.hero.name);
@@ -432,20 +459,19 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
            await addDoc(collection(db, 'linkRequests'), {
              studentId: uid,
              studentName: userData.name || auth.currentUser.displayName || 'Novo Aluno',
+             studentAvatar: userData.avatar || auth.currentUser.photoURL || '',
              studentEmail: auth.currentUser.email,
              trainerId: trainerId,
              status: 'pending',
              observation: `Consulta de Valor Landing Page (Plano: ${plan.name})`,
              createdAt: serverTimestamp()
            });
-        } else {
-           // Se já existe e tá pending ou se já foi aceito, a gente só avisa o usuário
         }
         
-        alert("Sua solicitação de consulta foi enviada! Após o personal aceitar seu vínculo, você poderá verificar os valores pelo sistema e entrar em contato pelo Chat.");
+        setAlertMessage("Sua solicitação de consulta foi enviada! Após o personal aceitar seu vínculo, você poderá verificar os valores pelo sistema e entrar em contato pelo Chat.");
      } catch (err: any) {
         console.error(err);
-        alert('Erro ao enviar solicitação: ' + err.message);
+        setAlertMessage('Erro ao enviar solicitação: ' + err.message);
      } finally {
         setPaymentLoading(null);
      }
@@ -626,6 +652,7 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                 { id: "services", priority: data.sections.services.order, visible: data.sections.services.visible },
                 { id: "testimonials", priority: data.sections.testimonials.order, visible: data.sections.testimonials.visible },
                 { id: "gallery", priority: data.sections.gallery.order, visible: data.sections.gallery.visible },
+                { id: "plans", priority: data.sections.plans?.order ?? 5, visible: data.sections.plans?.visible ?? true },
                 { id: "contact", priority: data.sections.contact.order, visible: data.sections.contact.visible },
               ]
                 .filter((s) => s.visible)
@@ -825,84 +852,85 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                     );
                   }
 
+                  if (section.id === "plans") {
+                    return (
+                      <section className="flex flex-col gap-6 text-center" id="planos" key="plans">
+                        <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
+                          Escolha seu Plano
+                        </h2>
+                        <div className="grid grid-cols-1 gap-8 md:grid-cols-3 mt-4">
+                          {data.plans.filter(p => {
+                            const isTargetToRenew = renewingPlanName && p.name === renewingPlanName;
+                            if (p.hiddenGlobal) {
+                              if (isTargetToRenew && p.allowHiddenRenewal) return true;
+                              return false;
+                            }
+                            if (p.displayOnLandingPage === false) {
+                              if (isTargetToRenew) return true;
+                              return false;
+                            }
+                            return true;
+                          }).map((plan) => (
+                            <div
+                              key={plan.id}
+                              className={`flex flex-col bg-[#182c1e] p-6 text-left transition-transform ${plan.isPopular ? "border-2 border-custom-primary shadow-[0_0_20px_rgba(var(--primary),0.2)] scale-105 z-10 hover:scale-110" : "border border-[var(--primary)]/30 hover:scale-[1.02]"} ${data.theme.cardStyle}`}
+                              style={{ backgroundColor: (data.sections.plans && data.sections.plans.backgroundColor !== "transparent") ? data.sections.plans.backgroundColor : undefined }}
+                            >
+                              {plan.isPopular && (
+                                <p className="self-start rounded-full bg-custom-primary px-3 py-1 text-xs font-bold uppercase text-[#0d1b12] mb-4">
+                                  Mais Popular
+                                </p>
+                              )}
+                              <h3
+                                className={`text-xl font-bold text-[#e0f5e7] ${!plan.isPopular && "mt-4"}`}
+                              >
+                                {plan.name}
+                              </h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="material-symbols-outlined text-[var(--primary)] text-sm opacity-70">schedule</span>
+                                <span className="text-[#8fc5a4] text-xs font-bold uppercase tracking-widest">{plan.durationDays} Dias de acesso</span>
+                              </div>
+                              <p className="mt-3 text-4xl font-black text-[#e0f5e7]">
+                                {plan.showPriceOnLandingPage === false ? (
+                                   <span className="text-2xl tracking-normal">Consultar Valor</span>
+                                ) : (
+                                   <>
+                                     {plan.price}
+                                     <span className="text-base font-medium text-[#8fc5a4]">
+                                       /total
+                                     </span>
+                                   </>
+                                )}
+                              </p>
+                              <ul className="mt-6 flex-grow space-y-3">
+                                {plan.features.map((feature, idx) => (
+                                  <li
+                                    key={idx}
+                                    className="flex items-center gap-2 text-[#8fc5a4]"
+                                  >
+                                    <span className="material-symbols-outlined text-custom-primary text-lg">
+                                      check_circle
+                                    </span>
+                                    {feature}
+                                  </li>
+                                ))}
+                              </ul>
+                              <button
+                                onClick={() => plan.showPriceOnLandingPage === false ? handleConsultPlan(plan) : handleJoinPlan(plan)}
+                                disabled={paymentLoading === plan.id}
+                                className={`mt-6 w-full cursor-pointer px-4 py-3 text-sm font-bold transition-all ${plan.isPopular ? "bg-custom-primary text-[#0d1b12] hover:brightness-110" : "bg-custom-primary/10 text-custom-primary border border-custom-primary/30 hover:bg-custom-primary/20"} ${data.theme.buttonStyle} disabled:opacity-50`}
+                              >
+                                {paymentLoading === plan.id ? 'Aguarde...' : (plan.showPriceOnLandingPage === false ? 'Consultar Valor' : 'Quero este plano')}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  }
+
                   return null;
                 })}
-
-              {/* Planos e Preços - FIXED SECTION ALWAYS VISIBLE (for demonstration synced with real plans) */}
-              <section className="flex flex-col gap-6 text-center" id="planos">
-                <h2 className="text-3xl font-bold tracking-tight text-[#e0f5e7]">
-                  Escolha seu Plano
-                </h2>
-                <div className="grid grid-cols-1 gap-8 md:grid-cols-3 mt-4">
-                  {data.plans.filter(p => {
-                    const isTargetToRenew = renewingPlanName && p.name === renewingPlanName;
-
-                    if (p.hiddenGlobal) {
-                      if (isTargetToRenew && p.allowHiddenRenewal) {
-                        return true;
-                      }
-                      return false;
-                    }
-                    if (p.displayOnLandingPage === false) {
-                      if (isTargetToRenew) return true;
-                      return false;
-                    }
-                    return true;
-                  }).map((plan) => (
-                    <div
-                      key={plan.id}
-                      className={`flex flex-col bg-[#182c1e] p-6 text-left transition-transform ${plan.isPopular ? "border-2 border-custom-primary shadow-[0_0_20px_rgba(var(--primary),0.2)] scale-105 z-10 hover:scale-110" : "border border-[var(--primary)]/30 hover:scale-[1.02]"} ${data.theme.cardStyle}`}
-                    >
-                      {plan.isPopular && (
-                        <p className="self-start rounded-full bg-custom-primary px-3 py-1 text-xs font-bold uppercase text-[#0d1b12] mb-4">
-                          Mais Popular
-                        </p>
-                      )}
-                      <h3
-                        className={`text-xl font-bold text-[#e0f5e7] ${!plan.isPopular && "mt-4"}`}
-                      >
-                        {plan.name}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="material-symbols-outlined text-[var(--primary)] text-sm opacity-70">schedule</span>
-                        <span className="text-[#8fc5a4] text-xs font-bold uppercase tracking-widest">{plan.durationDays} Dias de acesso</span>
-                      </div>
-                      <p className="mt-3 text-4xl font-black text-[#e0f5e7]">
-                        {plan.showPriceOnLandingPage === false ? (
-                           <span className="text-2xl tracking-normal">Consultar Valor</span>
-                        ) : (
-                           <>
-                             {plan.price}
-                             <span className="text-base font-medium text-[#8fc5a4]">
-                               /total
-                             </span>
-                           </>
-                        )}
-                      </p>
-                      <ul className="mt-6 flex-grow space-y-3">
-                        {plan.features.map((feature, idx) => (
-                          <li
-                            key={idx}
-                            className="flex items-center gap-2 text-[#8fc5a4]"
-                          >
-                            <span className="material-symbols-outlined text-custom-primary text-lg">
-                              check_circle
-                            </span>
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                      <button
-                        onClick={() => plan.showPriceOnLandingPage === false ? handleConsultPlan(plan) : handleJoinPlan(plan)}
-                        disabled={paymentLoading === plan.id}
-                        className={`mt-6 w-full cursor-pointer px-4 py-3 text-sm font-bold transition-all ${plan.isPopular ? "bg-custom-primary text-[#0d1b12] hover:brightness-110" : "bg-custom-primary/10 text-custom-primary border border-custom-primary/30 hover:bg-custom-primary/20"} ${data.theme.buttonStyle} disabled:opacity-50`}
-                      >
-                        {paymentLoading === plan.id ? 'Aguarde...' : (plan.showPriceOnLandingPage === false ? 'Consultar Valor' : 'Quero este plano')}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
 
             </main>
 
@@ -957,6 +985,24 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
                 </div>
               </div>
             </footer>
+
+            {/* Modal de Alerta */}
+            {alertMessage && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-[#182c1e] border border-green-500/30 w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
+                  <div className="p-6 flex flex-col gap-4 items-center text-center">
+                    <span className="material-symbols-outlined text-5xl text-green-400">info</span>
+                    <p className="text-[#e0f5e7] text-lg font-bold">{alertMessage}</p>
+                    <button
+                      onClick={() => setAlertMessage(null)}
+                      className="mt-2 w-full bg-green-500 text-[#0d1b12] font-bold py-3 px-6 rounded-lg hover:brightness-110 transition-all cursor-pointer"
+                    >
+                      Entendi
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

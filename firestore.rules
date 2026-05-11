@@ -43,10 +43,18 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn() && (isAdmin() || resource.data.role == 'TRAINER' || resource.data.trainerId == request.auth.uid || resource.data.email == request.auth.token.email);
       allow create: if isOwner(userId) && isValidUser(incoming());
+      
+      // Standard update for owners and admins
       allow update: if (isOwner(userId) || isAdmin()) && (
-        (isValidUser(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications'])) && 
+        isValidUser(incoming()) && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'birthdate', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications', 'privacy']) && 
         (isAdmin() || incoming().role == existing().role)
       );
+
+      // Specific update for trainers managing their students
+      allow update: if isTrainerApproving(userId) || isTrainerManagingStudent(userId);
+      
+      allow delete: if isOwner(userId) || isAdmin();
 
       function isValidUser(data) {
         return data.keys().hasAll(['id', 'name', 'email', 'role']) &&
@@ -59,22 +67,31 @@ service cloud.firestore {
                (!('specialty' in data) || (data.specialty is string && data.specialty.size() <= 200)) &&
                (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 1000)) &&
                (!('phone' in data) || (data.phone is string && data.phone.size() <= 50)) &&
+               (!('birthdate' in data) || (data.birthdate is string && data.birthdate.size() <= 20)) &&
                (!('financialSettings' in data) || data.financialSettings is map) &&
-               (!('notifications' in data) || data.notifications is map);
+               (!('notifications' in data) || data.notifications is map) &&
+               (!('privacy' in data) || data.privacy is map) &&
+               (!('expDate' in data) || data.expDate is string) &&
+               (!('subscriptionExpiry' in data) || data.subscriptionExpiry is string || data.subscriptionExpiry == null);
+      }
+
+      function isTrainerApproving(targetStudentId) {
+        return isSignedIn() && 
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER' &&
+               incoming().trainerId == request.auth.uid &&
+               incoming().diff(existing()).affectedKeys().hasOnly(['trainerId', 'updatedAt', 'trialUntil']);
+      }
+
+      function isTrainerManagingStudent(targetStudentId) {
+        return isSignedIn() &&
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER' &&
+               existing().trainerId == request.auth.uid &&
+               incoming().diff(existing()).affectedKeys().hasOnly(['trialUntil', 'updatedAt', 'plan', 'expDate', 'status', 'subscriptionExpiry', 'trainerId']) &&
+               (incoming().get('trainerId', null) == existing().trainerId || incoming().get('trainerId', null) == null);
       }
     }
 
-    // --- Trainers ---
-    match /trainers/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(userId);
-    }
 
-    // --- Students ---
-    match /students/{userId} {
-      allow read: if isAdmin() || isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER');
-      allow write: if isAdmin() || isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER');
-    }
 
     // --- Workouts ---
     match /workouts/{workoutId} {
@@ -95,18 +112,33 @@ service cloud.firestore {
 
     // --- Link Requests ---
     match /linkRequests/{requestId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read: if isSignedIn() && (isAdmin() || resource.data.studentId == request.auth.uid || resource.data.trainerId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().studentId == request.auth.uid && isValidLinkRequest(incoming());
+      allow update: if isSignedIn() && (
+        (existing().studentId == request.auth.uid && incoming().status == 'cancelled') ||
+        (existing().trainerId == request.auth.uid && incoming().status in ['approved', 'rejected'])
+      ) && isValidLinkRequest(incoming());
+      allow delete: if isAdmin();
+
+      function isValidLinkRequest(data) {
+        return data.keys().hasAll(['studentId', 'trainerId', 'status']) &&
+               isValidId(data.studentId) &&
+               isValidId(data.trainerId) &&
+               data.status in ['pending', 'approved', 'rejected', 'cancelled'] &&
+               (!('studentName' in data) || (data.studentName is string && data.studentName.size() < 100));
+      }
     }
 
     // --- Chats ---
     match /chats/{chatId} {
-      allow read, write: if isSignedIn() && (isAdmin() || chatId.contains(request.auth.uid));
+      allow get: if isSignedIn() && (isAdmin() || chatId.matches(".*" + request.auth.uid + ".*"));
+      allow list: if isSignedIn() && (isAdmin() || resource.data.trainerId == request.auth.uid || resource.data.studentId == request.auth.uid);
+      allow create: if isSignedIn() && (isAdmin() || incoming().trainerId == request.auth.uid || incoming().studentId == request.auth.uid);
+      allow update: if isSignedIn() && (isAdmin() || existing().trainerId == request.auth.uid || existing().studentId == request.auth.uid);
       
       match /messages/{messageId} {
-        allow read, write: if isSignedIn() && (isAdmin() || get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]));
+        allow read: if isSignedIn() && (isAdmin() || get(/databases/$(database)/documents/chats/$(chatId)).data.trainerId == request.auth.uid || get(/databases/$(database)/documents/chats/$(chatId)).data.studentId == request.auth.uid);
+        allow create: if isSignedIn() && (isAdmin() || incoming().senderId == request.auth.uid);
       }
     }
 

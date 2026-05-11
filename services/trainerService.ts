@@ -9,7 +9,9 @@ export const trainerService = {
   getTrainerData: async (username: string): Promise<LandingPageData> => {
     // Try Firestore first for real data
     try {
-      const docRef = doc(db, 'landingPages', username.startsWith('@') ? username : `@${username}`);
+      const u = username.toLowerCase();
+      const formattedUsername = u.startsWith('@') ? u : `@${u}`;
+      const docRef = doc(db, 'landingPages', formattedUsername);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data() as LandingPageData;
@@ -17,6 +19,14 @@ export const trainerService = {
           ...defaultLandingPageData,
           ...data,
           username: data.username || username,
+          theme: { ...defaultLandingPageData.theme, ...(data.theme || {}) },
+          sections: { ...defaultLandingPageData.sections, ...(data.sections || {}) },
+          hero: { ...defaultLandingPageData.hero, ...(data.hero || {}) },
+          about: { ...defaultLandingPageData.about, ...(data.about || {}) },
+          results: { ...defaultLandingPageData.results, ...(data.results || {}) },
+          testimonials: { ...defaultLandingPageData.testimonials, ...(data.testimonials || {}) },
+          contact: { ...defaultLandingPageData.contact, ...(data.contact || {}) },
+          social: { ...defaultLandingPageData.social, ...(data.social || {}) },
         } as LandingPageData;
       }
     } catch (err) {
@@ -24,7 +34,7 @@ export const trainerService = {
     }
 
     // Fallback to localStorage for immediate feedback or legacy
-    const savedData = localStorage.getItem(`${STORAGE_KEY_PREFIX}${username.replace('@', '')}`);
+    const savedData = localStorage.getItem(`${STORAGE_KEY_PREFIX}${username.replace('@', '').toLowerCase()}`);
     let parsedData = null;
     if (savedData) {
       try {
@@ -33,6 +43,7 @@ export const trainerService = {
         console.error('Error parsing trainer data', e);
       }
     }
+    // ... rest of the logic remains same until next edit
 
     if (parsedData) {
       // Handle schema migration for results
@@ -66,8 +77,9 @@ export const trainerService = {
   },
 
   saveTrainerData: async (username: string, data: Partial<LandingPageData>) => {
-    // Save to Firestore
-    const formattedUsername = username.startsWith('@') ? username : `@${username}`;
+    // Save to Firestore with lowercase ID for robustness
+    const u = username.toLowerCase();
+    const formattedUsername = u.startsWith('@') ? u : `@${u}`;
     const docRef = doc(db, 'landingPages', formattedUsername);
     
     // Get current data to merge
@@ -85,7 +97,7 @@ export const trainerService = {
       // Still save to localStorage as backup/local state
     }
     
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${username.replace('@', '')}`, JSON.stringify(newData));
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${username.replace('@', '').toLowerCase()}`, JSON.stringify(newData));
     // Dispatch a custom event so other components (like landing page in same app) can update
     window.dispatchEvent(new CustomEvent('trainer_data_updated', { detail: { username, data: newData } }));
   },

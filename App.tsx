@@ -16,6 +16,7 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import ImpersonateWrapper from './pages/ImpersonateWrapper';
 import { User, UserRole } from './types';
 import { auth, syncUserToFirestore, logoutUser, db } from './services/firebase';
+import { dataService } from './services/dataService';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
 
@@ -48,28 +49,23 @@ const App: React.FC = () => {
           // Auto-link logic for pending requests from PublicLandingPage
           const pendingTrainerId = localStorage.getItem('pending_link_trainer_id');
           const pendingConsultMsg = localStorage.getItem('pending_consult_plan_message');
-          if (pendingTrainerId) {
+          if (pendingTrainerId && pendingTrainerId !== 'null' && pendingTrainerId !== 'undefined') {
              const uid = firebaseUser.uid;
-             const q = query(collection(db, 'linkRequests'), where('studentId', '==', uid), where('trainerId', '==', pendingTrainerId));
-             const res = await getDocs(q);
-             if (res.empty) {
-                const requestData: any = {
-                  studentId: uid,
-                  studentName: firebaseUser.displayName || 'Novo Aluno',
-                  studentEmail: firebaseUser.email,
-                  trainerId: pendingTrainerId,
-                  status: 'pending',
-                  createdAt: serverTimestamp()
-                };
-                if (pendingConsultMsg) {
-                  requestData.observation = pendingConsultMsg;
-                }
-                await addDoc(collection(db, 'linkRequests'), requestData);
+             const studentName = firebaseUser.displayName || 'Novo Aluno';
+             const studentAvatar = firebaseUser.photoURL || '';
+             
+             try {
+               // The dataService.requestLink already checks for duplicates
+               await dataService.requestLink(uid, pendingTrainerId, studentName, studentAvatar);
+               console.log("Successfully created pending link request for trainer:", pendingTrainerId);
+             } catch (err) {
+               console.error("Error processing pending link request:", err);
              }
+             
              localStorage.removeItem('pending_link_trainer_id');
              localStorage.removeItem('pending_link_trainer_name');
              if (pendingConsultMsg) {
-               alert("Sua solicitação de consulta de valor foi enviada! Após o personal aceitar seu vínculo, você poderá verificar os valores na aba Planos ou pelo Chat.");
+               alert("Sua solicitação de vínculo foi enviada! Após o personal aceitar, você poderá verificar os valores e treinos.");
                localStorage.removeItem('pending_consult_plan_message');
              }
           }

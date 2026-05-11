@@ -76,6 +76,16 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
     if (user.username) {
       setLoading(true);
       const fetchedData = await trainerService.getTrainerData(user.username.replace('@', ''));
+      
+      // Safety check to ensure any new sections added to defaultLandingPageData exist in the fetched state
+      const mergedSections = { ...defaultLandingPageData.sections, ...(fetchedData.sections || {}) };
+      for (const key of Object.keys(defaultLandingPageData.sections)) {
+         if (!mergedSections[key as keyof LandingPageData['sections']]) {
+            mergedSections[key as keyof LandingPageData['sections']] = defaultLandingPageData.sections[key as keyof LandingPageData['sections']];
+         }
+      }
+      fetchedData.sections = mergedSections;
+      
       setData(fetchedData);
       setTrainerURL(user.username.replace('@', ''));
       setLoading(false);
@@ -89,7 +99,17 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
   useEffect(() => {
     const handleUpdate = (e: any) => {
       if (e.detail.username === user.username?.replace('@', '')) {
-        setData(prev => ({ ...prev, ...e.detail.data }));
+        setData(prev => {
+           const newData = { ...prev, ...e.detail.data };
+           const mergedSections = { ...defaultLandingPageData.sections, ...(newData.sections || {}) };
+           for (const key of Object.keys(defaultLandingPageData.sections)) {
+             if (!mergedSections[key as keyof LandingPageData['sections']]) {
+                mergedSections[key as keyof LandingPageData['sections']] = defaultLandingPageData.sections[key as keyof LandingPageData['sections']];
+             }
+           }
+           newData.sections = mergedSections;
+           return newData;
+        });
       }
     };
     window.addEventListener("trainer_data_updated", handleUpdate);
@@ -108,7 +128,10 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
 
   const handleSave = async () => {
     if (user.username) {
-      await trainerService.saveTrainerData(user.username.replace('@', ''), data);
+      await trainerService.saveTrainerData(user.username.replace('@', ''), {
+        ...data,
+        trainerId: user.id
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     }
@@ -178,8 +201,9 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
   const sectionLabels: Record<keyof LandingPageData['sections'], string> = {
     about: "Sobre Mim",
     services: "Serviços Oferecidos",
-    testimonials: "Depoimentos",
+    testimonials: "O Que Meus Alunos Dizem",
     gallery: "Galeria de Resultados",
+    plans: "Escolha seu Plano",
     contact: "Fale Comigo"
   };
 
@@ -337,11 +361,6 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                      </label>
                   </div>
                ))}
-               
-               <div className="mt-4 p-4 bg-primary/10 border border-primary/30 rounded-xl flex items-start gap-3">
-                 <span className="material-symbols-outlined text-primary">info</span>
-                 <p className="text-xs text-[#8fc5a4]">A seção de <strong>Planos e Preços</strong> não pode ser ocultada ou reordenada por aqui. O conteúdo dela é gerado automaticamente a partir dos planos cadastrados no seu painel.</p>
-               </div>
             </div>
           )}
 
@@ -414,6 +433,15 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                   className="bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary resize-none"
                 ></textarea>
               </div>
+              <div className="flex flex-col gap-2">
+                 <label className="text-xs font-bold text-text-secondary">Texto do Botão WhatsApp (Nav)</label>
+                 <input
+                  type="text"
+                  value={data.hero.whatsappText || ""}
+                  onChange={(e) => updateData("hero", "whatsappText", e.target.value)}
+                  className="bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary"
+                />
+              </div>
 
               <div className="h-px bg-border-dark my-2 w-full"></div>
               
@@ -424,7 +452,6 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                       onClick={() => {
                          const newServices = [...data.services];
                          newServices.push({ id: Date.now(), icon: "fitness_center", title: "Novo Serviço", description: "Descrição" });
-                         updateData("services", "items", newServices); // Note: Should just update services array directly since it's an array at root level
                          setData(prev => ({ ...prev, services: newServices }));
                       }}
                       className="text-primary hover:text-white transition-colors text-xs font-bold flex items-center gap-1"
@@ -434,7 +461,18 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                  </div>
                  {data.services.map((service, i) => (
                     <div key={service.id} className="flex flex-col gap-2 bg-background-dark p-3 rounded-xl border border-border-dark">
-                       <div className="flex items-center justify-between">
+                       <div className="flex items-center justify-between gap-2">
+                         <input 
+                           type="text"
+                           value={service.icon || ""}
+                           onChange={(e) => {
+                              const newServices = [...data.services];
+                              newServices[i].icon = e.target.value;
+                              setData(prev => ({ ...prev, services: newServices }));
+                           }}
+                           className="text-xs text-primary bg-transparent outline-none border-b border-border-dark focus:border-primary w-20 shrink-0"
+                           placeholder="Icon (ex: star)"
+                         />
                          <input 
                            type="text"
                            value={service.title}
@@ -473,6 +511,18 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
 
               <div className="h-px bg-border-dark my-2 w-full"></div>
               
+              <div className="flex flex-col gap-2">
+                 <label className="text-xs font-bold text-text-secondary">Título "Galeria de Resultados"</label>
+                 <input
+                   type="text"
+                   value={data.results?.title || ""}
+                   onChange={(e) => updateData("results", "title", e.target.value)}
+                   className="bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary w-full"
+                 />
+              </div>
+
+              <div className="h-px bg-border-dark my-2 w-full"></div>
+              
               <div className="flex flex-col gap-3">
                  <div className="flex justify-between items-center">
                     <label className="text-xs font-bold text-white">Depoimentos</label>
@@ -486,6 +536,16 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                     >
                        <Plus size={14}/> Adicionar Depoimento
                     </button>
+                 </div>
+                 <div className="flex flex-col gap-2 mb-2">
+                    <label className="text-xs font-bold text-text-secondary">Título da Seção de Depoimentos</label>
+                    <input
+                      type="text"
+                      value={data.testimonials?.title || ""}
+                      onChange={(e) => updateData("testimonials", "title", e.target.value)}
+                      placeholder="Título..."
+                      className="bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary w-full"
+                    />
                  </div>
                  {data.testimonials.items.map((testimonial, i) => (
                     <div key={testimonial.id} className="flex flex-col gap-2 bg-background-dark p-3 rounded-xl border border-border-dark">
@@ -515,7 +575,7 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                        </div>
                        <input 
                            type="text"
-                           value={testimonial.role}
+                           value={testimonial.role || ""}
                            onChange={(e) => {
                               const newTestimonials = { ...data.testimonials };
                               newTestimonials.items[i].role = e.target.value;
@@ -526,7 +586,7 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                        />
                        <input 
                            type="text"
-                           value={testimonial.image}
+                           value={testimonial.image || ""}
                            onChange={(e) => {
                               const newTestimonials = { ...data.testimonials };
                               newTestimonials.items[i].image = e.target.value;
@@ -536,7 +596,7 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                            placeholder="URL da Foto do Aluno"
                        />
                        <textarea 
-                         value={testimonial.text}
+                         value={testimonial.text || ""}
                          onChange={(e) => {
                             const newTestimonials = { ...data.testimonials };
                             newTestimonials.items[i].text = e.target.value;
@@ -550,6 +610,26 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                  ))}
                  {data.testimonials.items.length === 0 && <p className="text-xs text-text-secondary">Nenhum depoimento cadastrado.</p>}
               </div>
+
+               <div className="h-px bg-border-dark my-2 w-full"></div>
+               
+               <div className="flex flex-col gap-2">
+                 <label className="text-xs font-bold text-white">Contato ("Fale Comigo")</label>
+                 <input
+                   type="text"
+                   value={data.contact?.title || ""}
+                   onChange={(e) => updateData("contact", "title", e.target.value)}
+                   placeholder="Título (ex: Fale Comigo)"
+                   className="bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary"
+                 />
+                 <textarea
+                   rows={2}
+                   value={data.contact?.description || ""}
+                   onChange={(e) => updateData("contact", "description", e.target.value)}
+                   placeholder="Descrição do contato"
+                   className="bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary resize-none mt-1"
+                 ></textarea>
+               </div>
 
             </div>
           )}
@@ -663,6 +743,28 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                   type="text"
                   value={data.social.whatsapp}
                   onChange={(e) => updateData("social", "whatsapp", e.target.value)}
+                  className="bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-text-secondary flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">facebook</span> Facebook URL
+                </label>
+                <input
+                  type="text"
+                  value={data.social.facebook || ""}
+                  onChange={(e) => updateData("social", "facebook", e.target.value)}
+                  className="bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-text-secondary flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">smart_display</span> Youtube URL
+                </label>
+                <input
+                  type="text"
+                  value={data.social.youtube || ""}
+                  onChange={(e) => updateData("social", "youtube", e.target.value)}
                   className="bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-primary"
                 />
               </div>

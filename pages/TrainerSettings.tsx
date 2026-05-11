@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { dataService } from '../services/dataService';
 import { auth } from '../services/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 
 interface TrainerSettingsProps {
   user: User;
@@ -78,6 +78,9 @@ const TrainerSettings: React.FC<TrainerSettingsProps> = ({ user }) => {
          specialty,
          bio
        });
+       if (auth.currentUser) {
+         await updateProfile(auth.currentUser, { displayName: name });
+       }
        setSuccessMsg('Perfil atualizado com sucesso!');
        setTimeout(() => setSuccessMsg(''), 5000);
     } catch (err) {

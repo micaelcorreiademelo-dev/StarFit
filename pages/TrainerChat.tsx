@@ -1,98 +1,83 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User } from '../types';
+import { User, Chat, ChatMessage } from '../types';
+import { chatService } from '../services/chatService';
+import { dataService } from '../services/dataService';
 
-interface Message {
-  id: string;
-  text: string;
-  time: string;
-  sender: 'me' | 'them';
-  status?: 'sent' | 'delivered' | 'read';
+interface TrainerChatProps {
+  user: User;
 }
 
-interface Conversation {
-  id: string;
-  name: string;
-  avatar: string;
-  lastMessage: string;
-  time: string;
-  unreadCount: number;
-  messages: Message[];
-}
-
-    const MOCK_CONVERSATIONS: Conversation[] = [
-      {
-        id: '1',
-        name: 'Ana Beatriz',
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA5VLTNU-0_iZofcLVIqmdRzFt7RewDs7QzmWFfjrPPXNVXZxxyvYpczuWxGsqrvafAI17OolcnmuoYAcZkOOr8cy8eFRwanHpMnjVenlFyHAHKy26AFiWupgLlXUCmjq-I0QuiDxliv320NcBplxWOSw9-cRSOYOtNhtbCbhtjgVFKEIbjT6o5vdV8sNejgOj-LHDx0Y9zXogY0L5HHuOr1ozOdXFddNzghxl7-crzm2f0_yeCLTdCbDtsqXDYJvCOZ2Z0MmlOGds',
-        lastMessage: 'Ótimo, vou ajustar aqui!',
-        time: '10:42',
-        unreadCount: 2,
-        messages: [
-          { id: 'm1', text: 'Olá Carlos, tudo bem? Podemos ajustar meu treino de amanhã para o período da manhã?', time: '10:40', sender: 'them' },
-          { id: 'm2', text: 'Olá Ana! Tudo ótimo. Claro, podemos sim. Qual horário fica melhor para você?', time: '10:41', sender: 'me', status: 'read' },
-          { id: 'm3', text: 'Ótimo, vou ajustar aqui!', time: '10:42', sender: 'them' },
-          { id: 'm4', text: 'Combinado! Treino atualizado para amanhã às 8h.', time: '10:42', sender: 'me', status: 'sent' }
-        ]
-      },
-      {
-        id: '2',
-        name: 'João Victor',
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAdi5oyFqK7HNG8M-7GdCaQg5NrGe67Vk3-atEKEFo4TaSmmjeNyH95TWZC-PqCRYMInPTM0k7uDUTj68oUZD2ZWIi_p8ae96RXvhf6RYu3XBsVBFrcIneZ8Ban2hp3y5Yu90xYVWCi6kPmrBxww8hsC3FXB5-y1UuxAtuhNp6d3fsUhgPtKOTyHhlY5YqVtzTdLq5Gb0b8uThAPtwlUL_iFXPfoDsYXkhF0vJkBtzAkYKx4yAeU0a7oXLOWAe33MRbv6Ch5XZd094',
-        lastMessage: 'Combinado. Te vejo amanhã.',
-        time: 'Ontem',
-        unreadCount: 0,
-        messages: []
-      },
-      {
-        id: '3',
-        name: 'Mariana Costa',
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD3FrAz5aoWVKDobuil1U2_zX4Nt_jvO31UtGLieKLUkajBaCzz13lpX0Tfnt-e23PPDdXSzQLpO-KX99CstFosPMJyK3HHPifcSO581AI7jgPwCt-SWnNjYcmsan9yHxH6E0YW1J0QXW7qu7BXfB8bxOnVJROqI74IdDm39ayWaIyhVrYEXjqVZZDBipnKbUEfkavgzpOlADW_Vb70MZqpzwoDeN_Ez5jp63DDA2gi5o0S2jlQQwWpzb6tKV6xXf3wDdaDFwk7cDw',
-        lastMessage: 'O treino hoje foi intenso!',
-        time: '2d atrás',
-        unreadCount: 0,
-        messages: []
-      }
-    ];
-
-const TrainerChat: React.FC = () => {
-  const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
-  const [activeConvId, setActiveConvId] = useState('1');
+const TrainerChat: React.FC<TrainerChatProps> = ({ user }) => {
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
 
-  const activeConv = conversations.find(c => c.id === activeConvId);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+  // Subscribe to trainer's students
+  useEffect(() => {
+    if (!user.id) return;
+    const unsubStudents = dataService.subscribeToStudents(user.id, (fetchedStudents) => {
+      setStudents(fetchedStudents);
+      setLoading(false);
+      // Auto-select first student if none selected
+      if (fetchedStudents.length > 0 && !selectedStudentId) {
+        setSelectedStudentId(fetchedStudents[0].id);
+      }
+    });
+    return () => unsubStudents();
+  }, [user.id, selectedStudentId]);
+
+  // Get or create chatId for selected student
+  useEffect(() => {
+    if (selectedStudentId && user.id) {
+      chatService.getOrCreateChat(user.id, selectedStudentId).then(id => {
+        setActiveChatId(id);
+      });
+    }
+  }, [selectedStudentId, user.id]);
+
+  // Subscribe to messages of active chat
+  useEffect(() => {
+    if (!activeChatId) {
+      setMessages([]);
+      return;
+    }
+    const unsubMessages = chatService.subscribeToMessages(activeChatId, setMessages);
+    return () => unsubMessages();
+  }, [activeChatId]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [activeConv?.messages]);
+  }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim() || !activeConv) return;
+  const activeStudent = students.find(s => s.id === selectedStudentId);
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputValue,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      sender: 'me',
-      status: 'sent'
-    };
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || !activeChatId || !selectedStudentId) return;
 
-    setConversations(prev => prev.map(c => {
-      if (c.id === activeConvId) {
-        return {
-          ...c,
-          lastMessage: inputValue,
-          time: newMessage.time,
-          messages: [...c.messages, newMessage]
-        };
-      }
-      return c;
-    }));
-
+    const receiverId = selectedStudentId;
+    const text = inputValue;
     setInputValue('');
+
+    await chatService.sendMessage(activeChatId, user.id, receiverId, text);
+  };
+
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return '';
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
   };
 
   return (
@@ -100,103 +85,104 @@ const TrainerChat: React.FC = () => {
       {/* Conversation List Panel */}
       <aside className="flex flex-col w-full sm:w-80 lg:w-96 bg-card-dark border-r border-border-dark shrink-0">
         <div className="p-4 border-b border-border-dark">
-          <h2 className="text-2xl font-bold text-text-primary mb-4">Conversas</h2>
-          <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-sm">search</span>
-            <input 
-              className="w-full bg-background-dark border-border-dark rounded-lg py-2 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-secondary focus:ring-primary focus:border-primary transition-all" 
-              placeholder="Buscar conversas" 
-            />
-          </div>
+          <h2 className="text-2xl font-bold text-text-primary mb-4">Alunos</h2>
         </div>
         <div className="flex-grow overflow-y-auto">
-          {conversations.map((conv) => (
+          {students.map((student) => (
             <div 
-              key={conv.id}
-              onClick={() => setActiveConvId(conv.id)}
-              className={`flex gap-4 px-4 py-3 justify-between cursor-pointer transition-colors ${activeConvId === conv.id ? 'bg-primary/20' : 'bg-transparent hover:bg-white/5'}`}
+              key={student.id}
+              onClick={() => setSelectedStudentId(student.id)}
+              className={`flex gap-4 px-4 py-3 justify-between cursor-pointer transition-colors ${selectedStudentId === student.id ? 'bg-primary/20' : 'bg-transparent hover:bg-white/5'}`}
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-4 flex-1 overflow-hidden">
                 <div 
                   className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-[56px] w-[56px] relative shrink-0" 
-                  style={{ backgroundImage: `url("${conv.avatar}")` }}
+                  style={{ backgroundImage: `url("${student.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'}")` }}
                 >
+                  {student.status === 'Ativa' ? (
+                    <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-primary ring-2 ring-card-dark"></span>
+                  ) : (
+                    <span className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-card-dark ${
+                      student.trialUntil && new Date() > (student.trialUntil?.toDate ? student.trialUntil.toDate() : new Date(student.trialUntil))
+                      ? 'bg-red-500' : 'bg-amber-500'
+                    }`}></span>
+                  )}
                 </div>
                 <div className="flex flex-1 flex-col justify-center overflow-hidden">
-                  <p className="text-text-primary text-base font-medium leading-normal truncate">{conv.name}</p>
-                  <p className={`text-sm leading-normal truncate ${conv.unreadCount > 0 ? 'text-primary font-semibold' : 'text-text-secondary'}`}>
-                    {conv.lastMessage}
-                  </p>
-                </div>
-              </div>
-              <div className="shrink-0 flex flex-col items-end gap-1">
-                <p className="text-text-secondary text-xs font-normal">{conv.time}</p>
-                {conv.unreadCount > 0 && (
-                  <div className="flex size-5 items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">
-                    {conv.unreadCount}
+                  <p className="text-text-primary text-base font-black uppercase tracking-tight truncate leading-tight mb-0.5">{student.name}</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                      student.status === 'Ativa' ? 'bg-primary/20 text-primary' : 'bg-amber-500/20 text-amber-500'
+                    }`}>
+                      {student.status || 'Pendente'}
+                    </span>
+                    {student.trialUntil && student.status !== 'Ativa' && (
+                       <span className="text-[9px] text-text-secondary truncate italic uppercase font-bold tracking-tighter">
+                         Trial: {new Date(student.trialUntil?.toDate ? student.trialUntil.toDate() : student.trialUntil).toLocaleDateString()}
+                       </span>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           ))}
+          {students.length === 0 && !loading && (
+            <div className="p-8 text-center text-text-secondary text-sm">
+              Nenhum aluno vinculado.
+            </div>
+          )}
         </div>
       </aside>
 
       {/* Main Chat Area */}
       <main className="flex flex-col flex-1 bg-background-dark">
-        {activeConv ? (
+        {activeStudent ? (
           <>
             {/* Chat Header */}
             <header className="flex items-center p-4 border-b border-border-dark bg-card-dark shrink-0">
               <div className="flex items-center gap-4">
                 <div 
                   className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12 border border-border-dark" 
-                  style={{ backgroundImage: `url("${activeConv.avatar}")` }}
+                  style={{ backgroundImage: `url("${activeStudent.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'}")` }}
                 ></div>
                 <div>
-                  <h3 className="text-lg font-bold text-text-primary">{activeConv.name}</h3>
+                  <h3 className="text-lg font-bold text-text-primary">{activeStudent.name}</h3>
+                  <p className="text-xs text-text-secondary">{activeStudent.plan || 'Aluno StarFit'}</p>
                 </div>
               </div>
             </header>
 
             {/* Message History */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="text-center text-[10px] text-text-secondary uppercase tracking-widest font-bold">Hoje</div>
-              
-              {activeConv.messages.length > 0 ? (
-                activeConv.messages.map((msg) => (
+              {messages.length > 0 ? (
+                messages.map((msg) => (
                   <div 
                     key={msg.id} 
-                    className={`flex items-end gap-3 ${msg.sender === 'me' ? 'justify-end' : 'max-w-xl'}`}
+                    className={`flex items-end gap-3 ${msg.senderId === user.id ? 'justify-end' : 'max-w-xl'}`}
                   >
-                    {msg.sender === 'them' && (
+                    {msg.senderId !== user.id && (
                       <div 
                         className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-8 w-8 shrink-0 border border-border-dark" 
-                        style={{ backgroundImage: `url("${activeConv.avatar}")` }}
+                        style={{ backgroundImage: `url("${activeStudent.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'}")` }}
                       ></div>
                     )}
                     <div className={`rounded-2xl p-3 shadow-sm relative ${
-                      msg.sender === 'me' 
+                      msg.senderId === user.id 
                         ? 'bg-primary text-background-dark rounded-br-none' 
                         : 'bg-card-dark text-text-primary rounded-bl-none border border-border-dark'
                     }`}>
-                      <p className="text-sm leading-relaxed">{msg.text}</p>
-                      <div className={`flex items-center gap-1 mt-1 ${msg.sender === 'me' ? 'justify-end' : 'justify-end'}`}>
-                        <p className={`text-[10px] ${msg.sender === 'me' ? 'text-background-dark/70' : 'text-text-secondary'}`}>
-                          {msg.time}
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                      <div className={`flex items-center gap-1 mt-1 ${msg.senderId === user.id ? 'justify-end' : 'justify-end'}`}>
+                        <p className={`text-[10px] ${msg.senderId === user.id ? 'text-background-dark/70' : 'text-text-secondary'}`}>
+                          {formatTimestamp(msg.timestamp)}
                         </p>
-                        {msg.sender === 'me' && (
-                          <span className={`material-symbols-outlined !text-xs ${msg.status === 'read' ? 'fill' : ''} ${msg.sender === 'me' ? 'text-background-dark/70' : 'text-primary'}`}>
-                            {msg.status === 'read' ? 'done_all' : 'done'}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="h-full flex items-center justify-center text-text-secondary text-sm italic">
-                  Nenhuma mensagem ainda. Inicie a conversa!
+                  Nenhuma mensagem ainda. Inicie a conversa com {activeStudent.name}!
                 </div>
               )}
             </div>
