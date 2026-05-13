@@ -76,6 +76,20 @@
         "color": { "type": "string" }
       }
     },
+    "Exercise": {
+      "title": "Exercise",
+      "description": "An exercise stored in the trainer's library",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trainerId": { "type": "string" },
+        "name": { "type": "string" },
+        "group": { "type": "string" },
+        "equip": { "type": "string" },
+        "desc": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "LinkRequest": {
       "title": "Link Request",
       "description": "Request to link a student to a trainer",
@@ -126,6 +140,7 @@
     "/landingPages/{username}": { "schema": "LandingPage", "description": "Landing page data keyed by username" },
     "/students/{userId}": { "schema": "StudentStats", "description": "Students stats collection" },
     "/workouts/{workoutId}": { "schema": "Workout", "description": "Workouts collection" },
+    "/exercises/{exerciseId}": { "schema": "Exercise", "description": "Exercises collection" },
     "/agendaEvents/{eventId}": { "schema": "AgendaEvent", "description": "Agenda events collection" },
     "/linkRequests/{requestId}": { "schema": "LinkRequest", "description": "Link requests collection" },
     "/chats/{chatId}/messages/{messageId}": { "schema": "ChatMessage", "description": "Chat messages collection" }

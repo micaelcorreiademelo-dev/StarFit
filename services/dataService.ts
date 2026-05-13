@@ -70,7 +70,62 @@ export const dataService = {
     }
   },
 
-  // Agenda
+  updateWorkout: async (workoutId: string, workoutData: any) => {
+    try {
+      const docRef = doc(db, 'workouts', workoutId);
+      await updateDoc(docRef, workoutData);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `workouts/${workoutId}`);
+    }
+  },
+
+  deleteWorkout: async (workoutId: string) => {
+    try {
+      const docRef = doc(db, 'workouts', workoutId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `workouts/${workoutId}`);
+    }
+  },
+
+  // Exercises (Library)
+  subscribeToExercises: (trainerId: string, callback: (exercises: any[]) => void) => {
+    const q = query(collection(db, 'exercises'), where('trainerId', '==', trainerId));
+    return onSnapshot(q, (snapshot) => {
+      const exercises = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      callback(exercises);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'exercises'));
+  },
+
+  createExercise: async (exerciseData: any) => {
+    try {
+      const docRef = await addDoc(collection(db, 'exercises'), {
+        ...exerciseData,
+        createdAt: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'exercises');
+    }
+  },
+
+  updateExercise: async (exerciseId: string, exerciseData: any) => {
+    try {
+      const docRef = doc(db, 'exercises', exerciseId);
+      await updateDoc(docRef, exerciseData);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `exercises/${exerciseId}`);
+    }
+  },
+
+  deleteExercise: async (exerciseId: string) => {
+    try {
+      const docRef = doc(db, 'exercises', exerciseId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `exercises/${exerciseId}`);
+    }
+  },
   subscribeToAgenda: (trainerId: string, callback: (events: any[]) => void) => {
     const q = query(collection(db, 'agendaEvents'), where('trainerId', '==', trainerId));
     return onSnapshot(q, (snapshot) => {

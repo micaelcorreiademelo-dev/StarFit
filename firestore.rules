@@ -41,14 +41,18 @@ service cloud.firestore {
     // --- Users ---
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isSignedIn() && (isAdmin() || resource.data.role == 'TRAINER' || resource.data.trainerId == request.auth.uid || resource.data.email == request.auth.token.email);
+      allow list: if isSignedIn() && (isAdmin() || 
+        ('role' in resource.data && resource.data.role == 'TRAINER') || 
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) || 
+        ('email' in resource.data && resource.data.email == request.auth.token.email)
+      );
       allow create: if isOwner(userId) && isValidUser(incoming());
       
       // Standard update for owners and admins
       allow update: if (isOwner(userId) || isAdmin()) && (
         isValidUser(incoming()) && 
         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'birthdate', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications', 'privacy']) && 
-        (isAdmin() || incoming().role == existing().role)
+        (isAdmin() || ('role' in incoming() && 'role' in existing() && incoming().role == existing().role))
       );
 
       // Specific update for trainers managing their students
@@ -59,7 +63,7 @@ service cloud.firestore {
       function isValidUser(data) {
         return data.keys().hasAll(['id', 'name', 'email', 'role']) &&
                data.id == userId &&
-               (isAdmin() || data.email == request.auth.token.email || (resource != null && data.email == resource.data.email)) &&
+               (isAdmin() || data.email == request.auth.token.email || (resource != null && 'email' in resource.data && data.email == resource.data.email)) &&
                data.role in ['ADMIN', 'TRAINER', 'STUDENT'] &&
                data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
                (!('username' in data) || (data.username is string && data.username.size() <= 50)) &&
@@ -77,17 +81,17 @@ service cloud.firestore {
 
       function isTrainerApproving(targetStudentId) {
         return isSignedIn() && 
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER' &&
-               incoming().trainerId == request.auth.uid &&
+               ('role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER') &&
+               ('trainerId' in incoming() && incoming().trainerId == request.auth.uid) &&
                incoming().diff(existing()).affectedKeys().hasOnly(['trainerId', 'updatedAt', 'trialUntil']);
       }
 
       function isTrainerManagingStudent(targetStudentId) {
         return isSignedIn() &&
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER' &&
-               existing().trainerId == request.auth.uid &&
+               ('role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER') &&
+               ('trainerId' in existing() && existing().trainerId == request.auth.uid) &&
                incoming().diff(existing()).affectedKeys().hasOnly(['trialUntil', 'updatedAt', 'plan', 'expDate', 'status', 'subscriptionExpiry', 'trainerId']) &&
-               (incoming().get('trainerId', null) == existing().trainerId || incoming().get('trainerId', null) == null);
+               (incoming().get('trainerId', null) == existing().get('trainerId', null) || incoming().get('trainerId', null) == null);
       }
     }
 
@@ -95,10 +99,29 @@ service cloud.firestore {
 
     // --- Workouts ---
     match /workouts/{workoutId} {
-      allow read: if isAdmin() || (isSignedIn() && (resource.data.trainerId == request.auth.uid || resource.data.studentId == request.auth.uid || (request.auth.uid in resource.data.studentIds)));
-      allow create: if isSignedIn() && (isAdmin() || incoming().trainerId == request.auth.uid);
-      allow update: if isSignedIn() && (isAdmin() || existing().trainerId == request.auth.uid);
-      allow delete: if isSignedIn() && (isAdmin() || existing().trainerId == request.auth.uid);
+      allow read: if isAdmin() || (isSignedIn() && (
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) || 
+        ('studentId' in resource.data && resource.data.studentId == request.auth.uid) || 
+        ('studentIds' in resource.data && request.auth.uid in resource.data.studentIds)
+      ));
+      allow create: if isSignedIn() && (isAdmin() || ('trainerId' in incoming() && incoming().trainerId == request.auth.uid));
+      allow update: if isSignedIn() && (isAdmin() || 
+        ('trainerId' in existing() && existing().trainerId == request.auth.uid) || 
+        ('studentId' in existing() && existing().studentId == request.auth.uid) || 
+        ('studentIds' in existing() && request.auth.uid in existing().studentIds)
+      );
+      allow delete: if isSignedIn() && (isAdmin() || ('trainerId' in existing() && existing().trainerId == request.auth.uid));
+    }
+
+    // --- Exercises ---
+    match /exercises/{exerciseId} {
+      allow read: if isSignedIn() && (isAdmin() || 
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) || 
+        ('studentId' in resource.data && resource.data.studentId == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (isAdmin() || ('trainerId' in incoming() && incoming().trainerId == request.auth.uid));
+      allow update: if isSignedIn() && (isAdmin() || ('trainerId' in existing() && existing().trainerId == request.auth.uid));
+      allow delete: if isSignedIn() && (isAdmin() || ('trainerId' in existing() && existing().trainerId == request.auth.uid));
     }
 
     // --- Agenda Events ---
@@ -112,11 +135,14 @@ service cloud.firestore {
 
     // --- Link Requests ---
     match /linkRequests/{requestId} {
-      allow read: if isSignedIn() && (isAdmin() || resource.data.studentId == request.auth.uid || resource.data.trainerId == request.auth.uid);
+      allow read: if isSignedIn() && (isAdmin() || 
+        ('studentId' in resource.data && resource.data.studentId == request.auth.uid) || 
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid)
+      );
       allow create: if isSignedIn() && incoming().studentId == request.auth.uid && isValidLinkRequest(incoming());
       allow update: if isSignedIn() && (
-        (existing().studentId == request.auth.uid && incoming().status == 'cancelled') ||
-        (existing().trainerId == request.auth.uid && incoming().status in ['approved', 'rejected'])
+        ('studentId' in existing() && existing().studentId == request.auth.uid && incoming().status == 'cancelled') ||
+        ('trainerId' in existing() && existing().trainerId == request.auth.uid && incoming().status in ['approved', 'rejected'])
       ) && isValidLinkRequest(incoming());
       allow delete: if isAdmin();
 
@@ -132,22 +158,37 @@ service cloud.firestore {
     // --- Chats ---
     match /chats/{chatId} {
       allow get: if isSignedIn() && (isAdmin() || chatId.matches(".*" + request.auth.uid + ".*"));
-      allow list: if isSignedIn() && (isAdmin() || resource.data.trainerId == request.auth.uid || resource.data.studentId == request.auth.uid);
-      allow create: if isSignedIn() && (isAdmin() || incoming().trainerId == request.auth.uid || incoming().studentId == request.auth.uid);
-      allow update: if isSignedIn() && (isAdmin() || existing().trainerId == request.auth.uid || existing().studentId == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || 
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) || 
+        ('studentId' in resource.data && resource.data.studentId == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (isAdmin() || 
+        ('trainerId' in incoming() && incoming().trainerId == request.auth.uid) || 
+        ('studentId' in incoming() && incoming().studentId == request.auth.uid)
+      );
+      allow update: if isSignedIn() && (isAdmin() || 
+        ('trainerId' in existing() && existing().trainerId == request.auth.uid) || 
+        ('studentId' in existing() && existing().studentId == request.auth.uid)
+      );
       
       match /messages/{messageId} {
-        allow read: if isSignedIn() && (isAdmin() || get(/databases/$(database)/documents/chats/$(chatId)).data.trainerId == request.auth.uid || get(/databases/$(database)/documents/chats/$(chatId)).data.studentId == request.auth.uid);
-        allow create: if isSignedIn() && (isAdmin() || incoming().senderId == request.auth.uid);
+        allow read: if isSignedIn() && (isAdmin() || 
+          ('trainerId' in get(/databases/$(database)/documents/chats/$(chatId)).data && get(/databases/$(database)/documents/chats/$(chatId)).data.trainerId == request.auth.uid) || 
+          ('studentId' in get(/databases/$(database)/documents/chats/$(chatId)).data && get(/databases/$(database)/documents/chats/$(chatId)).data.studentId == request.auth.uid)
+        );
+        allow create: if isSignedIn() && (isAdmin() || ('senderId' in incoming() && incoming().senderId == request.auth.uid));
       }
     }
 
     // --- Progress ---
     match /progress/{progressId} {
-      allow read: if isSignedIn() && (isAdmin() || resource.data.studentId == request.auth.uid || resource.data.trainerId == request.auth.uid);
-      allow create: if isSignedIn() && (isAdmin() || incoming().studentId == request.auth.uid);
-      allow update: if isSignedIn() && (isAdmin() || existing().studentId == request.auth.uid);
-      allow delete: if isSignedIn() && (isAdmin() || existing().studentId == request.auth.uid);
+      allow read: if isSignedIn() && (isAdmin() || 
+        ('studentId' in resource.data && resource.data.studentId == request.auth.uid) || 
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (isAdmin() || ('studentId' in incoming() && incoming().studentId == request.auth.uid));
+      allow update: if isSignedIn() && (isAdmin() || ('studentId' in existing() && existing().studentId == request.auth.uid));
+      allow delete: if isSignedIn() && (isAdmin() || ('studentId' in existing() && existing().studentId == request.auth.uid));
     }
     // --- Platform Plans ---
     match /platformPlans/{planId} {

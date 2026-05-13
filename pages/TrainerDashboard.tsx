@@ -214,6 +214,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const prevRequestsCountRef = useRef(0);
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const [workouts, setWorkouts] = useState<any[]>([]);
+  const [libraryExercises, setLibraryExercises] = useState<any[]>([]);
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [editingEx, setEditingEx] = useState<any>(null);
   const [platformPlans, setPlatformPlans] = useState<any[]>([]);
   const [trainerCustomPlans, setTrainerCustomPlans] = useState<any[]>([]);
   const [latestChat, setLatestChat] = useState<any>(null);
@@ -250,6 +253,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     });
     const unsubStudents = dataService.subscribeToStudents(user.id, setStudentsData);
     const unsubWorkouts = dataService.subscribeToWorkouts(user.id, setWorkouts);
+    const unsubExercises = dataService.subscribeToExercises(user.id, setLibraryExercises);
     const unsubPlatformPlans = dataService.subscribeToPlatformPlans(setPlatformPlans);
     
     // Subscribe to latest chat
@@ -264,6 +268,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       unsubRequests();
       unsubStudents();
       unsubWorkouts();
+      unsubExercises();
       unsubPlatformPlans();
       unsubChats();
     };
@@ -369,6 +374,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
   // Estados para o Criador de Treinos
   const [activeWorkoutTab, setActiveWorkoutTab] = useState("A");
+  const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null);
   const [workoutName, setWorkoutName] = useState("");
   const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
@@ -1074,12 +1080,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     <option key={w.id} value={w.id}>{w.name}</option>
                   ))}
                   {workouts.length === 0 && (
-                    <>
-                      <option value="Hipertrofia A - Peito">Hipertrofia A - Peito</option>
-                      <option value="Hipertrofia B - Costas">Hipertrofia B - Costas</option>
-                      <option value="Emagrecimento Fullbody">Emagrecimento Fullbody</option>
-                      <option value="Adaptação Iniciante">Adaptação Iniciante</option>
-                    </>
+                    <option value="" disabled>Nenhuma ficha disponível. Crie uma ficha primeiro.</option>
                   )}
                 </select>
               </div>
@@ -1087,6 +1088,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-border-dark">
                 <button
                   onClick={() => {
+                    setEditingWorkoutId('new');
+                    setExercises([]);
                     setWorkoutName(`Treino Exclusivo - ${linkingWorkoutStudent.name}`);
                     setActiveTab("workouts");
                     setLinkingWorkoutStudent(null);
@@ -1775,28 +1778,34 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <div className="flex items-center justify-between">
               <h3 className="text-white font-bold">Fichas Recentes</h3>
             </div>
-            {[
-              "Hipertrofia A - Peito",
-              "Hipertrofia B - Costas",
-              "Emagrecimento Fullbody",
-              "Adaptação Iniciante",
-            ].map((t, i) => (
+            {workouts.map((w) => (
               <div
-                key={i}
-                className="flex flex-col rounded-lg bg-background-dark border border-border-dark hover:border-primary/50 transition-all group overflow-hidden"
+                key={w.id}
+                className={`flex flex-col rounded-lg bg-background-dark border ${editingWorkoutId === w.id ? 'border-primary ring-1 ring-primary/50' : 'border-border-dark hover:border-primary/50'} transition-all group overflow-hidden`}
               >
-                <button className="flex items-center justify-between p-3 text-left w-full focus:outline-none">
-                  <span className="text-sm text-text-primary group-hover:text-white font-medium">
-                    {t}
+                <button 
+                  onClick={() => {
+                    setEditingWorkoutId(w.id);
+                    setWorkoutName(w.name || w.title || "Treino sem nome");
+                    setExercises(w.exercises || []);
+                  }}
+                  className="flex items-center justify-between p-3 text-left w-full focus:outline-none"
+                >
+                  <span className={`text-sm font-medium ${editingWorkoutId === w.id ? 'text-primary font-bold' : 'text-text-primary group-hover:text-white'}`}>
+                    {w.name || w.title || "Treino sem nome"}
                   </span>
-                  <span className="material-symbols-outlined text-text-secondary text-sm group-hover:text-primary">
+                  <span className={`material-symbols-outlined text-sm ${editingWorkoutId === w.id ? 'text-primary' : 'text-text-secondary group-hover:text-primary'}`}>
                     edit
                   </span>
                 </button>
                 <div className="flex border-t border-border-dark divide-x divide-border-dark opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                   <button
                     title="Vincular a Aluno"
-                    onClick={() => setActiveTab("students")}
+                    onClick={() => {
+                      // Navigate to students tab to select student
+                      setActiveTab("students");
+                      setSelectedWorkoutToLink(w.id);
+                    }}
                     className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">
@@ -1805,6 +1814,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   </button>
                   <button
                     title="Duplicar"
+                    onClick={async () => {
+                      await dataService.createWorkout({
+                        name: `${w.name || w.title || "Treino sem nome"} (Cópia)`,
+                        exercises: w.exercises || [],
+                        trainerId: user.id
+                      });
+                    }}
                     className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/5 transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">
@@ -1813,6 +1829,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   </button>
                   <button
                     title="Excluir"
+                    onClick={async () => {
+                      if (window.confirm("Deseja realmente excluir esta ficha?")) {
+                        await dataService.deleteWorkout(w.id);
+                        if (editingWorkoutId === w.id) {
+                          setEditingWorkoutId(null);
+                          setWorkoutName("");
+                          setExercises([]);
+                        }
+                      }
+                    }}
                     className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">
@@ -1822,7 +1848,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 </div>
               </div>
             ))}
-            <button className="w-full py-3 mt-2 rounded-lg border border-dashed border-primary/30 text-primary font-bold text-sm hover:bg-primary/10 transition-colors flex items-center justify-center gap-2">
+            <button 
+              onClick={() => {
+                setEditingWorkoutId("new");
+                setWorkoutName("Nova Ficha");
+                setExercises([]);
+              }}
+              className="w-full py-3 mt-2 rounded-lg border border-dashed border-primary/30 text-primary font-bold text-sm hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
+            >
               <span className="material-symbols-outlined">add</span>
               Nova Ficha
             </button>
@@ -1831,29 +1864,163 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
         {/* Editor de Treino */}
         <div className="lg:col-span-3 flex flex-col gap-6">
-          <div className="bg-card-dark rounded-xl border border-border-dark p-12 shadow-sm flex flex-col items-center justify-center text-center gap-4">
-            <div className="size-16 rounded-full bg-white/5 flex items-center justify-center text-text-secondary">
-              <span className="material-symbols-outlined text-4xl">
-                fitness_center
-              </span>
+          {editingWorkoutId ? (
+            <div className="bg-card-dark rounded-xl border border-border-dark flex flex-col shadow-[0_0_20px_rgba(0,0,0,0.1)] overflow-hidden">
+              <div className="p-6 border-b border-border-dark flex items-center justify-between">
+                <input 
+                  type="text" 
+                  value={workoutName}
+                  onChange={(e) => setWorkoutName(e.target.value)}
+                  className="bg-transparent border-none text-white text-2xl font-black w-full focus:outline-none focus:ring-0 placeholder-text-secondary/50"
+                  placeholder="Nome do Treino (ex: Treino A - Costas e Bíceps)"
+                />
+                <button
+                  onClick={async () => {
+                    if (!workoutName.trim()) {
+                      alert("O treino precisa de um nome.");
+                      return;
+                    }
+                    if (editingWorkoutId === 'new') {
+                      await dataService.createWorkout({
+                        name: workoutName,
+                        exercises: exercises,
+                        trainerId: user.id
+                      });
+                    } else {
+                      await dataService.updateWorkout(editingWorkoutId, {
+                        name: workoutName,
+                        exercises: exercises
+                      });
+                    }
+                    setEditingWorkoutId(null);
+                    alert("Treino salvo com sucesso!");
+                  }}
+                  className="flex min-w-[120px] items-center justify-center gap-2 px-6 py-2 bg-primary text-background-dark hover:brightness-110 transition-colors rounded-lg font-bold shadow-lg shadow-primary/20 shrink-0"
+                >
+                  <span className="material-symbols-outlined text-base">save</span>
+                  Salvar
+                </button>
+              </div>
+
+              <div className="p-6 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-white font-bold uppercase tracking-widest text-sm flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-primary text-[18px]">format_list_numbered</span>
+                    Exercícios do Treino ({exercises.length})
+                  </h3>
+                  <button
+                    onClick={addExercise}
+                    className="flex items-center gap-1.5 px-4 py-1.5 border border-dashed border-primary/30 text-primary hover:bg-primary/10 transition-colors rounded-lg text-xs font-bold"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">add</span>
+                    Adicionar Manual
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {exercises.map((ex, index) => (
+                    <div 
+                      key={ex.id}
+                      className="group flex flex-col sm:flex-row gap-4 p-4 border border-border-dark bg-background-dark/50 rounded-xl relative hover:border-primary/50 transition-all"
+                    >
+                      <button className="absolute -left-3 top-1/2 -translate-y-1/2 bg-card-dark border border-border-dark rounded-full size-6 flex items-center justify-center text-text-secondary cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="material-symbols-outlined text-[14px]">drag_indicator</span>
+                      </button>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={ex.name}
+                          onChange={(e) => {
+                            const newEx = [...exercises];
+                            newEx[index].name = e.target.value;
+                            setExercises(newEx);
+                          }}
+                          placeholder="Nome do Exercício"
+                          className="bg-transparent text-white font-bold text-lg w-full focus:outline-none focus:ring-0 placeholder-text-secondary/50 mb-2 border-b border-transparent focus:border-border-dark transition-colors pb-1"
+                        />
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">Séries</span>
+                            <input
+                              type="text"
+                              value={ex.sets}
+                              onChange={(e) => {
+                                const newEx = [...exercises];
+                                newEx[index].sets = e.target.value;
+                                setExercises(newEx);
+                              }}
+                              className="w-16 bg-card-dark border border-border-dark rounded px-2 py-1 text-white text-center focus:border-primary focus:outline-none transition-colors"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">Reps</span>
+                            <input
+                              type="text"
+                              value={ex.reps}
+                              onChange={(e) => {
+                                const newEx = [...exercises];
+                                newEx[index].reps = e.target.value;
+                                setExercises(newEx);
+                              }}
+                              className="w-20 bg-card-dark border border-border-dark rounded px-2 py-1 text-white text-center focus:border-primary focus:outline-none transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newEx = [...exercises];
+                          newEx.splice(index, 1);
+                          setExercises(newEx);
+                        }}
+                        className="self-start sm:self-center text-text-secondary hover:text-red-500 transition-colors p-2"
+                        title="Remover exercício"
+                      >
+                        <span className="material-symbols-outlined text-xl">delete</span>
+                      </button>
+                    </div>
+                  ))}
+                  {exercises.length === 0 && (
+                    <div className="py-12 border-2 border-dashed border-border-dark rounded-xl flex flex-col items-center justify-center text-center">
+                      <span className="material-symbols-outlined text-4xl text-text-secondary mb-2 opacity-50">note_stack</span>
+                      <p className="text-text-secondary text-sm">Esta ficha ainda não tem exercícios.</p>
+                      <button onClick={addExercise} className="mt-4 text-primary font-bold text-sm flex items-center gap-1 hover:underline">
+                        Adicione um exercício agora <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div>
-              <h3 className="text-white font-bold text-lg">
-                Nenhum exercício selecionado
-              </h3>
-              <p className="text-text-secondary text-sm max-w-xs mx-auto">
-                Selecione uma ficha ao lado ou crie uma nova para começar a
-                editar os treinos.
-              </p>
+          ) : (
+            <div className="bg-card-dark rounded-xl border border-border-dark p-12 shadow-sm flex flex-col items-center justify-center text-center gap-4">
+              <div className="size-16 rounded-full bg-white/5 flex items-center justify-center text-text-secondary">
+                <span className="material-symbols-outlined text-4xl">
+                  fitness_center
+                </span>
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-lg">
+                  Nenhum treino selecionado
+                </h3>
+                <p className="text-text-secondary text-sm max-w-xs mx-auto">
+                  Selecione uma ficha ao lado ou crie uma nova para começar a
+                  editar os treinos.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingWorkoutId("new");
+                  setWorkoutName("Nova Ficha");
+                  setExercises([]);
+                }}
+                className="mt-2 flex items-center gap-2 px-6 py-2 rounded-lg bg-primary text-background-dark hover:brightness-110 transition-colors text-sm font-bold shadow-lg shadow-primary/20"
+              >
+                <span className="material-symbols-outlined text-base">add</span>
+                Nova Ficha
+              </button>
             </div>
-            <button
-              onClick={addExercise}
-              className="mt-2 flex items-center gap-2 px-6 py-2 rounded-lg bg-primary text-background-dark hover:brightness-110 transition-colors text-sm font-bold shadow-lg shadow-primary/20"
-            >
-              <span className="material-symbols-outlined text-base">add</span>
-              Novo Exercício
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -1886,7 +2053,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               className="w-full bg-background-dark border border-border-dark rounded-lg py-2 pl-10 pr-4 text-white text-sm focus:ring-1 focus:ring-primary focus:border-primary"
             />
           </div>
-          <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-primary text-background-dark font-bold rounded-lg text-sm hover:brightness-110 transition-colors shadow-lg shadow-primary/20">
+          <button 
+            onClick={() => {
+              setEditingEx(null);
+              setShowAddExerciseModal(true);
+            }}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-primary text-background-dark font-bold rounded-lg text-sm hover:brightness-110 transition-colors shadow-lg shadow-primary/20"
+          >
             <span className="material-symbols-outlined text-[18px]">add</span>
             Novo Exercício
           </button>
@@ -1925,66 +2098,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         {/* Exercise List */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-background-dark">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {[
-              {
-                name: "Supino Reto com Barra",
-                group: "Peito",
-                equip: "Barra, Banco",
-                fav: true,
-                desc: "Focar na contração do peitoral, descida controlada.",
-              },
-              {
-                name: "Agachamento Livre",
-                group: "Perna",
-                equip: "Barra, Rack",
-                fav: true,
-                desc: "Manter a coluna neutra e romper a paralela.",
-              },
-              {
-                name: "Remada Curvada",
-                group: "Costas",
-                equip: "Barra",
-                fav: false,
-                desc: "Puxar com as costas, não apenas com os braços.",
-              },
-              {
-                name: "Desenvolvimento c/ Halteres",
-                group: "Ombro",
-                equip: "Halteres",
-                fav: true,
-                desc: "Não esticar totalmente os cotovelos no topo.",
-              },
-              {
-                name: "Rosca Direta",
-                group: "Bíceps",
-                equip: "Barra W",
-                fav: false,
-                desc: "Evitar balanço do corpo. Punhos firmes.",
-              },
-              {
-                name: "Tríceps Corda na Polia",
-                group: "Tríceps",
-                equip: "Polia",
-                fav: false,
-                desc: "Abrir a corda no final do movimento para contração.",
-              },
-              {
-                name: "Levantamento Terra",
-                group: "Costas",
-                equip: "Barra",
-                fav: true,
-                desc: "Puxar colado na canela, travar quadril no topo.",
-              },
-              {
-                name: "Cadeira Extensora",
-                group: "Máquina",
-                equip: "Máquina",
-                fav: false,
-                desc: "Segurar 2 seg no pico de contração.",
-              },
-            ].map((libEx, i) => (
+            {libraryExercises.map((libEx) => (
               <div
-                key={i}
+                key={libEx.id}
                 className="bg-card-dark border border-border-dark rounded-xl p-5 flex flex-col gap-3 group hover:border-primary/40 transition-colors shadow-sm"
               >
                 <div className="flex justify-between items-start gap-2">
@@ -2006,35 +2122,163 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
                 <div className="flex flex-wrap gap-2 mt-2">
                   <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest">
-                    {libEx.group}
+                    {libEx.group || 'Geral'}
                   </span>
                   <span className="bg-background-dark text-text-secondary border border-border-dark px-2 py-1 rounded text-[10px] uppercase font-bold tracking-widest">
-                    {libEx.equip}
+                    {libEx.equip || 'Peso Corporal'}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 mt-auto pt-4 border-t border-border-dark">
                   <button
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-xs font-bold transition-colors border border-transparent hover:border-red-600"
-                    title="Assistir Vídeo (YouTube)"
+                    onClick={() => {
+                      setEditingEx(libEx);
+                      setShowAddExerciseModal(true);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-background-dark border border-border-dark text-text-primary hover:text-white hover:border-primary/50 hover:bg-primary/10 rounded-lg text-xs font-bold transition-colors"
                   >
                     <span className="material-symbols-outlined text-[16px]">
-                      play_arrow
+                      edit
                     </span>
-                    YouTube
+                    Editar
                   </button>
-                  <button className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-background-dark border border-border-dark text-text-primary hover:text-white hover:border-primary/50 hover:bg-primary/10 rounded-lg text-xs font-bold transition-colors">
+                  <button
+                    onClick={async () => {
+                      if (window.confirm("Deseja excluir este exercício da biblioteca?")) {
+                        await dataService.deleteExercise(libEx.id);
+                      }
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-xs font-bold transition-colors border border-transparent hover:border-red-600"
+                  >
                     <span className="material-symbols-outlined text-[16px]">
-                      add
+                      delete
                     </span>
-                    Inserir
+                    Excluir
                   </button>
                 </div>
               </div>
             ))}
+            {libraryExercises.length === 0 && (
+              <div className="col-span-full py-16 flex flex-col items-center justify-center text-text-secondary opacity-70">
+                <span className="material-symbols-outlined text-4xl mb-3">fitness_center</span>
+                <p>Nenhum exercício na biblioteca ainda.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {showAddExerciseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
+          <div className="bg-card-dark border border-border-dark w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between p-4 border-b border-border-dark bg-background-dark/50">
+              <h3 className="text-white font-bold tracking-tight">
+                {editingEx ? 'Editar Exercício' : 'Novo Exercício'}
+              </h3>
+              <button 
+                onClick={() => setShowAddExerciseModal(false)}
+                className="text-text-secondary hover:text-white transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const name = formData.get('name') as string;
+              if (!name.trim()) return;
+
+              const exerciseData = {
+                name,
+                group: formData.get('group') || '',
+                equip: formData.get('equip') || '',
+                desc: formData.get('desc') || '',
+                trainerId: user.id
+              };
+
+              if (editingEx) {
+                await dataService.updateExercise(editingEx.id, exerciseData);
+              } else {
+                await dataService.createExercise(exerciseData);
+              }
+              setShowAddExerciseModal(false);
+            }}>
+              <div className="p-6 flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                    Nome do Exercício *
+                  </label>
+                  <input 
+                    type="text"
+                    name="name"
+                    required
+                    defaultValue={editingEx?.name || ''}
+                    placeholder="Ex: Supino Reto com Halteres"
+                    className="w-full bg-background-dark border border-border-dark rounded-xl px-4 py-2 text-white focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                      Grupo Muscular
+                    </label>
+                    <input 
+                      type="text"
+                      name="group"
+                      defaultValue={editingEx?.group || ''}
+                      placeholder="Ex: Peito"
+                      className="w-full bg-background-dark border border-border-dark rounded-xl px-4 py-2 text-white focus:border-primary focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                      Equipamento
+                    </label>
+                    <input 
+                      type="text"
+                      name="equip"
+                      defaultValue={editingEx?.equip || ''}
+                      placeholder="Ex: Halteres"
+                      className="w-full bg-background-dark border border-border-dark rounded-xl px-4 py-2 text-white focus:border-primary focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                    Instruções (Opcional)
+                  </label>
+                  <textarea 
+                    name="desc"
+                    defaultValue={editingEx?.desc || ''}
+                    placeholder="Dicas de execução, postura, etc."
+                    rows={3}
+                    className="w-full bg-background-dark border border-border-dark rounded-xl px-4 py-2 text-white focus:border-primary focus:outline-none transition-colors resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 p-4 border-t border-border-dark bg-background-dark/50">
+                <button
+                  type="button"
+                  onClick={() => setShowAddExerciseModal(false)}
+                  className="px-4 py-2 rounded-lg font-bold text-text-secondary border border-border-dark hover:bg-white/5 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-primary text-background-dark rounded-lg font-bold hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+                >
+                  {editingEx ? 'Salvar Alterações' : 'Adicionar Exercício'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 
