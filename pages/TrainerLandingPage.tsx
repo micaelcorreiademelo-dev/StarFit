@@ -61,6 +61,7 @@ const ColorPickerField = ({ label, color, onChange }: { label: string, color: st
   );
 };
 
+import { ImageUpload } from "../components/ImageUpload";
 import { User } from "../types";
 
 const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
@@ -582,17 +583,21 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                            className="text-xs text-primary bg-transparent outline-none mt-1"
                            placeholder="Ex: Aluno Presencial"
                        />
-                       <input 
-                           type="text"
-                           value={testimonial.image || ""}
-                           onChange={(e) => {
+                       <div className="mt-2">
+                         <ImageUpload
+                           currentImageUrl={testimonial.image}
+                           onUploadSuccess={(url) => {
                               const newTestimonials = { ...data.testimonials };
-                              newTestimonials.items[i].image = e.target.value;
+                              newTestimonials.items[i].image = url;
                               updateData("testimonials", "items", newTestimonials.items);
                            }}
-                           className="text-xs text-text-secondary bg-transparent outline-none mt-1"
-                           placeholder="URL da Foto do Aluno"
-                       />
+                           folder={`landing_pages/${user.id}/testimonials`}
+                           maxSizeMB={0.5}
+                           maxWidthOrHeight={300}
+                           idealText="Ideal: quadrada, máx: 500KB"
+                           label="Foto do Aluno"
+                         />
+                       </div>
                        <textarea 
                          value={testimonial.text || ""}
                          onChange={(e) => {
@@ -633,89 +638,82 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
           )}
 
           {editorTab === "imagens" && (
-            <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-text-secondary">URL da Foto de Perfil</label>
-                <div className="flex gap-4 items-center">
-                  <img
-                    src={data.hero.profileImage}
-                    alt="Profile"
-                    className="w-16 h-16 rounded-full border border-border-dark object-cover shrink-0"
-                  />
-                  <input
-                    type="text"
-                    value={data.hero.profileImage}
-                    onChange={(e) => updateData("hero", "profileImage", e.target.value)}
-                    className="flex-1 bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm min-w-0"
-                    placeholder="https://..."
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-text-secondary">URL do Banner Principal (Capa)</label>
-                <div className="flex gap-4 items-center">
-                  <img
-                    src={data.hero.bannerImage}
-                    alt="Banner"
-                    className="w-24 h-16 rounded-lg border border-border-dark object-cover shrink-0"
-                  />
-                  <input
-                    type="text"
-                    value={data.hero.bannerImage}
-                    onChange={(e) => updateData("hero", "bannerImage", e.target.value)}
-                    className="flex-1 bg-background-dark border border-border-dark rounded-lg px-3 py-2 text-white text-sm min-w-0"
-                    placeholder="https://..."
-                  />
-                </div>
-              </div>
+            <div className="flex flex-col gap-8 animate-in fade-in duration-300">
+              <ImageUpload 
+                currentImageUrl={data.hero.profileImage}
+                onUploadSuccess={(url) => updateData("hero", "profileImage", url)}
+                folder={`landing_pages/${user.id}/profile`}
+                maxSizeMB={1}
+                maxWidthOrHeight={500}
+                idealText="Resolução ideal: 500x500px. Máximo: 1MB"
+                label="Foto de Perfil"
+              />
 
-              <div className="h-px bg-border-dark my-2 w-full"></div>
+              <ImageUpload 
+                currentImageUrl={data.hero.bannerImage}
+                onUploadSuccess={(url) => updateData("hero", "bannerImage", url)}
+                folder={`landing_pages/${user.id}/banner`}
+                maxSizeMB={2}
+                maxWidthOrHeight={1920}
+                idealText="Resolução ideal: 1920x800px. Máximo: 2MB"
+                label="Banner Principal (Capa)"
+              />
+
+              <div className="h-px bg-border-dark my-4 w-full"></div>
               
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-white">Galeria de Resultados</label>
-                    <button 
-                      onClick={() => {
-                         const newResults = { ...data.results };
-                         newResults.items.push({ id: Date.now(), image: "https://via.placeholder.com/400?text=Nova+Imagem" });
-                         updateData("results", "items", newResults.items);
-                      }}
-                      className="text-primary hover:text-white transition-colors text-xs font-bold flex items-center gap-1"
-                    >
-                       <Plus size={14}/> Adicionar
-                    </button>
+                    <div>
+                      <label className="text-sm font-bold text-white">Galeria de Resultados</label>
+                      <p className="text-xs text-text-secondary">Envie fotos de antes/depois ou resultados dos alunos.</p>
+                    </div>
                  </div>
                  
-                 {data.results.items.map((res, i) => (
-                    <div key={res.id} className="flex gap-3 items-center bg-background-dark p-2 rounded-xl border border-border-dark">
-                       <img src={res.image} className="w-10 h-10 rounded object-cover shrink-0 border border-border-dark"/>
-                       <input 
-                         type="text"
-                         value={res.image}
-                         onChange={(e) => {
-                            const newResults = { ...data.results };
-                            newResults.items[i].image = e.target.value;
-                            updateData("results", "items", newResults.items);
-                         }}
-                         className="flex-1 bg-transparent text-sm text-white outline-none min-w-0"
-                         placeholder="URL da Imagem..."
-                       />
-                       <button
-                         onClick={() => {
-                            const newResults = { ...data.results };
-                            newResults.items = newResults.items.filter(item => item.id !== res.id);
-                            updateData("results", "items", newResults.items);
-                         }}
-                         className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg shrink-0"
-                       >
-                          <Trash2 size={16}/>
-                       </button>
-                    </div>
-                 ))}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {data.results.items.map((res, i) => (
+                      <div key={res.id} className="relative group rounded-xl overflow-hidden border border-border-dark bg-background-dark/50">
+                         <ImageUpload
+                           currentImageUrl={res.image}
+                           onUploadSuccess={(url) => {
+                              const newResults = { ...data.results };
+                              newResults.items[i].image = url;
+                              updateData("results", "items", newResults.items);
+                           }}
+                           folder={`landing_pages/${user.id}/gallery`}
+                           maxSizeMB={1.5}
+                           maxWidthOrHeight={1200}
+                           idealText="Ideal: 1200x1200px (Máx: 1.5MB)"
+                           label={`Imagem ${i + 1}`}
+                         />
+                         <button
+                           onClick={() => {
+                              const newResults = { ...data.results };
+                              newResults.items = newResults.items.filter(item => item.id !== res.id);
+                              updateData("results", "items", newResults.items);
+                           }}
+                           className="absolute top-2 right-2 p-2 bg-red-500/80 text-white hover:bg-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm z-20"
+                           title="Remover Imagem"
+                         >
+                            <Trash2 size={16}/>
+                         </button>
+                      </div>
+                   ))}
+
+                   <div 
+                     onClick={() => {
+                        const newResults = { ...data.results };
+                        newResults.items.push({ id: Date.now(), image: "" });
+                        updateData("results", "items", newResults.items);
+                     }}
+                     className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border-dark hover:border-primary hover:bg-primary/5 rounded-xl cursor-pointer transition-colors"
+                   >
+                      <div className="size-12 rounded-full bg-border-dark flex items-center justify-center mb-3">
+                         <span className="material-symbols-outlined text-text-secondary">add_circle</span>
+                      </div>
+                      <span className="text-sm font-bold text-white">Adicionar Foto</span>
+                   </div>
+                 </div>
                  
-                 {data.results.items.length === 0 && (
-                    <p className="text-xs text-text-secondary text-center py-4">Nenhuma imagem na galeria.</p>
-                 )}
               </div>
             </div>
           )}
