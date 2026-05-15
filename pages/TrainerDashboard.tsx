@@ -2701,11 +2701,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[80px] z-50">
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 80" preserveAspectRatio="none">
             <path
-              d="M0 0 H137.5 C147.5 0 152.5 5 157.5 15 C 167.5 44 207.5 44 217.5 15 C 222.5 5 227.5 0 237.5 0 H375 V80 H0 Z"
+              d="M0 0 H125 C135 0 140 5 145 15 C 155 54 220 54 230 15 C 235 5 240 0 250 0 H375 V80 H0 Z"
               className="fill-card-dark"
             />
             <path
-              d="M0 0 H137.5 C147.5 0 152.5 5 157.5 15 C 167.5 44 207.5 44 217.5 15 C 222.5 5 227.5 0 237.5 0 H375"
+              d="M0 0 H125 C135 0 140 5 145 15 C 155 54 220 54 230 15 C 235 5 240 0 250 0 H375"
               className="stroke-border-dark"
               strokeWidth="1"
               fill="none"
@@ -2726,14 +2726,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 <span className={`material-symbols-outlined text-2xl transition-all ${(activeTab === 'students') ? 'fill scale-110' : ''}`}>group</span>
                 {(activeTab === 'students') && <span className="text-[10px] font-medium tracking-wide">Alunos</span>}
             </button>
-
+ 
             {/* Workout Button - Elevated & Centralized */}
-            <div className="relative -mt-[68px]">
+            <div className="relative -mt-[84px]">
               <button
                   onClick={() => setActiveTab('workouts')}
-                  className={`flex items-center justify-center size-[64px] rounded-full border-2 border-primary/20 shadow-[0_8px_20px_rgba(0,0,0,0.4),0_0_15px_rgba(19,236,91,0.2)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-110 shadow-[0_8px_25px_rgba(19,236,91,0.4)]' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
+                  className={`flex items-center justify-center size-[72px] rounded-full border border-primary/10 shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.2)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-110 shadow-[0_12px_35px_rgba(19,236,91,0.4)]' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
               >
-                  <span className="material-symbols-outlined text-[32px] drop-shadow-sm">fitness_center</span>
+                  <span className="material-symbols-outlined text-[36px] drop-shadow-sm">fitness_center</span>
               </button>
             </div>
 
