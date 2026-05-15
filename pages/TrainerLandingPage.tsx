@@ -208,11 +208,9 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
   };
 
   return (
-    <div className="flex h-full w-full justify-center pb-20">
-      {/* Editor Sidebar */}
-      <aside className="w-full max-w-[800px] flex flex-col bg-card-dark border border-border-dark rounded-2xl overflow-hidden max-h-[calc(100vh-120px)]">
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
+    <div className="w-full max-w-[800px] mx-auto flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-black text-white uppercase italic tracking-tighter">
             Configuração da Landing Page
           </h1>
@@ -350,14 +348,14 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
                      </div>
                      <span className="text-sm font-bold text-white flex-1">{sectionLabels[sectionKey]}</span>
                      
-                     <label className="relative inline-flex items-center cursor-pointer">
+                     <label className="relative inline-flex items-center cursor-pointer shrink-0">
                         <input 
                            type="checkbox" 
                            className="sr-only peer"
                            checked={data.sections[sectionKey].visible}
                            onChange={(e) => updateSectionConfig(sectionKey, "visible", e.target.checked)}
                         />
-                        <div className="w-11 h-6 bg-[#182c1e] max-md:w-9 max-md:h-5 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                        <div className="relative shrink-0 w-11 h-6 bg-[#182c1e] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                      </label>
                   </div>
                ))}
@@ -773,7 +771,7 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
         </div>
         </div>
 
-        <div className="shrink-0 p-6 pt-4 bg-card-dark z-10 border-t border-border-dark">
+        <div className="mt-4 pb-8">
           {saved && (
             <p className="text-primary text-xs font-bold text-center mb-2 animate-pulse flex items-center justify-center gap-1">
               <Check size={14}/> Alterações salvas!
@@ -787,7 +785,6 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
             Publicar Alterações
           </button>
         </div>
-      </aside>
     </div>
   );
 };

@@ -166,7 +166,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {kpis.map((kpi, i) => (
-                <div key={i} className="bg-card-dark p-6 rounded-2xl border border-border-dark shadow-sm">
+                <div key={i} className="bg-card-dark p-6 rounded-2xl border border-border-dark shadow-sm cursor-default select-none">
                   <p className="text-sm text-text-secondary mb-1">{kpi.label}</p>
                   <p className="text-3xl font-bold text-white mb-2">{kpi.val}</p>
                   <div className={`flex items-center gap-1 text-sm ${kpi.up ? 'text-primary' : 'text-red-400'}`}>
@@ -263,7 +263,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                         </td>
                       </tr>
                     ) : (
-                      <tr className="hover:bg-white/5 transition-colors">
+                      <tr className="transition-colors">
                         <td colSpan={3} className="px-6 py-4 text-center text-text-secondary">
                           Consulte a aba de usuários para mais detalhes.
                         </td>

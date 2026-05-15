@@ -508,18 +508,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             color: "text-primary",
           },
           {
-            label: "Alunos Pendentes",
+            label: "Aguardando Pagamento",
             value: linkRequests.length.toString(),
-            detail: "Aguardando vínculo",
+            detail: "Solicitações pendentes",
             color: "text-orange-400",
-            onClick: () => setActiveTab("requests")
           },
           {
             label: "Solicitações",
             value: linkRequests.length.toString(),
             detail: "Novos pedidos",
             color: linkRequests.length > 0 ? "text-orange-400" : "text-primary",
-            onClick: () => setActiveTab("requests")
           },
           {
             label: "Eventos na Agenda",
@@ -536,8 +534,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         ].map((kpi, idx) => (
           <div
             key={idx}
-            className={`flex flex-col gap-1 md:gap-2 rounded-xl p-3 md:p-6 border border-border-dark bg-card-dark shadow-sm transition-all ${kpi.onClick ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5' : ''}`}
-            onClick={kpi.onClick}
+            className="flex flex-col gap-1 md:gap-2 rounded-xl p-3 md:p-6 border border-border-dark bg-card-dark shadow-sm transition-all cursor-default select-none"
           >
             <p className="text-text-secondary text-[10px] md:text-sm font-medium leading-tight">
               {kpi.label}
@@ -570,18 +567,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             onClick: () => setActiveTab("workouts")
           },
           {
-            label: "Nova Mensagem",
-            icon: "chat",
-            bg: "bg-purple-500/10 hover:bg-purple-500/20",
-            iconColor: "text-purple-400",
-            onClick: () => setActiveTab("chat")
-          },
-          {
             label: "Landing Page",
             icon: "public",
             bg: "bg-orange-500/10 hover:bg-orange-500/20",
             iconColor: "text-orange-400",
             onClick: () => setActiveTab("landing-page")
+          },
+          {
+            label: "Nova Mensagem",
+            icon: "chat",
+            bg: "bg-purple-500/10 hover:bg-purple-500/20",
+            iconColor: "text-purple-400",
+            onClick: () => setActiveTab("chat")
           },
         ].map((shortcut, idx) => (
           <button
@@ -2693,19 +2690,19 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         {/* Padding for mobile top nav */}
         <div className="md:hidden h-16 shrink-0"></div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8">
           <div className="max-w-7xl mx-auto">{renderContent()}</div>
         </div>
 
         {/* Mobile Bottom Navbar */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[80px] z-50">
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 80" preserveAspectRatio="none">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[84px] z-50">
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 84" preserveAspectRatio="none">
             <path
-              d="M0 0 H125 C135 0 140 5 145 15 C 155 54 220 54 230 15 C 235 5 240 0 250 0 H375 V80 H0 Z"
+              d="M0 0 H120 C135 0 140 3 145 10 C 158 52 217 52 230 10 C 235 3 240 0 255 0 H375 V84 H0 Z"
               className="fill-card-dark"
             />
             <path
-              d="M0 0 H125 C135 0 140 5 145 15 C 155 54 220 54 230 15 C 235 5 240 0 250 0 H375"
+              d="M0 0 H120 C135 0 140 3 145 10 C 158 52 217 52 230 10 C 235 3 240 0 255 0 H375"
               className="stroke-border-dark"
               strokeWidth="1"
               fill="none"
@@ -2728,12 +2725,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </button>
  
             {/* Workout Button - Elevated & Centralized */}
-            <div className="relative -mt-[84px]">
+            <div className="relative -mt-[110px]">
               <button
                   onClick={() => setActiveTab('workouts')}
-                  className={`flex items-center justify-center size-[72px] rounded-full border border-primary/10 shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.2)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-110 shadow-[0_12px_35px_rgba(19,236,91,0.4)]' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
+                  className={`flex items-center justify-center size-[80px] rounded-full border-4 border-background-dark shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.25)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-105 shadow-[0_12px_35px_rgba(19,236,91,0.4)]' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
               >
-                  <span className="material-symbols-outlined text-[36px] drop-shadow-sm">fitness_center</span>
+                  <span className="material-symbols-outlined text-[40px] drop-shadow-sm font-bold">fitness_center</span>
               </button>
             </div>
 

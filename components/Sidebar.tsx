@@ -144,7 +144,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        <div className="flex flex-col gap-1 mt-4 pt-4 border-t border-border-light dark:border-border-dark shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="flex flex-col gap-1 mt-4 pt-4 border-t border-border-light dark:border-border-dark shrink-0 pb-[calc(2rem+env(safe-area-inset-bottom))]">
           <button
             onClick={() => handleTabClick("settings")}
             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-text-light-primary dark:text-text-dark-primary text-left ${

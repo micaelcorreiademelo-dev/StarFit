@@ -311,7 +311,7 @@ const TrainerSettings: React.FC<TrainerSettingsProps> = ({ user }) => {
                       checked={autoReminders} 
                       onChange={(e) => setAutoReminders(e.target.checked)}
                     />
-                    <div className="w-11 h-6 bg-border-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    <div className="relative w-11 h-6 bg-border-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
               </div>
@@ -365,12 +365,12 @@ const TrainerSettings: React.FC<TrainerSettingsProps> = ({ user }) => {
                     setter: setNotifChatMessages
                   }
                 ].map((notif) => (
-                  <div key={notif.id} className="flex items-center justify-between p-4 bg-background-dark rounded-xl border border-border-dark">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-white">{notif.title}</span>
-                      <span className="text-xs text-text-secondary">{notif.desc}</span>
+                  <div key={notif.id} className="flex items-center justify-between p-4 bg-background-dark rounded-xl border border-border-dark gap-4">
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-bold text-white text-sm md:text-base leading-tight">{notif.title}</span>
+                      <span className="text-xs text-text-secondary leading-normal mt-0.5">{notif.desc}</span>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
                       <input 
                         type="checkbox" 
                         className="sr-only peer" 
@@ -385,7 +385,7 @@ const TrainerSettings: React.FC<TrainerSettingsProps> = ({ user }) => {
                           });
                         }}
                       />
-                      <div className="w-11 h-6 bg-border-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      <div className="relative w-11 h-6 bg-border-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
                 ))}
