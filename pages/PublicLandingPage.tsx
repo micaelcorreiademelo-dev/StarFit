@@ -253,14 +253,22 @@ export const defaultLandingPageData: LandingPageData = {
   },
 };
 
-const PublicLandingPage: React.FC<{ previewData?: LandingPageData }> = ({
+const PublicLandingPage: React.FC<{ previewData?: LandingPageData; subdomainOverride?: string }> = ({
   previewData,
+  subdomainOverride
 }) => {
   const { username: urlUsername } = useParams<{ username: string }>();
   const [searchParams] = useSearchParams();
   const renewingPlanName = searchParams.get('planToRenew');
+  
+  // Use subdomainOverride if available, else standard URL parameter
+  const rawUsername = subdomainOverride || urlUsername;
+  let username = rawUsername ? rawUsername.replace('@', '') : undefined;
+  
   // Default to a specific username if none provided in URL
-  const username = urlUsername || "carlossousa";
+  if (!username && window.location.hostname === 'localhost') {
+    username = "carlossousa"; // Keep for dev testing if needed
+  }
   const navigate = useNavigate();
 
   const [data, setData] = useState<LandingPageData>(previewData || defaultLandingPageData);

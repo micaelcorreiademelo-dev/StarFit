@@ -107,6 +107,29 @@ const App: React.FC = () => {
     );
   }
 
+  // Detect Subdomain
+  let subdomain = null;
+  const hostname = window.location.hostname;
+  const parts = hostname.split('.');
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    // Optionally handle localhost subdomains
+    if (parts.length === 2 && parts[1] === 'localhost') {
+       subdomain = parts[0];
+    }
+  } else if (hostname.endsWith('.run.app') || hostname.endsWith('.vercel.app') || hostname.endsWith('.web.app') || hostname.endsWith('.firebaseapp.com')) {
+    // Check if there is an extra prefix part
+    if (parts.length > 3 && parts[0] !== 'www') {
+      subdomain = parts[0];
+    }
+  } else {
+    // Custom domains like starfit.com -> parts = ['starfit', 'com'] (2)
+    // subdomains: username.starfit.com -> parts = ['username', 'starfit', 'com'] (3)
+    if (parts.length >= 3 && parts[0] !== 'www') {
+      subdomain = parts[0];
+    }
+  }
+
   return (
     <Router>
       <PWAInstallBanner />
@@ -136,6 +159,7 @@ const App: React.FC = () => {
         } />
 
         <Route path="/" element={
+          subdomain ? <PublicLandingPage subdomainOverride={subdomain} /> :
           !user ? <Navigate to="/login" /> : 
           showOnboarding ? <Navigate to="/onboarding" /> :
           user.role === 'ADMIN' ? <AdminDashboard user={user} onLogout={handleLogout} /> :
