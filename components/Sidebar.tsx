@@ -86,13 +86,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       <aside
         className={`
         fixed inset-y-0 left-0 z-[70] w-64 bg-card-light dark:bg-card-dark flex flex-col p-4 border-r border-border-light dark:border-border-dark shrink-0
-        transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 h-screen
+        transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 h-screen h-[100dvh]
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
       `}
       >
-        <div className="flex flex-col gap-4 flex-grow overflow-hidden">
+        <div className="flex flex-col gap-4 flex-grow min-h-0">
           {/* Header Sidebar with Close Button for Mobile */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 shrink-0">
             <div className="flex items-center gap-3 shrink-0 overflow-hidden">
               <div
                 className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-primary/20"
@@ -115,7 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
 
-          <nav className="flex flex-col gap-2 mt-4 overflow-y-auto pr-1">
+          <nav className="flex flex-col gap-2 mt-4 overflow-y-auto pr-1 custom-scrollbar flex-1">
             {links.map((link) => (
               <button
                 key={link.id}
@@ -144,7 +144,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        <div className="flex flex-col gap-1 mt-4 pt-4 border-t border-border-light dark:border-border-dark shrink-0">
+        <div className="flex flex-col gap-1 mt-4 pt-4 border-t border-border-light dark:border-border-dark shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <button
             onClick={() => handleTabClick("settings")}
             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-text-light-primary dark:text-text-dark-primary text-left ${
