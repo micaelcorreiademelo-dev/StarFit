@@ -1805,6 +1805,21 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
               <span className="font-black text-xl tracking-tighter text-text-light-primary dark:text-text-dark-primary">StarFit</span>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+                className="p-2 text-text-light-primary dark:text-text-dark-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+                title="Notificações"
+            >
+                <span className="material-symbols-outlined">notifications</span>
+            </button>
+            <button
+                className="p-2 text-text-light-primary dark:text-text-dark-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+                title="Chat"
+                onClick={() => setActiveTab('chat')}
+            >
+                <span className="material-symbols-outlined">chat</span>
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 h-full">

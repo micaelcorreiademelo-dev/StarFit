@@ -84,8 +84,10 @@ const Register: React.FC = () => {
       if (err.code === 'auth/popup-blocked') {
         setError('O navegador bloqueou a janela de registro. Tente usar o botão abaixo ou verifique as permissões de popup.');
         setShowRedirectOption(true);
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('Este domínio não está autorizado no Firebase. Adicione a URL atual (ex: vercel.app) no painel do Firebase > Authentication > Settings > Authorized domains.');
       } else {
-        setError('Ocorreu um erro ao registrar com o Google. Tente novamente.');
+        setError('Ocorreu um erro ao registrar com o Google. Tente novamente. Erro: ' + err.message);
       }
       console.error(err);
       localStorage.removeItem('pending_role');

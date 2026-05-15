@@ -35,8 +35,10 @@ const Login: React.FC = () => {
         setError('Uma tentativa de login já está em andamento.');
       } else if (err.code === 'auth/popup-closed-by-user') {
         setError('O login foi cancelado. Você precisa completar o processo na janela do Google.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('Este domínio não está autorizado no Firebase. Adicione a URL atual (ex: vercel.app) no painel do Firebase > Authentication > Settings > Authorized domains.');
       } else {
-        setError('Ocorreu um erro ao entrar com o Google. Tente novamente.');
+        setError('Ocorreu um erro ao entrar com o Google. Tente novamente. Erro: ' + err.message);
       }
     } finally {
       if (!useRedirect) setLoading(false);

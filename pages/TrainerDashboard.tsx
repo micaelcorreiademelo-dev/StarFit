@@ -432,7 +432,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             Bem-vindo de volta, {user.name}!
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          {/* Mobile-only Add Student Icon */}
+          <button
+              onClick={() => setActiveTab("add-student")}
+              className="md:hidden flex size-10 items-center justify-center rounded-lg bg-primary text-background-dark shadow-lg shadow-primary/20 hover:brightness-110 transition-all"
+          >
+              <span className="material-symbols-outlined text-base">add</span>
+          </button>
+
+          {/* Desktop-only Buttons */}
           <motion.button
             onClick={markAnnouncementsRead}
             animate={unreadAnnouncements > 0 ? {
@@ -440,7 +449,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               backgroundColor: ["rgba(34, 197, 94, 0)", "rgba(34, 197, 94, 0.1)", "rgba(34, 197, 94, 0)"],
             } : {}}
             transition={unreadAnnouncements > 0 ? { repeat: Infinity, duration: 1.5 } : {}}
-            className="flex items-center justify-center size-10 bg-card-dark border border-border-dark text-text-secondary hover:text-white rounded-lg transition-all relative group"
+            className="hidden md:flex items-center justify-center size-10 bg-card-dark border border-border-dark text-text-secondary hover:text-white rounded-lg transition-all relative group"
             title="Comunicados da Plataforma"
           >
             <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">
@@ -452,11 +461,21 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               </span>
             )}
           </motion.button>
+
+          <button
+            onClick={() => setActiveTab('chat')}
+            className="hidden md:flex items-center justify-center size-10 bg-card-dark border border-border-dark text-text-secondary hover:text-white rounded-lg transition-all group"
+            title="Chat com Alunos"
+          >
+            <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">
+              chat
+            </span>
+          </button>
           
           {user.username && (
              <button
                 onClick={() => setShowQRCode(true)}
-                className="flex items-center gap-2 h-10 px-4 bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 rounded-lg font-bold text-sm transition-all"
+                className="hidden md:flex items-center gap-2 h-10 px-4 bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 rounded-lg font-bold text-sm transition-all"
              >
                 <span className="material-symbols-outlined text-[18px]">qr_code</span>
                 Meu QR Code
@@ -465,7 +484,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
           <button
             onClick={() => setActiveTab("add-student")}
-            className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-background-dark text-sm font-bold gap-2 hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+            className="hidden md:flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-background-dark text-sm font-bold gap-2 hover:brightness-110 transition-all shadow-lg shadow-primary/20"
           >
             <span className="material-symbols-outlined text-base">add</span>
             <span className="truncate">Adicionar Aluno</span>
@@ -2461,6 +2480,108 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     </div>
   );
 
+  const renderSettingsMenu = () => (
+    <div className="flex flex-col gap-6 animate-in fade-in duration-300 pb-24 md:hidden">
+      <div className="flex flex-col gap-2 mb-4">
+        <h1 className="text-white text-3xl font-black leading-tight tracking-[-0.033em]">
+          Menu
+        </h1>
+      </div>
+
+      <div className="flex items-center gap-4 bg-card-dark p-4 rounded-xl border border-border-dark mb-4">
+        <div
+          className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-12 border-2 border-primary/20"
+          style={{ backgroundImage: `url(${user.avatar})` }}
+        />
+        <div className="flex flex-col">
+          <h2 className="text-white font-bold text-lg">{user.name}</h2>
+          <p className="text-text-secondary text-xs uppercase tracking-wider font-bold">
+            {user.role}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <h3 className="text-xs font-black text-text-secondary uppercase tracking-widest px-2 mb-2">GERENCIAMENTO</h3>
+        {[
+          { id: "library", icon: "menu_book", label: "Biblioteca de Exercícios" },
+          { id: "agenda", icon: "calendar_month", label: "Agenda" },
+          { id: "chat", icon: "chat", label: "Chat" },
+          { id: "plans", icon: "local_activity", label: "Meus Planos e Pagamentos" },
+        ].map((link) => (
+          <button
+            key={link.id}
+            onClick={() => setActiveTab(link.id)}
+            className="flex items-center gap-4 bg-card-dark border border-border-dark p-4 rounded-xl hover:bg-white/5 transition-all text-left"
+          >
+            <div className="size-10 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-primary">{link.icon}</span>
+            </div>
+            <span className="text-white font-bold flex-1">{link.label}</span>
+            <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-2 mt-4">
+         <h3 className="text-xs font-black text-text-secondary uppercase tracking-widest px-2 mb-2">CONTA</h3>
+         <button
+            onClick={() => setActiveTab('landing-page')}
+            className="flex items-center gap-4 bg-card-dark border border-border-dark p-4 rounded-xl hover:bg-white/5 transition-all text-left"
+          >
+            <div className="size-10 bg-blue-500/10 rounded-full flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-blue-400">web</span>
+            </div>
+            <span className="text-white font-bold flex-1">Landing Page</span>
+            <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
+          </button>
+
+         <button
+            onClick={() => setActiveTab('subscription')}
+            className="flex items-center gap-4 bg-card-dark border border-border-dark p-4 rounded-xl hover:bg-white/5 transition-all text-left"
+          >
+            <div className="size-10 bg-purple-500/10 rounded-full flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-purple-400">credit_card</span>
+            </div>
+            <span className="text-white font-bold flex-1">Minha Assinatura StarFit</span>
+            <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('settings')}
+            className="flex items-center gap-4 bg-card-dark border border-border-dark p-4 rounded-xl hover:bg-white/5 transition-all text-left"
+          >
+            <div className="size-10 bg-text-secondary/10 rounded-full flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-text-secondary">settings</span>
+            </div>
+            <span className="text-white font-bold flex-1">Configurações</span>
+            <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('support')}
+            className="flex items-center gap-4 bg-card-dark border border-border-dark p-4 rounded-xl hover:bg-white/5 transition-all text-left"
+          >
+            <div className="size-10 bg-orange-500/10 rounded-full flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-orange-400">support_agent</span>
+            </div>
+            <span className="text-white font-bold flex-1">Suporte</span>
+            <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
+          </button>
+      </div>
+
+      <div className="mt-8 mb-4">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center justify-center gap-2 h-12 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl font-bold hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-transparent hover:shadow-red-500/20"
+        >
+          <span className="material-symbols-outlined text-[18px]">logout</span>
+          Sair do Aplicativo
+        </button>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
@@ -2485,6 +2606,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         return <TrainerChat user={user} />;
       case "landing-page":
         return <TrainerLandingPage user={user} />;
+      case "settings-menu":
+        return renderSettingsMenu();
       case "settings":
         return <TrainerSettings user={user} />;
       case "support":
@@ -2509,45 +2632,111 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         onClose={() => setIsSidebarOpen(false)}
       />
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between px-4 h-16 bg-card-dark border-b border-border-dark shrink-0">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 text-text-primary hover:bg-white/5 rounded-lg"
-            >
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary fill">
-                fitness_center
-              </span>
-              <span className="font-black text-xl tracking-tighter text-white">
-                StarFit
-              </span>
-            </div>
+        {/* Mobile Header / Top Navbar */}
+        <header className="md:hidden flex items-center justify-between px-4 h-16 bg-card-dark border-b border-border-dark shrink-0 z-50 fixed top-0 w-full left-0 right-0">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary fill text-2xl">
+              fitness_center
+            </span>
+            <span className="font-black text-xl tracking-tighter text-white">
+              StarFit
+            </span>
           </div>
-          <motion.button 
-            onClick={markAnnouncementsRead}
-            animate={unreadAnnouncements > 0 ? {
-              borderColor: ["rgba(34, 197, 94, 0)", "#22c55e", "rgba(34, 197, 94, 0)"],
-              backgroundColor: ["rgba(34, 197, 94, 0)", "rgba(34, 197, 94, 0.1)", "rgba(34, 197, 94, 0)"],
-            } : {}}
-            transition={unreadAnnouncements > 0 ? { repeat: Infinity, duration: 2 } : {}}
-            className="relative p-2 text-text-secondary hover:text-white border border-transparent rounded-lg transition-all"
-          >
-            <span className="material-symbols-outlined">notifications</span>
-            {(unreadAnnouncements > 0 || linkRequests.length > 0) && (
-              <span className="absolute top-1 right-1 bg-primary text-background-dark text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-background-dark">
-                {unreadAnnouncements + linkRequests.length}
-              </span>
-            )}
-          </motion.button>
+          <div className="flex items-center gap-2">
+             {user.username && (
+               <>
+                 <button
+                    onClick={() => setShowQRCode(true)}
+                    className="flex items-center justify-center size-10 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-all"
+                 >
+                    <span className="material-symbols-outlined">qr_code</span>
+                 </button>
+                 <button
+                    onClick={() => setActiveTab('chat')}
+                    className="flex items-center justify-center size-10 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-all"
+                 >
+                    <span className="material-symbols-outlined">chat</span>
+                 </button>
+               </>
+             )}
+            <motion.button 
+              onClick={markAnnouncementsRead}
+              animate={unreadAnnouncements > 0 ? {
+                borderColor: ["rgba(34, 197, 94, 0)", "#22c55e", "rgba(34, 197, 94, 0)"],
+                backgroundColor: ["rgba(34, 197, 94, 0)", "rgba(34, 197, 94, 0.1)", "rgba(34, 197, 94, 0)"],
+              } : {}}
+              transition={unreadAnnouncements > 0 ? { repeat: Infinity, duration: 2 } : {}}
+              className="relative flex items-center justify-center size-10 text-text-secondary hover:text-white border border-transparent rounded-lg transition-all"
+            >
+              <span className="material-symbols-outlined">notifications</span>
+              {unreadAnnouncements > 0 && (
+                <span className="absolute top-1 right-1 bg-primary text-background-dark text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-background-dark">
+                  {unreadAnnouncements}
+                </span>
+              )}
+            </motion.button>
+          </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        {/* Padding for mobile top nav */}
+        <div className="md:hidden h-16 shrink-0"></div>
+
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
           <div className="max-w-7xl mx-auto">{renderContent()}</div>
         </div>
+
+        {/* Mobile Bottom Navbar */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[80px] z-50">
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 80" preserveAspectRatio="none">
+            <path
+              d="M0 0 H140 C150 0 155 5 160 15 C 170 35 205 35 215 15 C 220 5 225 0 235 0 H375 V80 H0 Z"
+              className="fill-card-dark stroke-border-dark"
+              strokeWidth="1"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-around px-2 pb-2">
+            <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`flex flex-col items-center justify-center gap-1 w-16 transition-colors ${(activeTab === 'dashboard') ? 'text-primary' : 'text-text-secondary hover:text-white'}`}
+            >
+                <span className={`material-symbols-outlined text-2xl transition-all ${(activeTab === 'dashboard') ? 'fill scale-110' : ''}`}>dashboard</span>
+                {(activeTab === 'dashboard') && <span className="text-[10px] font-medium tracking-wide">Início</span>}
+            </button>
+            <button
+                onClick={() => setActiveTab('students')}
+                className={`flex flex-col items-center justify-center gap-1 w-16 transition-colors ${(activeTab === 'students') ? 'text-primary' : 'text-text-secondary hover:text-white'}`}
+            >
+                <span className={`material-symbols-outlined text-2xl transition-all ${(activeTab === 'students') ? 'fill scale-110' : ''}`}>group</span>
+                {(activeTab === 'students') && <span className="text-[10px] font-medium tracking-wide">Alunos</span>}
+            </button>
+
+            {/* Workout Button - Elevated & Centralized */}
+            <div className="relative -mt-16">
+              <button
+                  onClick={() => setActiveTab('workouts')}
+                  className={`flex items-center justify-center size-[64px] rounded-full border-4 border-card-dark shadow-[0_-4px_10px_rgba(0,0,0,0.2),0_4px_15px_rgba(19,236,91,0.3)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-110' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
+              >
+                  <span className="material-symbols-outlined text-[32px] drop-shadow-sm">fitness_center</span>
+              </button>
+            </div>
+
+            <button
+                onClick={() => setActiveTab('requests')}
+                className={`flex flex-col items-center justify-center gap-1 w-16 relative transition-colors ${(activeTab === 'requests') ? 'text-primary' : 'text-text-secondary hover:text-white'}`}
+            >
+                {linkRequests.length > 0 && <span className="absolute top-0 right-3 size-2.5 bg-orange-500 rounded-full animate-pulse border border-card-dark"></span>}
+                <span className={`material-symbols-outlined text-2xl transition-all ${(activeTab === 'requests') ? 'fill scale-110' : ''}`}>person_add</span>
+                {(activeTab === 'requests') && <span className="text-[10px] font-medium tracking-wide">Pedidos</span>}
+            </button>
+            <button
+                onClick={() => setActiveTab('settings-menu')}
+                className={`flex flex-col items-center justify-center gap-1 w-16 transition-colors ${(activeTab === 'settings-menu') ? 'text-primary' : 'text-text-secondary hover:text-white'}`}
+            >
+                <span className={`material-symbols-outlined text-2xl transition-all ${(activeTab === 'settings-menu') ? 'fill scale-110' : ''}`}>tune</span>
+                {(activeTab === 'settings-menu') && <span className="text-[10px] font-medium tracking-wide">Ajustes</span>}
+            </button>
+          </div>
+        </nav>
       </main>
 
       {/* Announcements Modal */}
