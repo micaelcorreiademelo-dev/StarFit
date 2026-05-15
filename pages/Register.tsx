@@ -86,6 +86,9 @@ const Register: React.FC = () => {
         setShowRedirectOption(true);
       } else if (err.code === 'auth/unauthorized-domain') {
         setError('Este domínio não está autorizado no Firebase. Adicione a URL atual (ex: vercel.app) no painel do Firebase > Authentication > Settings > Authorized domains.');
+      } else if (err.code === 'auth/internal-error') {
+        setError('Erro interno do Firebase. Isso geralmente ocorre se o Google não estiver ativado no painel do Firebase Authentication ou por bloqueio do navegador. Tente a opção de redirecionamento ou ative o Google no Firebase.');
+        setShowRedirectOption(true);
       } else {
         setError('Ocorreu um erro ao registrar com o Google. Tente novamente. Erro: ' + err.message);
       }
