@@ -2690,8 +2690,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 80" preserveAspectRatio="none">
             <path
               d="M0 0 H140 C150 0 155 5 160 15 C 170 35 205 35 215 15 C 220 5 225 0 235 0 H375 V80 H0 Z"
-              className="fill-card-dark stroke-border-dark"
+              className="fill-card-dark"
+            />
+            <path
+              d="M0 0 H140 C150 0 155 5 160 15 C 170 35 205 35 215 15 C 220 5 225 0 235 0 H375"
+              className="stroke-border-dark"
               strokeWidth="1"
+              fill="none"
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-around px-2 pb-2">
