@@ -55,8 +55,14 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       onUploadSuccess(result.url);
       setPreviewUrl(null); // Reset preview and use the actual uploaded URL passed from parent
     } catch (err: any) {
-      setError('Erro ao enviar imagem. Tente novamente.');
-      console.error(err);
+      let msg = 'Erro ao enviar imagem. Tente novamente.';
+      if (err.code === 'storage/unauthorized') {
+         msg = 'Permissão negada no Firebase Storage. Ative o Storage no painel do Firebase ou ajuste as regras (firestore.rules não cobre Storage).';
+      } else if (err.message) {
+         msg = err.message;
+      }
+      setError(msg);
+      console.error("ImageUpload Error:", err);
       setPreviewUrl(null);
     } finally {
       setIsUploading(false);
@@ -156,7 +162,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                />
              </div>
              <span className="text-white text-xs font-bold">{Math.round(progress)}% Concluído</span>
-             <span className="text-text-secondary text-[10px]">Otimizando imagem...</span>
+             <span className="text-text-secondary text-[10px]">
+               {progress === 0 ? "Comprimindo imagem..." : progress < 100 ? "Enviando arquivo..." : "Finalizando..."}
+             </span>
           </div>
         )}
       </div>

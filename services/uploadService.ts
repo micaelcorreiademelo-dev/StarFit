@@ -26,22 +26,22 @@ export const uploadImage = async (
     const compressionOptions = {
       maxSizeMB,
       maxWidthOrHeight,
-      useWebWorker: true,
-      fileType: 'image/webp',
+      useWebWorker: false,
+      alwaysKeepResolution: true
     };
     
-    // Attempt compression
+    console.log("Starting compression...");
     const compressedFile = await imageCompression(file, compressionOptions);
+    console.log("Compression done. Size:", compressedFile.size);
 
-    // Generate unique file name
     const timestamp = Date.now();
     const uniqueId = Math.random().toString(36).substring(2, 10);
-    const extension = 'webp'; // Since we convert to webp
+    const extension = compressedFile.name.split('.').pop() || 'tmp';
     const safeFileName = options.fileName || `${timestamp}-${uniqueId}`;
     const filePath = `${folder}/${safeFileName}.${extension}`;
 
-    // 2. Upload to Firebase Storage
     const storageRef = ref(storage, filePath);
+    console.log("Uploading to:", filePath);
     const uploadTask = uploadBytesResumable(storageRef, compressedFile);
 
     return new Promise((resolve, reject) => {
@@ -49,18 +49,23 @@ export const uploadImage = async (
         'state_changed',
         (snapshot) => {
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log(`Upload progress: ${progress}%`);
           if (onProgress) {
             onProgress(progress);
           }
         },
         (error) => {
+          console.error("Upload Task Error:", error);
           reject(error);
         },
         async () => {
           try {
+            console.log("Upload task completed. Getting download URL...");
             const url = await getDownloadURL(uploadTask.snapshot.ref);
+            console.log("Download URL obtained:", url);
             resolve({ url, path: filePath });
           } catch (err) {
+            console.error("Error getting download URL:", err);
             reject(err);
           }
         }

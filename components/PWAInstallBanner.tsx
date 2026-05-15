@@ -57,7 +57,7 @@ export function PWAInstallBanner() {
     }
 
     if (!deferredPrompt) {
-      alert('Para instalar o aplicativo:\n\n1. Abra este link no seu navegador.\n2. Acesse o menu do navegador (três pontinhos na barra).\n3. Selecione "Adicionar à Tela Inicial" ou "Instalar Aplicativo".\n\nIsso ocorre porque o botão automático pode estar bloqueado neste ambiente.');
+      alert('Para baixar o aplicativo:\n\n1. Abra o sistema no seu navegador principal (Chrome/Safari).\n2. Acesse o menu de opções (ícone de três pontos ou compartilhar).\n3. Selecione "Adicionar à Tela Inicial" ou "Instalar Aplicativo".\n\nIsso fará o download do aplicativo para a tela do seu celular!');
       return;
     }
 
@@ -111,9 +111,10 @@ export function PWAInstallBanner() {
           {!isIOS && (
             <button
               onClick={handleInstallClick}
-              className="w-full bg-primary text-black font-semibold text-sm py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors mt-2"
+              className="w-full bg-primary text-black font-semibold text-sm py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors mt-2"
             >
-              {deferredPrompt ? 'Instalar Agora' : 'Como Instalar?'}
+              <span className="material-symbols-outlined text-[18px]">download</span>
+              Baixar Aplicativo
             </button>
           )}
         </motion.div>
