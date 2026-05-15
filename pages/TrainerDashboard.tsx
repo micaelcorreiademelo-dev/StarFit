@@ -2701,11 +2701,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[80px] z-50">
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 80" preserveAspectRatio="none">
             <path
-              d="M0 0 H135 C145 0 150 5 155 15 C 165 42 210 42 220 15 C 225 5 230 0 240 0 H375 V80 H0 Z"
+              d="M0 0 H137.5 C147.5 0 152.5 5 157.5 15 C 167.5 44 207.5 44 217.5 15 C 222.5 5 227.5 0 237.5 0 H375 V80 H0 Z"
               className="fill-card-dark"
             />
             <path
-              d="M0 0 H135 C145 0 150 5 155 15 C 165 42 210 42 220 15 C 225 5 230 0 240 0 H375"
+              d="M0 0 H137.5 C147.5 0 152.5 5 157.5 15 C 167.5 44 207.5 44 217.5 15 C 222.5 5 227.5 0 237.5 0 H375"
               className="stroke-border-dark"
               strokeWidth="1"
               fill="none"
@@ -2728,7 +2728,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </button>
 
             {/* Workout Button - Elevated & Centralized */}
-            <div className="relative -mt-[72px]">
+            <div className="relative -mt-[68px]">
               <button
                   onClick={() => setActiveTab('workouts')}
                   className={`flex items-center justify-center size-[64px] rounded-full border-2 border-primary/20 shadow-[0_8px_20px_rgba(0,0,0,0.4),0_0_15px_rgba(19,236,91,0.2)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-110 shadow-[0_8px_25px_rgba(19,236,91,0.4)]' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
