@@ -423,7 +423,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
   // Helper inside renderDashboard
   const renderDashboard = () => (
-    <div className="flex flex-col gap-6 pb-20">
+    <div className="flex flex-col gap-6 pb-12 md:pb-0">
       {/* Header Section */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
@@ -493,8 +493,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {[
+          {
+            label: "Total de Alunos",
+            value: (studentsData.length + linkRequests.length).toString(),
+            detail: "Base total",
+            color: "text-blue-400",
+          },
           {
             label: "Alunos Ativos",
             value: studentsData.length.toString(),
@@ -502,17 +508,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             color: "text-primary",
           },
           {
-            label: "Solicitações",
+            label: "Alunos Pendentes",
             value: linkRequests.length.toString(),
-            detail: "Aguardando aprovação",
-            color: linkRequests.length > 0 ? "text-orange-400" : "text-primary",
+            detail: "Aguardando vínculo",
+            color: "text-orange-400",
             onClick: () => setActiveTab("requests")
           },
           {
-            label: "Treinos Criados",
-            value: workouts.length.toString(),
-            detail: "Biblioteca de treinos",
-            color: "text-primary",
+            label: "Solicitações",
+            value: linkRequests.length.toString(),
+            detail: "Novos pedidos",
+            color: linkRequests.length > 0 ? "text-orange-400" : "text-primary",
+            onClick: () => setActiveTab("requests")
           },
           {
             label: "Eventos na Agenda",
@@ -523,22 +530,22 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           {
             label: "Receita Estimada",
             value: `R$ ${(studentsData.length * 150).toLocaleString()}`,
-            detail: "Baseado em R$150/aluno",
+            detail: "Projeção mensal",
             color: "text-primary",
           },
         ].map((kpi, idx) => (
           <div
             key={idx}
-            className={`flex flex-col gap-2 rounded-xl p-6 border border-border-dark bg-card-dark shadow-sm transition-all ${kpi.onClick ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5' : ''}`}
+            className={`flex flex-col gap-1 md:gap-2 rounded-xl p-3 md:p-6 border border-border-dark bg-card-dark shadow-sm transition-all ${kpi.onClick ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5' : ''}`}
             onClick={kpi.onClick}
           >
-            <p className="text-text-secondary text-sm font-medium">
+            <p className="text-text-secondary text-[10px] md:text-sm font-medium leading-tight">
               {kpi.label}
             </p>
-            <p className="text-white tracking-light text-2xl xl:text-3xl font-bold">
+            <p className="text-white tracking-light text-lg md:text-2xl xl:text-3xl font-bold">
               {kpi.value}
             </p>
-            <p className={`${kpi.color} text-[10px] font-medium`}>
+            <p className={`${kpi.color} text-[8px] md:text-[10px] font-medium leading-tight`}>
               {kpi.detail}
             </p>
           </div>
@@ -549,33 +556,38 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           {
-            label: "Novo Treino",
-            icon: "fitness_center",
+            label: "Agenda",
+            icon: "calendar_month",
             bg: "bg-primary/10 hover:bg-primary/20",
             iconColor: "text-primary",
+            onClick: () => setActiveTab("agenda")
           },
           {
-            label: "Novo Aluno",
-            icon: "person_add",
+            label: "Biblioteca",
+            icon: "library_books",
             bg: "bg-blue-500/10 hover:bg-blue-500/20",
             iconColor: "text-blue-400",
-          },
-          {
-            label: "Nova Avaliação",
-            icon: "monitor_weight",
-            bg: "bg-purple-500/10 hover:bg-purple-500/20",
-            iconColor: "text-purple-400",
+            onClick: () => setActiveTab("workouts")
           },
           {
             label: "Nova Mensagem",
-            icon: "send",
+            icon: "chat",
+            bg: "bg-purple-500/10 hover:bg-purple-500/20",
+            iconColor: "text-purple-400",
+            onClick: () => setActiveTab("chat")
+          },
+          {
+            label: "Landing Page",
+            icon: "public",
             bg: "bg-orange-500/10 hover:bg-orange-500/20",
             iconColor: "text-orange-400",
+            onClick: () => setActiveTab("landing-page")
           },
         ].map((shortcut, idx) => (
           <button
             key={idx}
             className={`${shortcut.bg} rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-colors border border-transparent`}
+            onClick={shortcut.onClick}
           >
             <span
               className={`material-symbols-outlined text-3xl ${shortcut.iconColor}`}
@@ -2681,7 +2693,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         {/* Padding for mobile top nav */}
         <div className="md:hidden h-16 shrink-0"></div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8">
           <div className="max-w-7xl mx-auto">{renderContent()}</div>
         </div>
 
@@ -2689,11 +2701,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[80px] z-50">
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 80" preserveAspectRatio="none">
             <path
-              d="M0 0 H140 C150 0 155 5 160 15 C 170 35 205 35 215 15 C 220 5 225 0 235 0 H375 V80 H0 Z"
+              d="M0 0 H135 C145 0 150 5 155 15 C 165 42 210 42 220 15 C 225 5 230 0 240 0 H375 V80 H0 Z"
               className="fill-card-dark"
             />
             <path
-              d="M0 0 H140 C150 0 155 5 160 15 C 170 35 205 35 215 15 C 220 5 225 0 235 0 H375"
+              d="M0 0 H135 C145 0 150 5 155 15 C 165 42 210 42 220 15 C 225 5 230 0 240 0 H375"
               className="stroke-border-dark"
               strokeWidth="1"
               fill="none"
@@ -2716,10 +2728,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </button>
 
             {/* Workout Button - Elevated & Centralized */}
-            <div className="relative -mt-16">
+            <div className="relative -mt-[72px]">
               <button
                   onClick={() => setActiveTab('workouts')}
-                  className={`flex items-center justify-center size-[64px] rounded-full border-4 border-card-dark shadow-[0_-4px_10px_rgba(0,0,0,0.2),0_4px_15px_rgba(19,236,91,0.3)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-110' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
+                  className={`flex items-center justify-center size-[64px] rounded-full border-2 border-primary/20 shadow-[0_8px_20px_rgba(0,0,0,0.4),0_0_15px_rgba(19,236,91,0.2)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-110 shadow-[0_8px_25px_rgba(19,236,91,0.4)]' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
               >
                   <span className="material-symbols-outlined text-[32px] drop-shadow-sm">fitness_center</span>
               </button>

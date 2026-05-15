@@ -1822,7 +1822,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 h-full">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 h-full pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8">
           <div className="max-w-7xl mx-auto h-full">
             {renderContent()}
           </div>
