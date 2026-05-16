@@ -39,6 +39,13 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       return;
     }
 
+    // Validate File Size
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > maxSizeMB) {
+      setError(`A imagem possui ${fileSizeMB.toFixed(1)}MB, o que excede o limite de ${maxSizeMB}MB.`);
+      return;
+    }
+
     // Temporary Preview
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl(objectUrl);
@@ -163,7 +170,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
              </div>
              <span className="text-white text-xs font-bold">{Math.round(progress)}% Concluído</span>
              <span className="text-text-secondary text-[10px]">
-               {progress === 0 ? "Comprimindo imagem..." : progress < 100 ? "Enviando arquivo..." : "Finalizando..."}
+               {progress < 100 ? "Enviando arquivo..." : "Finalizando..."}
              </span>
           </div>
         )}
