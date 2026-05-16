@@ -3,6 +3,10 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
+import multer from 'multer';
+import { initializeApp } from 'firebase/app';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,8 +17,58 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Initialize Firebase for the Server proxy
+  let storage: any = null;
+  try {
+    const configPath = path.join(__dirname, 'firebase-applet-config.json');
+    if (fs.existsSync(configPath)) {
+      const configObj = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const firebaseApp = initializeApp(configObj, 'server-app');
+      storage = getStorage(firebaseApp);
+    }
+  } catch (error) {
+    console.error("Firebase Storage init error in server:", error);
+  }
+
+  // Configure Multer
+  const upload = multer({ storage: multer.memoryStorage() });
+
+  // Upload Proxy Endpoint
+  app.post('/api/upload', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+      }
+      if (!storage) {
+        return res.status(500).json({ error: 'Storage não configurado.' });
+      }
+
+      const file = req.file;
+      const folder = req.body.folder || 'uploads';
+      const timestamp = Date.now();
+      const uniqueId = Math.random().toString(36).substring(2, 10);
+      const extension = file.originalname?.split('.').pop() || 'tmp';
+      const filePath = `${folder}/${timestamp}-${uniqueId}.${extension}`;
+
+      const storageRef = ref(storage, filePath);
+      
+      const metadata = {
+        contentType: file.mimetype,
+      };
+
+      const snapshot = await uploadBytes(storageRef, file.buffer, metadata);
+      const url = await getDownloadURL(snapshot.ref);
+
+      res.json({ url, path: filePath });
+    } catch (error: any) {
+      console.error('Server Upload Error:', error);
+      res.status(500).json({ error: error.message || 'Erro interno no upload' });
+    }
+  });
+
   // API Route: Create Mercado Pago Preference
   app.post('/api/payments/create-preference', async (req, res) => {
+
     try {
       const { trainerAccessToken, studentEmail, planName, price, studentId, trainerId } = req.body;
 

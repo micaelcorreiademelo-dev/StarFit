@@ -21,48 +21,41 @@ export const uploadImage = async (
   } = options;
 
   try {
-    const timestamp = Date.now();
-    const uniqueId = Math.random().toString(36).substring(2, 10);
-    const extension = file.name.split('.').pop() || 'tmp';
-    const safeFileName = options.fileName || `${timestamp}-${uniqueId}`;
-    const filePath = `${folder}/${safeFileName}.${extension}`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
 
-    const storageRef = ref(storage, filePath);
-    console.log("Uploading to:", filePath);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    if (onProgress) {
+        onProgress(30); // Simulate progress as fetch doesn't support upload progress naturally
+    }
 
-    return new Promise((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log(`Upload progress: ${progress}%`);
-          if (onProgress) {
-            onProgress(progress);
-          }
-        },
-        (error) => {
-          console.error("Upload Task Error:", error);
-          reject(error);
-        },
-        async () => {
-          try {
-            console.log("Upload task completed. Getting download URL...");
-            const url = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log("Download URL obtained:", url);
-            resolve({ url, path: filePath });
-          } catch (err) {
-            console.error("Error getting download URL:", err);
-            reject(err);
-          }
-        }
-      );
+    const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
     });
+
+    if (onProgress) {
+        onProgress(80);
+    }
+
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Upload failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (onProgress) {
+        onProgress(100);
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error uploading image:', error);
     throw error;
   }
 };
+
 
 export const deleteImage = async (path: string): Promise<void> => {
   if (!path) return;

@@ -38,9 +38,18 @@ export function PWAInstallBanner() {
       // Force prompt to true to bypass iframe limitations for demonstration and info
       setShowPrompt(true);
 
+      const checkAndSetGlobalPrompt = () => {
+        if ((window as any).globalDeferredPrompt) {
+          setDeferredPrompt((window as any).globalDeferredPrompt);
+        }
+      };
+      
+      checkAndSetGlobalPrompt();
+
       const handleBeforeInstallPrompt = (e: Event) => {
         e.preventDefault();
         setDeferredPrompt(e as BeforeInstallPromptEvent);
+        (window as any).globalDeferredPrompt = e;
       };
 
       window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);

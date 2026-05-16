@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           injectRegister: 'auto',
           includeAssets: ['starfit-icon.svg'],
+          devOptions: {
+            enabled: true,
+          },
           manifest: {
             name: 'StarFit Fitness Ecosystem',
             short_name: 'StarFit',
@@ -26,16 +29,25 @@ export default defineConfig(({ mode }) => {
             start_url: '/',
             icons: [
               {
-                src: '/starfit-icon.svg',
-                sizes: '192x192',
-                type: 'image/svg+xml',
-                purpose: 'any maskable'
+                src: '/pwa-64x64.png',
+                sizes: '64x64',
+                type: 'image/png'
               },
               {
-                src: '/starfit-icon.svg',
+                src: '/pwa-192x192.png',
+                sizes: '192x192',
+                type: 'image/png'
+              },
+              {
+                src: '/pwa-512x512.png',
                 sizes: '512x512',
-                type: 'image/svg+xml',
-                purpose: 'any maskable'
+                type: 'image/png'
+              },
+              {
+                src: '/maskable-icon-512x512.png',
+                sizes: '512x512',
+                type: 'image/png',
+                purpose: 'maskable'
               }
             ]
           },
