@@ -21,8 +21,7 @@ export function PWAInstallBanner() {
     if (hasDismissed) return;
 
     // Check if the app is already installed
-    const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    if (checkStandalone) {
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
       setIsStandalone(true);
       return;
     }
@@ -35,22 +34,20 @@ export function PWAInstallBanner() {
       setIsIOS(true);
       setShowPrompt(true);
     } else {
-      // Force prompt to true to bypass iframe limitations for demonstration and info
-      setShowPrompt(true);
-
-      const checkAndSetGlobalPrompt = () => {
-        if ((window as any).globalDeferredPrompt) {
-          setDeferredPrompt((window as any).globalDeferredPrompt);
-        }
-      };
-      
-      checkAndSetGlobalPrompt();
-
       const handleBeforeInstallPrompt = (e: Event) => {
+        // Prevent the mini-infobar from appearing on mobile
         e.preventDefault();
+        // Stash the event so it can be triggered later.
         setDeferredPrompt(e as BeforeInstallPromptEvent);
-        (window as any).globalDeferredPrompt = e;
+        // Update UI notify the user they can install the PWA
+        setShowPrompt(true);
       };
+
+      // Check if it was already fired and stored globally
+      if ((window as any).globalDeferredPrompt) {
+        setDeferredPrompt((window as any).globalDeferredPrompt);
+        setShowPrompt(true);
+      }
 
       window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
@@ -61,22 +58,24 @@ export function PWAInstallBanner() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (isIOS) {
-      return;
-    }
-
     if (!deferredPrompt) {
-      alert('Para baixar o aplicativo:\n\n1. Abra o sistema no seu navegador principal (Chrome/Safari).\n2. Acesse o menu de opções (ícone de três pontos ou compartilhar).\n3. Selecione "Adicionar à Tela Inicial" ou "Instalar Aplicativo".\n\nIsso fará o download do aplicativo para a tela do seu celular!');
       return;
     }
 
+    // Show the install prompt
     deferredPrompt.prompt();
 
+    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
     
     if (outcome === 'accepted') {
       setShowPrompt(false);
-      setDeferredPrompt(null);
+    }
+    
+    // We've used the prompt, and can't use it again, throw it away
+    setDeferredPrompt(null);
+    if ((window as any).globalDeferredPrompt) {
+      (window as any).globalDeferredPrompt = null;
     }
   };
 

@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Regra principal para a pasta landing_pages
+    match /landing_pages/{userId}/{allPaths=**} {
+      // Permitir leitura pública (para que as imagens apareçam na landing page)
+      allow read: if true;
+      
+      // Permitir upload/escrita apenas se o usuário autenticado for o dono da pasta
+      // Ele também precisa garantir que o payload seja imagem (opcional, validado no frontend também)
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Regras genéricas para uploads caso use outro caminho
+    match /uploads/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Negar acesso padrão se não corresponder aos caminhos acima
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

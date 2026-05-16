@@ -109,8 +109,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       <span className="text-sm font-bold text-white">{label}</span>
       <p className="text-xs text-text-secondary">{idealText}</p>
       
-      <div 
-        className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-4 transition-colors ${dragActive ? 'border-primary bg-primary/10' : 'border-border-dark bg-background-dark/50 hover:bg-card-dark'} overflow-hidden group`}
+      <label 
+        className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-4 transition-colors cursor-pointer ${dragActive ? 'border-primary bg-primary/10' : 'border-border-dark bg-background-dark/50 hover:bg-card-dark'} overflow-hidden group w-full`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
@@ -119,44 +119,36 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         <input 
           type="file" 
           ref={fileInputRef} 
-          className="hidden" 
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
           accept="image/jpeg, image/png, image/webp" 
           onChange={handleChange}
           disabled={isUploading}
         />
         
         {displayUrl ? (
-          <div className="relative w-full aspect-video md:aspect-auto md:h-48 rounded-lg overflow-hidden flex items-center justify-center bg-black/50">
+          <div className="relative w-full aspect-video md:aspect-auto md:h-48 rounded-lg overflow-hidden flex items-center justify-center bg-black/50 pointer-events-none">
             <img 
               src={displayUrl} 
               alt="Upload Preview" 
               className="w-full h-full object-cover"
             />
             {!isUploading && (
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 <button 
-                   type="button"
-                   onClick={() => fileInputRef.current?.click()}
-                   className="px-4 py-2 bg-primary text-background-dark font-bold text-sm rounded-lg shadow-lg"
-                 >
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                 <div className="px-4 py-2 bg-primary text-background-dark font-bold text-sm rounded-lg shadow-lg">
                    Trocar Imagem
-                 </button>
+                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-6 gap-3">
+          <div className="flex flex-col items-center justify-center py-6 gap-3 pointer-events-none">
              <div className="size-12 rounded-full bg-border-dark flex items-center justify-center">
                  <span className="material-symbols-outlined text-text-secondary">add_photo_alternate</span>
              </div>
-             <button 
-               type="button"
-               onClick={() => fileInputRef.current?.click()}
-               className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-medium text-sm rounded-lg transition-colors border border-border-dark"
-             >
+             <div className="px-4 py-2 bg-white/10 group-hover:bg-white/20 text-white font-medium text-sm rounded-lg transition-colors border border-border-dark">
                Selecionar Imagem
-             </button>
-             <p className="text-[10px] text-text-secondary text-center">Ou arraste e solte o arquivo aqui</p>
+             </div>
+             <p className="text-[10px] text-text-secondary text-center">Tamanho máx: {maxSizeMB}MB (JPG/PNG/WEBP)</p>
           </div>
         )}
 
@@ -174,10 +166,13 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
              </span>
           </div>
         )}
-      </div>
+      </label>
       
       {error && (
-        <p className="text-red-400 text-xs font-medium bg-red-400/10 border border-red-400/20 p-2 rounded-lg">{error}</p>
+        <div className="bg-red-400/10 border border-red-400/20 p-3 rounded-lg flex flex-col gap-2 mt-1">
+           <p className="text-red-400 text-xs font-bold">Erro no Upload:</p>
+           <p className="text-red-300/80 text-xs">{error}</p>
+        </div>
       )}
     </div>
   );
