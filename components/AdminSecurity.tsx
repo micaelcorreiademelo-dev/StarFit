@@ -44,14 +44,14 @@ const AdminSecurity: React.FC = () => {
   useEffect(() => {
     const qSecLogs = query(collection(db, 'securityLogs'), orderBy('createdAt', 'desc'));
     const unsubSecLogs = onSnapshot(qSecLogs, (snap) => {
-      const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const logs = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
       setAllLogs(logs);
       setCriticalLogs(logs.filter(l => l.severity === 'Alta' || l.isCritical));
     });
 
     const qLoginHistory = query(collection(db, 'loginHistory'), orderBy('createdAt', 'desc'));
     const unsubLoginHistory = onSnapshot(qLoginHistory, (snap) => {
-      setLoginHistory(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoginHistory(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
     });
 
     const qSysChanges = query(collection(db, 'systemChanges'), orderBy('createdAt', 'desc'));
@@ -86,9 +86,10 @@ const AdminSecurity: React.FC = () => {
       };
 
       // Auto register change
+      const keyString = String(key);
       await addDoc(collection(db, 'systemChanges'), {
         author: auth.currentUser?.email || 'Admin',
-        type: `Política de Segurança - ${policyLabels[key] || key}`,
+        type: `Política de Segurança - ${policyLabels[keyString] || keyString}`,
         from: policies[key] ? 'Ativado' : 'Desativado',
         to: newPolicies[key] ? 'Ativado' : 'Desativado',
         createdAt: serverTimestamp()

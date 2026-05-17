@@ -15,10 +15,10 @@ export const dataService = {
   subscribeToStudentProgress: (studentId: string, callback: (progress: any[]) => void) => {
     const q = query(collection(db, 'progress'), where('studentId', '==', studentId));
     return onSnapshot(q, (snapshot) => {
-      const progress = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const progress = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       // Sort by date inside the callback later or here. Better to sort here.
       // Assuming 'date' is a timestamp.
-      progress.sort((a, b) => {
+      progress.sort((a: any, b: any) => {
         const timeA = a.date?.toMillis ? a.date.toMillis() : a.date;
         const timeB = b.date?.toMillis ? b.date.toMillis() : b.date;
         return timeA - timeB; // ascending

@@ -119,7 +119,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           fatHistory: history.map(h => ({ date: h.dateString, value: h.fat })),
           lastWeight: last.weight,
           lastFat: last.fat,
-          history: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b) => {
+          history: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)).sort((a: any, b: any) => {
             const timeA = a.date?.toMillis ? a.date.toMillis() : a.date;
             const timeB = b.date?.toMillis ? b.date.toMillis() : b.date;
             return timeB - timeA; // descending

@@ -171,7 +171,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   useEffect(() => {
     const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       setAnnouncements(data);
       
       const lastSeen = localStorage.getItem('last_seen_announcement');

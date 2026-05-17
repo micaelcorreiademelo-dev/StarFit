@@ -9,7 +9,7 @@ import { HexColorPicker } from "react-colorful";
 import { Settings, Image as ImageIcon, Type, Share2, Eye, LayoutList, Check, Trash2, GripVertical, Plus } from "lucide-react";
 
 // Reusable Color Picker Component
-const ColorPickerField = ({ label, color, onChange }: { label: string, color: string, onChange: (color: string) => void }) => {
+const ColorPickerField: React.FC<{ label: string, color: string, onChange: (color: string) => void, key?: string | number }> = ({ label, color, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const popover = useRef<HTMLDivElement>(null);
 

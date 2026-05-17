@@ -57,26 +57,26 @@ export function PWAInstallBanner() {
     }
   }, []);
 
-  const handleInstallClick = async () => {
+  const handleInstallClick = () => {
     if (!deferredPrompt) {
       return;
     }
 
-    // Show the install prompt
+    // Show the install prompt synchronously immediately
     deferredPrompt.prompt();
 
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setShowPrompt(false);
-    }
-    
-    // We've used the prompt, and can't use it again, throw it away
-    setDeferredPrompt(null);
-    if ((window as any).globalDeferredPrompt) {
-      (window as any).globalDeferredPrompt = null;
-    }
+    // Wait for the user to respond to the prompt asynchronously
+    deferredPrompt.userChoice.then(({ outcome }) => {
+      if (outcome === 'accepted') {
+        setShowPrompt(false);
+      }
+      
+      // We've used the prompt, and can't use it again, throw it away
+      setDeferredPrompt(null);
+      if ((window as any).globalDeferredPrompt) {
+        (window as any).globalDeferredPrompt = null;
+      }
+    });
   };
 
   const handleDismiss = () => {

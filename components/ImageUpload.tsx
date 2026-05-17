@@ -65,6 +65,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       let msg = 'Erro ao enviar imagem. Tente novamente.';
       if (err.code === 'storage/unauthorized') {
          msg = 'Permissão negada no Firebase Storage. Ative o Storage no painel do Firebase ou ajuste as regras (firestore.rules não cobre Storage).';
+      } else if (err.code === 'storage/object-not-found') {
+         msg = 'Arquivo não salvo (Erro 404). Isso normalmente ocorre porque as regras do Storage não permitem upload ou há um problema temporário com o bucket. Tente enviar de novo ou certifique-se que as configurações de regra do Firebase no painel permitem escrita para sua conta.';
       } else if (err.message) {
          msg = err.message;
       }
@@ -74,6 +76,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     } finally {
       setIsUploading(false);
       URL.revokeObjectURL(objectUrl);
+      if (fileInputRef.current) {
+         fileInputRef.current.value = '';
+      }
     }
   };
 
