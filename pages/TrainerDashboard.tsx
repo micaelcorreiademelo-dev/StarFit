@@ -494,7 +494,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+      <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
         {[
           {
             label: "Total de Alunos",
