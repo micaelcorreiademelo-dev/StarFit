@@ -7,7 +7,8 @@ import {
   getRedirectResult,
   signOut, 
   onAuthStateChanged, 
-  User as FirebaseUser 
+  User as FirebaseUser,
+  browserPopupRedirectResolver
 } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocFromServer } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -172,7 +173,7 @@ export const logoutUser = () => signOut(auth);
 
 export const loginWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
     return result.user;
   } catch (error) {
     console.error('Error logging in with Google', error);

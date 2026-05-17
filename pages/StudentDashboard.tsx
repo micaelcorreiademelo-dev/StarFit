@@ -779,7 +779,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     }
 
     return (
-      <div className="flex flex-col h-full max-w-4xl mx-auto w-full pb-8">
+      <div className="flex flex-col h-[calc(100vh-200px)] md:h-[calc(100vh-140px)] min-h-[500px] max-w-4xl mx-auto w-full pb-4">
       <div className="flex items-center gap-4 pb-4 border-b border-border-light dark:border-border-dark shrink-0">
         <div className="relative">
           <div 

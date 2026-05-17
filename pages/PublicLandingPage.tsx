@@ -594,6 +594,14 @@ const PublicLandingPage: React.FC<{ previewData?: LandingPageData; subdomainOver
                   >
                     Contato
                   </a>
+                  {auth.currentUser && (
+                    <button
+                      onClick={() => navigate('/')}
+                      className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 border border-[var(--primary)]/30 text-[var(--primary)] text-sm font-bold tracking-wide transition-transform hover:scale-105"
+                    >
+                      Ir para o Painel
+                    </button>
+                  )}
                   <a
                     href={data.social.whatsapp}
                     target="_blank"

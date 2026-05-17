@@ -112,7 +112,12 @@ const App: React.FC = () => {
   const hostname = window.location.hostname;
   const parts = hostname.split('.');
   
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+  const isAistudioPreview = hostname.startsWith('ais-dev-') || hostname.startsWith('ais-pre-');
+
+  if (isAistudioPreview) {
+    // Never treat AI Studio preview URLs as subdomains
+    subdomain = null;
+  } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
     // Optionally handle localhost subdomains
     if (parts.length === 2 && parts[1] === 'localhost') {
        subdomain = parts[0];

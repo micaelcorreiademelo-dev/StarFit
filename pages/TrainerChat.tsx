@@ -25,9 +25,11 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user }) => {
     const unsubStudents = dataService.subscribeToStudents(user.id, (fetchedStudents) => {
       setStudents(fetchedStudents);
       setLoading(false);
-      // Auto-select first student if none selected
+      // Auto-select first student if none selected and on desktop
       if (fetchedStudents.length > 0 && !selectedStudentId) {
-        setSelectedStudentId(fetchedStudents[0].id);
+        if (window.innerWidth >= 768) {
+          setSelectedStudentId(fetchedStudents[0].id);
+        }
       }
     });
     return () => unsubStudents();
@@ -81,9 +83,9 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user }) => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-32px)] w-full rounded-2xl overflow-hidden border border-border-dark bg-background-dark shadow-2xl">
+    <div className="flex h-[calc(100vh-200px)] md:h-[calc(100vh-140px)] min-h-[500px] w-full rounded-2xl overflow-hidden border border-border-dark bg-background-dark shadow-2xl">
       {/* Conversation List Panel */}
-      <aside className="flex flex-col w-full sm:w-80 lg:w-96 bg-card-dark border-r border-border-dark shrink-0">
+      <aside className={`flex flex-col w-full md:w-80 lg:w-96 bg-card-dark border-r border-border-dark shrink-0 ${activeStudent ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-border-dark">
           <h2 className="text-2xl font-bold text-text-primary mb-4">Alunos</h2>
         </div>
@@ -135,19 +137,25 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user }) => {
       </aside>
 
       {/* Main Chat Area */}
-      <main className="flex flex-col flex-1 bg-background-dark">
+      <main className={`flex flex-col flex-1 bg-background-dark ${!activeStudent ? 'hidden md:flex' : 'flex'}`}>
         {activeStudent ? (
           <>
             {/* Chat Header */}
             <header className="flex items-center p-4 border-b border-border-dark bg-card-dark shrink-0">
               <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setSelectedStudentId(null)}
+                  className="md:hidden flex items-center justify-center p-2 -ml-2 rounded-full hover:bg-white/5 text-text-primary"
+                >
+                  <span className="material-symbols-outlined">arrow_back</span>
+                </button>
                 <div 
-                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12 border border-border-dark" 
+                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12 border border-border-dark shrink-0" 
                   style={{ backgroundImage: `url("${activeStudent.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'}")` }}
                 ></div>
-                <div>
-                  <h3 className="text-lg font-bold text-text-primary">{activeStudent.name}</h3>
-                  <p className="text-xs text-text-secondary">{activeStudent.plan || 'Aluno StarFit'}</p>
+                <div className="overflow-hidden">
+                  <h3 className="text-lg font-bold text-text-primary truncate">{activeStudent.name}</h3>
+                  <p className="text-xs text-text-secondary truncate">{activeStudent.plan || 'Aluno StarFit'}</p>
                 </div>
               </div>
             </header>

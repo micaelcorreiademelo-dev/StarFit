@@ -40,6 +40,9 @@ const Login: React.FC = () => {
       } else if (err.code === 'auth/internal-error') {
         setError('Erro interno do Firebase. Isso geralmente ocorre se o Google não estiver ativado no painel do Firebase Authentication ou por bloqueio do navegador. Tente a opção de redirecionamento ou ative o Google no Firebase.');
         setShowRedirectOption(true);
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Erro de conexão. Como estamos em um ambiente de visualização (iframe), navegadores com bloqueio de cookies de terceiros ou adblockers podem falhar no login. Você deve clicar no botão "Open in new tab" na barra superior do AI Studio para abrir o site em uma nova aba.');
+        setShowRedirectOption(true);
       } else {
         setError('Ocorreu um erro ao entrar com o Google. Tente novamente. Erro: ' + err.message);
       }
