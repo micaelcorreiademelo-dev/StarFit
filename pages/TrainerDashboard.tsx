@@ -494,7 +494,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
         {[
           {
             label: "Total de Alunos",
@@ -540,10 +540,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <p className="text-text-secondary text-[10px] md:text-sm font-medium leading-tight">
               {kpi.label}
             </p>
-            <p className="text-white tracking-light text-lg md:text-2xl xl:text-3xl font-bold">
+            <p className="text-white tracking-light text-lg md:text-2xl xl:text-2xl font-bold truncate">
               {kpi.value}
             </p>
-            <p className={`${kpi.color} text-[8px] md:text-[10px] font-medium leading-tight`}>
+            <p className={`${kpi.color} text-[8px] md:text-[10px] font-medium leading-tight truncate`}>
               {kpi.detail}
             </p>
           </div>
