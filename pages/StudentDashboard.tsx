@@ -848,106 +848,136 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     }
 
     return (
-      <div className="flex flex-col h-[calc(100vh-200px)] md:h-[calc(100vh-140px)] min-h-[500px] max-w-4xl mx-auto w-full pb-4">
-      <div className="flex items-center gap-4 pb-4 border-b border-border-light dark:border-border-dark shrink-0">
-        <div className="relative">
-          <div 
-            className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-12" 
-            style={{ backgroundImage: `url(${trainer?.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'})` }}
-          ></div>
-          <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-card-light dark:ring-card-dark"></span>
-        </div>
-        <div className="flex flex-col">
-          <h2 className="text-text-light-primary dark:text-text-dark-primary text-xl font-bold">{trainer?.name || 'Seu Personal'}</h2>
-          <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-mono tracking-tight uppercase text-[10px]">@{trainer?.trainerCode || 'TRAINER'}</p>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto py-4 space-y-4 pb-[80px] scroll-smooth px-2" ref={scrollRef}>
-        {messages.map((msg) => (
-          <div 
-            key={msg.id} 
-            className={`flex flex-col gap-1 w-full ${msg.senderId === user.id ? 'items-end' : 'items-start'}`}
-          >
-            {msg.context?.type === 'exercise' && (
-              <div className="max-w-[85%] bg-card-light dark:bg-border-dark/30 rounded-t-xl rounded-bl-xl px-3 py-2 border border-border-light dark:border-border-dark mb-1">
-                 <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase">
-                    <span className="material-symbols-outlined text-[14px]">fitness_center</span>
-                    Dúvida sobre exercício
-                 </div>
-                 <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary font-medium tracking-tight mt-1">"{msg.context.name}"</p>
-              </div>
-            )}
-            <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] w-auto`}>
-              {msg.senderId !== user.id && (
-                <div 
-                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0 mb-1 border border-border-light dark:border-border-dark" 
-                  style={{ backgroundImage: `url(${trainer?.avatar})` }}
-                ></div>
-              )}
-              <div className={`flex flex-col gap-1 rounded-2xl p-3 shadow-sm ${
-                msg.senderId === user.id 
-                  ? 'bg-primary text-background-dark rounded-br-none items-end' 
-                  : 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-light-primary dark:text-text-dark-primary rounded-bl-none items-start'
-              }`}>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className={`text-[9px] font-medium ${msg.senderId === user.id ? 'text-background-dark/70' : 'text-text-light-secondary dark:text-text-dark-secondary/70'}`}>
-                    {formatTimestamp(msg.timestamp)}
-                  </span>
-                  {msg.senderId === user.id && (
-                     <span className="material-symbols-outlined text-[12px] opacity-70">
-                       {msg.readAt ? 'done_all' : 'check'}
-                     </span>
-                  )}
-                </div>
-              </div>
+      <div className="flex flex-col h-full w-full bg-background-light dark:bg-[#121212] overflow-hidden relative">
+        <header className="flex flex-col gap-1 px-4 py-3 border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shrink-0 z-20 shadow-sm w-full">
+          <div className="flex items-center gap-3 overflow-hidden max-w-4xl mx-auto w-full">
+            <div className="relative shrink-0">
+              <div 
+                className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-10 w-10 border border-border-light dark:border-border-dark" 
+                style={{ backgroundImage: `url(${trainer?.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'})` }}
+              ></div>
+              <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-card-light dark:ring-card-dark"></span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-text-light-primary dark:text-white text-base font-bold truncate leading-tight">{trainer?.name || 'Seu Personal'}</h2>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary text-[11px] leading-tight font-medium uppercase truncate tracking-wide mt-0.5">@{trainer?.trainerCode || 'TRAINER'}</p>
             </div>
           </div>
-        ))}
-        {chatInfo?.typingState?.[trainer?.id] && (
-           <div className="flex items-end gap-2 max-w-[85%] w-auto animate-pulse pb-4">
-             <div 
-                className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-8 w-8 shrink-0 border border-border-light dark:border-border-dark mb-1 opacity-50" 
-                style={{ backgroundImage: `url("${trainer?.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'}")` }}
-             ></div>
-             <div className="bg-card-light dark:bg-card-dark text-text-light-secondary dark:text-text-dark-secondary rounded-2xl rounded-bl-none border border-border-light dark:border-border-dark p-3 text-xs italic opacity-70">
-               Digitando...
-             </div>
-           </div>
-        )}
-      </div>
+        </header>
 
-      <div className="absolute bottom-0 left-0 right-0 p-3 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.5)]">
-        {chatContext && (
-           <div className="flex justify-between items-center bg-card-light dark:bg-border-dark/50 px-3 py-2 rounded-xl mb-2 text-xs">
-             <span className="text-text-light-secondary dark:text-text-dark-secondary">
-               Contexto: <strong className="text-primary">{chatContext.name}</strong>
-             </span>
-             <button onClick={() => setChatContext(null)} className="text-text-light-secondary hover:text-red-500">
-               <span className="material-symbols-outlined text-sm">close</span>
-             </button>
-           </div>
-        )}
-        <div className="flex gap-2 max-w-full items-end">
-          <input
-            type="text"
-            className="flex-1 w-full px-5 py-3.5 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50 text-base md:text-sm shadow-inner transition-all text-text-light-primary dark:text-text-dark-primary"
-            placeholder="Digite algo..."
-            value={newMessage || ''}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleInputKeyDown}
-          />
-          <button 
-            className="h-[52px] w-[52px] bg-primary text-background-dark font-black rounded-full shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center shrink-0 disabled:opacity-50 disabled:scale-100"
-            onClick={handleSendMessage}
-            disabled={!newMessage.trim()}
-          >
-            <span className="material-symbols-outlined fill text-xl">send</span>
-          </button>
+        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 w-full custom-scrollbar relative" ref={scrollRef}>
+          <div className="flex flex-col gap-4 max-w-4xl mx-auto min-h-full pb-4">
+            {messages.length > 0 ? (
+              messages.map((msg) => {
+                const isMe = msg.senderId === user.id;
+                return (
+                  <div 
+                    key={msg.id} 
+                    className={`flex flex-col w-full max-w-[85%] md:max-w-[70%] lg:max-w-[65%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`}
+                  >
+                    {msg.context?.type === 'exercise' && (
+                       <div className={`text-[10px] uppercase font-bold px-3 py-1.5 rounded-t-lg mb-0.5 border ${
+                         isMe ? 'bg-primary/20 text-primary border-primary/30 ml-auto' : 'bg-card-light dark:bg-card-dark text-text-light-secondary dark:text-text-dark-secondary border-border-light dark:border-border-dark mr-auto'
+                       }`}>
+                          Dúvida: {msg.context.name}
+                       </div>
+                    )}
+                    <div className={`relative px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm break-words flex flex-col w-full ${
+                      isMe 
+                        ? 'bg-primary text-background-dark rounded-br-sm' 
+                        : 'bg-white dark:bg-card-dark text-text-light-primary dark:text-white rounded-bl-sm border border-border-light/50 dark:border-border-dark'
+                    }`}>
+                      <span className="whitespace-pre-wrap">{msg.text}</span>
+                      
+                      <div className={`flex items-center justify-end gap-1 mt-1 shrink-0 ${isMe ? 'text-background-dark/70' : 'text-text-light-secondary dark:text-text-dark-secondary'}`}>
+                        <span className="text-[10px] right-0 translate-y-0.5 leading-none">
+                          {formatTimestamp(msg.timestamp)}
+                        </span>
+                        {isMe && (
+                           <span className="material-symbols-outlined text-[14px] leading-none">
+                             {msg.readAt ? 'done_all' : 'check'}
+                           </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center opacity-50 m-auto mt-20 gap-3">
+                 <span className="material-symbols-outlined text-[48px] text-text-light-secondary dark:text-text-dark-secondary">forum</span>
+                 <p className="text-text-light-primary dark:text-white text-sm font-medium bg-card-light dark:bg-card-dark px-4 py-2 rounded-full border border-border-light dark:border-border-dark">Nenhuma mensagem ainda. Envie a primeira mensagem.</p>
+              </div>
+            )}
+            
+            {chatInfo?.typingState?.[trainer?.id || ''] && (
+               <div className="flex self-start max-w-[85%]">
+                 <div className="px-4 py-3 bg-white dark:bg-card-dark rounded-2xl rounded-bl-sm border border-border-light/50 dark:border-border-dark flex items-center gap-1.5 opacity-80 shadow-sm">
+                   <span className="w-1.5 h-1.5 bg-text-light-secondary dark:bg-text-dark-secondary rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
+                   <span className="w-1.5 h-1.5 bg-text-light-secondary dark:bg-text-dark-secondary rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
+                   <span className="w-1.5 h-1.5 bg-text-light-secondary dark:bg-text-dark-secondary rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
+                 </div>
+               </div>
+            )}
+            
+            <div className="h-1 w-full shrink-0" />
+          </div>
         </div>
+
+        <footer className="shrink-0 bg-background-light dark:bg-card-dark px-4 py-3 sm:px-6 w-full border-t border-border-light dark:border-border-dark z-20">
+          <div className="max-w-4xl mx-auto w-full flex flex-col">
+            {chatContext && (
+               <div className="flex justify-between items-center bg-card-light dark:bg-background-dark px-3 py-2 rounded-xl mb-3 border border-border-light/50 dark:border-border-dark/50 text-xs">
+                 <span className="text-text-light-secondary dark:text-text-dark-secondary flex items-center gap-2">
+                   <span className="material-symbols-outlined text-[14px]">info</span>
+                   Contexto da mensagem: <strong className="text-primary">{chatContext.name}</strong>
+                 </span>
+                 <button onClick={() => setChatContext(null)} className="text-text-light-secondary dark:text-text-dark-secondary hover:text-red-500 transition-colors">
+                   <span className="material-symbols-outlined text-[16px]">close</span>
+                 </button>
+               </div>
+            )}
+            <div className="flex items-end gap-2 sm:gap-3 w-full">
+              <button className="flex items-center justify-center size-12 shrink-0 rounded-full hover:bg-white/50 dark:hover:bg-white/5 text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-white transition-colors" title="Anexar arquivo">
+                <span className="material-symbols-outlined text-2xl">attach_file</span>
+              </button>
+              <div className="flex-1 bg-white dark:bg-background-dark border border-border-light dark:border-border-dark rounded-3xl min-h-[48px] max-h-[140px] flex items-center focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/30 transition-all shadow-inner overflow-hidden">
+                <textarea 
+                  className="w-full bg-transparent border-none focus:ring-0 text-text-light-primary dark:text-white placeholder:text-text-light-secondary/70 dark:placeholder:text-text-dark-secondary/70 resize-none px-5 py-3 max-h-[140px] text-[15px] leading-relaxed custom-scrollbar outline-none" 
+                  placeholder="Digite uma mensagem..." 
+                  rows={1}
+                  value={newMessage || ''}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
+                  }}
+                  onKeyDown={(e) => {
+                     if (e.key === 'Enter' && !e.shiftKey) {
+                       e.preventDefault();
+                       handleSendMessage();
+                       e.currentTarget.style.height = 'auto';
+                     } else {
+                       handleInputKeyDown(e as any);
+                     }
+                  }}
+                />
+              </div>
+              <button 
+                onClick={() => {
+                   handleSendMessage();
+                   const ta = document.querySelector('textarea');
+                   if(ta) ta.style.height = 'auto';
+                }}
+                disabled={!newMessage.trim()}
+                className="flex items-center justify-center size-12 shrink-0 rounded-full bg-primary text-background-dark shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:shadow-none transition-all"
+              >
+                <span className="material-symbols-outlined fill text-xl ml-0.5">send</span>
+              </button>
+            </div>
+          </div>
+        </footer>
       </div>
-    </div>
     );
   };
 
@@ -1918,8 +1948,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 h-full pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8">
-          <div className="max-w-7xl mx-auto h-full">
+        <div className={`flex-1 overflow-hidden flex flex-col h-full ${activeTab === 'chat' ? 'p-0 pb-[84px] md:pb-0' : 'overflow-y-auto p-4 md:p-8 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
+          <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto h-full'}`}>
             {renderContent()}
           </div>
         </div>

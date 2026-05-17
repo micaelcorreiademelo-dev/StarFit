@@ -173,7 +173,7 @@ export const logoutUser = () => signOut(auth);
 
 export const loginWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
+    const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error) {
     console.error('Error logging in with Google', error);

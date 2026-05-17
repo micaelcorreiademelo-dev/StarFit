@@ -15,7 +15,7 @@ import PublicLandingPage from './pages/PublicLandingPage';
 import PaymentSuccess from './pages/PaymentSuccess';
 import ImpersonateWrapper from './pages/ImpersonateWrapper';
 import { User, UserRole } from './types';
-import { auth, syncUserToFirestore, logoutUser, db } from './services/firebase';
+import { auth, syncUserToFirestore, logoutUser, db, handleRedirectResult } from './services/firebase';
 import { dataService } from './services/dataService';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
@@ -27,6 +27,10 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
+    handleRedirectResult().catch(err => {
+      console.error("Error handling redirect result:", err);
+    });
+
     let userUnsubscribe: (() => void) | null = null;
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
