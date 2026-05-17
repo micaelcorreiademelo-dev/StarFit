@@ -540,10 +540,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <p className="text-text-secondary text-[10px] md:text-sm font-medium leading-tight">
               {kpi.label}
             </p>
-            <p className="text-white tracking-light text-lg md:text-2xl xl:text-2xl font-bold truncate">
+            <p className="text-white tracking-light text-lg md:text-2xl xl:text-3xl font-bold">
               {kpi.value}
             </p>
-            <p className={`${kpi.color} text-[8px] md:text-[10px] font-medium leading-tight truncate`}>
+            <p className={`${kpi.color} text-[8px] md:text-[10px] font-medium leading-tight`}>
               {kpi.detail}
             </p>
           </div>
