@@ -21,7 +21,7 @@ const PaymentConfirmation: React.FC<PaymentConfirmationProps> = ({ user }) => {
           <h2 className="text-xl font-bold tracking-tight">StarFit</h2>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm hidden sm:block font-medium text-text-medium dark:text-text-secondary">Olá, {user.name.split(' ')[0]}</span>
+          <span className="text-sm hidden sm:block font-medium text-text-medium dark:text-text-secondary">Olá, {(user.name || 'Aluno').split(' ')[0]}</span>
           <div 
             className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-10 w-10 border-2 border-primary" 
             style={{ backgroundImage: `url(${user.avatar})` }}

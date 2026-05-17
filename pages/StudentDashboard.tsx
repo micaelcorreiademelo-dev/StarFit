@@ -438,7 +438,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         <div className="flex flex-wrap justify-between gap-3 mb-6">
           <div className="flex min-w-72 flex-col gap-2">
             <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">
-              Olá, {user.name.split(' ')[0]}!
+              Olá, {(user.name || 'Aluno').split(' ')[0]}!
             </h1>
             <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">
               {todayWorkout ? 'Pronto para o treino de hoje?' : 'Aguardando seu treinador atribuir um treino.'}
