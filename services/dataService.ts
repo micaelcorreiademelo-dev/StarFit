@@ -141,6 +141,37 @@ export const dataService = {
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'agendaEvents'));
   },
 
+  createAgendaEvent: async (eventData: any) => {
+    try {
+      const docRef = await addDoc(collection(db, 'agendaEvents'), {
+        ...eventData,
+        date: eventData.date,
+        createdAt: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'agendaEvents');
+    }
+  },
+
+  updateAgendaEvent: async (eventId: string, eventData: any) => {
+    try {
+      const docRef = doc(db, 'agendaEvents', eventId);
+      await updateDoc(docRef, { ...eventData, updatedAt: serverTimestamp() });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `agendaEvents/${eventId}`);
+    }
+  },
+
+  deleteAgendaEvent: async (eventId: string) => {
+    try {
+      const docRef = doc(db, 'agendaEvents', eventId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `agendaEvents/${eventId}`);
+    }
+  },
+
   // Link Requests
   subscribeToLinkRequests: (trainerId: string, callback: (requests: any[]) => void) => {
     const q = query(collection(db, 'linkRequests'), where('trainerId', '==', trainerId), where('status', '==', 'pending'));

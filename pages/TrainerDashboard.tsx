@@ -221,6 +221,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [trainerCustomPlans, setTrainerCustomPlans] = useState<any[]>([]);
   const [latestChat, setLatestChat] = useState<any>(null);
   const [isChatOpenOnMobile, setIsChatOpenOnMobile] = useState(false);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [newEvent, setNewEvent] = useState({ title: '', type: 'Consultoria', date: new Date().toISOString().split('T')[0], time: '10:00' });
 
   useEffect(() => {
     if (!user) return;
@@ -898,11 +900,48 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 Gerencie seus compromissos e sessões.
               </p>
             </div>
-            <button className="flex h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/20 hover:brightness-110 transition-all">
+            <button onClick={() => setIsCreatingEvent(true)} className="flex h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/20 hover:brightness-110 transition-all">
               <span className="material-symbols-outlined text-[18px]">add</span>
               Novo Agendamento
             </button>
           </header>
+
+          {isCreatingEvent && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <div className="bg-card-dark border border-border-dark w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
+                <div className="flex items-center justify-between p-4 border-b border-border-dark bg-background-dark/50">
+                  <h3 className="text-white font-bold tracking-tight">Novo Agendamento</h3>
+                  <button onClick={() => setIsCreatingEvent(false)} className="text-text-secondary hover:text-white transition-colors">
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <div className="p-6 flex flex-col gap-4">
+                  <input type="text" placeholder="Título (ex: Consulta Marcos)" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white" />
+                  <select value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value})} className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white">
+                      <option>Consultoria</option>
+                      <option>Retorno</option>
+                      <option>Avaliação Presencial</option>
+                      <option>Outro</option>
+                  </select>
+                  <input type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white" />
+                  <input type="time" value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white" />
+                  <button onClick={async () => {
+                     await dataService.createAgendaEvent({
+                       ...newEvent,
+                       date: new Date(newEvent.date),
+                       trainerId: user.id,
+                       status: 'Agendado',
+                       color: 'bg-primary/10 text-primary border-primary/20'
+                     });
+                     setIsCreatingEvent(false);
+                     setNewEvent({ title: '', type: 'Consultoria', date: new Date().toISOString().split('T')[0], time: '10:00' });
+                  }} className="w-full h-12 bg-primary text-background-dark font-bold rounded-xl mt-2">
+                    Salvar Agendamento
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex-grow flex flex-col gap-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
