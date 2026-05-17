@@ -220,6 +220,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [platformPlans, setPlatformPlans] = useState<any[]>([]);
   const [trainerCustomPlans, setTrainerCustomPlans] = useState<any[]>([]);
   const [latestChat, setLatestChat] = useState<any>(null);
+  const [isChatOpenOnMobile, setIsChatOpenOnMobile] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -2612,7 +2613,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       case "plans":
         return <TrainerPlans user={user} />;
       case "chat":
-        return <TrainerChat user={user} />;
+        return <TrainerChat user={user} onChatStateChange={setIsChatOpenOnMobile} />;
       case "landing-page":
         return <TrainerLandingPage user={user} />;
       case "settings-menu":
@@ -2631,7 +2632,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   };
 
   return (
-    <div className="flex h-screen bg-background-dark overflow-hidden">
+    <div className="flex h-[100dvh] bg-background-dark overflow-hidden">
       <Sidebar
         user={user}
         onLogout={onLogout}
@@ -2640,9 +2641,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden">
         {/* Mobile Header / Top Navbar */}
-        <header className="md:hidden flex items-center justify-between px-4 h-16 bg-card-dark border-b border-border-dark shrink-0 z-50 fixed top-0 w-full left-0 right-0">
+        <header className={`md:hidden flex items-center justify-between px-4 h-16 bg-card-dark border-b border-border-dark shrink-0 z-40 fixed top-0 w-full left-0 right-0 transition-transform duration-300 ease-in-out ${activeTab === 'chat' && isChatOpenOnMobile ? '-translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary fill text-2xl">
               fitness_center
@@ -2688,14 +2689,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         </header>
 
         {/* Padding for mobile top nav */}
-        <div className="md:hidden h-16 shrink-0"></div>
+        <div className={`md:hidden shrink-0 transition-[height] duration-300 ease-in-out ${activeTab === 'chat' && isChatOpenOnMobile ? 'h-0' : 'h-16'}`}></div>
 
-        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? 'p-0 pb-[84px] md:pb-0' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
+        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? (isChatOpenOnMobile ? 'p-0 pb-0' : 'p-0 pb-[84px] md:pb-0') : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
           <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto'}`}>{renderContent()}</div>
         </div>
 
         {/* Mobile Bottom Navbar */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[84px] z-50">
+        <nav className={`md:hidden fixed bottom-0 left-0 right-0 h-[84px] z-50 transition-transform duration-300 ease-in-out ${activeTab === 'chat' && isChatOpenOnMobile ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 84" preserveAspectRatio="none">
             <path
               d="M0 0 H120 C135 0 140 3 145 10 C 158 52 217 52 230 10 C 235 3 240 0 255 0 H375 V84 H0 Z"

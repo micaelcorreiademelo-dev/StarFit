@@ -6,11 +6,12 @@ import { dataService } from '../services/dataService';
 
 interface TrainerChatProps {
   user: User;
+  onChatStateChange?: (isOpen: boolean) => void;
 }
 
 export type ChatFilter = 'all' | 'online' | 'offline' | 'unanswered' | 'favorites';
 
-const TrainerChat: React.FC<TrainerChatProps> = ({ user }) => {
+const TrainerChat: React.FC<TrainerChatProps> = ({ user, onChatStateChange }) => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -69,7 +70,11 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user }) => {
         setActiveChatId(id);
       });
     }
-  }, [selectedStudentId, user.id]);
+    
+    if (onChatStateChange) {
+      onChatStateChange(!!selectedStudentId);
+    }
+  }, [selectedStudentId, user.id, onChatStateChange]);
 
   // Subscribe to messages of active chat & mark read
   useEffect(() => {
@@ -256,7 +261,7 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user }) => {
         {activeStudent ? (
           <div className="flex flex-col h-full w-full absolute inset-0">
             {/* Chat Header */}
-            <header className="flex items-center justify-between px-4 py-3 border-b border-border-dark bg-card-dark shrink-0 w-full z-20 shadow-sm">
+            <header className="flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-3 pb-3 border-b border-border-dark bg-card-dark shrink-0 w-full z-20 shadow-sm">
               <div className="flex items-center gap-3 overflow-hidden">
                 <button 
                   onClick={() => setSelectedStudentId(null)}
@@ -351,7 +356,7 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user }) => {
             </div>
 
             {/* Message Composer Footer */}
-            <footer className="shrink-0 bg-card-dark px-4 py-3 sm:px-6 w-full border-t border-border-dark z-20">
+            <footer className="shrink-0 bg-card-dark px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 w-full border-t border-border-dark z-20">
               <div className="flex items-end gap-2 sm:gap-3 max-w-4xl mx-auto w-full">
                 <button className="flex items-center justify-center size-12 shrink-0 rounded-full hover:bg-white/5 text-text-secondary hover:text-white transition-colors" title="Anexar arquivo">
                   <span className="material-symbols-outlined text-2xl">attach_file</span>
