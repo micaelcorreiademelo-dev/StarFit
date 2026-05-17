@@ -2726,7 +2726,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </button>
  
             {/* Workout Button - Elevated & Centralized */}
-            <div className="relative -mt-[110px]">
+            <div className={`relative -mt-[110px] transition-transform duration-300 ease-in-out ${activeTab === 'chat' && isChatOpenOnMobile ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
               <button
                   onClick={() => setActiveTab('workouts')}
                   className={`flex items-center justify-center size-[80px] rounded-full border-4 border-background-dark shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.25)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-105 shadow-[0_12px_35px_rgba(19,236,91,0.4)]' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
