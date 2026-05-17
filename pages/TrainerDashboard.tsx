@@ -222,6 +222,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [latestChat, setLatestChat] = useState<any>(null);
   const [isChatOpenOnMobile, setIsChatOpenOnMobile] = useState(false);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState({ title: '', type: 'Consultoria', date: new Date().toISOString().split('T')[0], time: '10:00' });
 
   useEffect(() => {
@@ -910,8 +911,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <div className="bg-card-dark border border-border-dark w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
                 <div className="flex items-center justify-between p-4 border-b border-border-dark bg-background-dark/50">
-                  <h3 className="text-white font-bold tracking-tight">Novo Agendamento</h3>
-                  <button onClick={() => setIsCreatingEvent(false)} className="text-text-secondary hover:text-white transition-colors">
+                  <h3 className="text-white font-bold tracking-tight">{editingEventId ? 'Editar Agendamento' : 'Novo Agendamento'}</h3>
+                  <button onClick={() => { setIsCreatingEvent(false); setEditingEventId(null); }} className="text-text-secondary hover:text-white transition-colors">
                     <span className="material-symbols-outlined">close</span>
                   </button>
                 </div>
@@ -926,17 +927,23 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   <input type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white" />
                   <input type="time" value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white" />
                   <button onClick={async () => {
-                     await dataService.createAgendaEvent({
+                     const eventData = {
                        ...newEvent,
                        date: new Date(newEvent.date),
                        trainerId: user.id,
                        status: 'Agendado',
                        color: 'bg-primary/10 text-primary border-primary/20'
-                     });
+                     };
+                     if (editingEventId) {
+                        await dataService.updateAgendaEvent(editingEventId, eventData);
+                     } else {
+                        await dataService.createAgendaEvent(eventData);
+                     }
                      setIsCreatingEvent(false);
+                     setEditingEventId(null);
                      setNewEvent({ title: '', type: 'Consultoria', date: new Date().toISOString().split('T')[0], time: '10:00' });
                   }} className="w-full h-12 bg-primary text-background-dark font-bold rounded-xl mt-2">
-                    Salvar Agendamento
+                    {editingEventId ? 'Atualizar Agendamento' : 'Salvar Agendamento'}
                   </button>
                 </div>
               </div>
@@ -1011,13 +1018,30 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             <span className="text-[10px] uppercase font-black tracking-wider opacity-80">
                               {evt.time}
                             </span>
-                            <span className="material-symbols-outlined text-[14px] opacity-70">
-                              {evt.status === "Concluído"
-                                ? "check_circle"
-                                : evt.status === "Cancelado"
-                                  ? "cancel"
-                                  : "schedule"}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNewEvent({ title: evt.title, type: evt.type, date: format(evt.date, 'yyyy-MM-dd'), time: evt.time });
+                                  setEditingEventId(evt.id);
+                                  setIsCreatingEvent(true);
+                                }}
+                                className="material-symbols-outlined text-[14px] cursor-pointer hover:text-white"
+                              >
+                                edit
+                              </span>
+                              <span
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (confirm('Tem certeza que deseja excluir este agendamento?')) {
+                                    await dataService.deleteAgendaEvent(evt.id);
+                                  }
+                                }}
+                                className="material-symbols-outlined text-[14px] cursor-pointer hover:text-red-500"
+                              >
+                                delete
+                              </span>
+                            </div>
                           </div>
                           <p className="text-xs font-bold leading-tight">
                             {evt.title}
