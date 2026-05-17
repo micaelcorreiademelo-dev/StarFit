@@ -44,6 +44,8 @@ export interface User {
   trialUntil?: any;
   createdAt?: any;
   updatedAt?: any;
+  lastActive?: any;
+  isOnline?: boolean;
   studentsCount?: number;
   privacy?: {
     publicProfile?: boolean;
@@ -79,6 +81,12 @@ export interface ChatMessage {
   text: string;
   timestamp: any;
   avatar?: string;
+  readAt?: any;
+  context?: {
+    type: 'exercise';
+    id: string;
+    name: string;
+  };
 }
 
 export interface Chat {
@@ -87,5 +95,8 @@ export interface Chat {
   studentId: string;
   lastMessage?: string;
   lastMessageTime?: any;
+  lastMessageSenderId?: string;
   unreadCount?: Record<string, number>;
+  typingState?: Record<string, boolean>;
+  isFavorite?: boolean;
 }

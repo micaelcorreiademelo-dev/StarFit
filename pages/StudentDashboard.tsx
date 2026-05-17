@@ -45,9 +45,27 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   // Data State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chatInfo, setChatInfo] = useState<Chat | null>(null);
+  const [chatContext, setChatContext] = useState<any>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   const isSubscriptionExpired = user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date();
   const hasActiveTrial = user.trialUntil && new Date() < (user.trialUntil?.toDate ? user.trialUntil.toDate() : new Date(user.trialUntil));
   const isAccessBlocked = user.trainerId && (user.status !== 'Ativa' || isSubscriptionExpired) && !hasActiveTrial;
+
+  // Online Presence
+  useEffect(() => {
+    if (user?.id) {
+       chatService.updatePresence(user.id, true);
+       const handleBeforeUnload = () => chatService.updatePresence(user.id, false);
+       window.addEventListener('beforeunload', handleBeforeUnload);
+       return () => {
+         chatService.updatePresence(user.id, false);
+         window.removeEventListener('beforeunload', handleBeforeUnload);
+       };
+    }
+  }, [user.id]);
   
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [studentStats, setStudentStats] = useState({
@@ -181,10 +199,26 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   }, [user]);
 
   useEffect(() => {
-    if (!activeChatId) return;
-    const unsubMessages = chatService.subscribeToMessages(activeChatId, setMessages);
-    return () => unsubMessages();
-  }, [activeChatId]);
+    if (!activeChatId || !user.id) return;
+    
+    const unsubInfo = chatService.subscribeToChatInfo(activeChatId, setChatInfo);
+
+    const unsubMessages = chatService.subscribeToMessages(activeChatId, (msgs) => {
+      setMessages(msgs);
+      chatService.markAsRead(activeChatId, user.id);
+    });
+
+    return () => {
+       unsubMessages();
+       unsubInfo();
+    };
+  }, [activeChatId, user.id]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, chatInfo?.typingState]);
 
   const handleSearchTrainer = async () => {
     if (!searchQuery.trim()) return;
@@ -231,8 +265,31 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !activeChatId || !user.trainerId) return;
     const text = newMessage;
+    const ctx = chatContext;
     setNewMessage('');
-    await chatService.sendMessage(activeChatId, user.id, user.trainerId, text);
+    setChatContext(null);
+    
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      chatService.setTypingStatus(activeChatId, user.id, false);
+    }
+    
+    await chatService.sendMessage(activeChatId, user.id, user.trainerId, text, ctx);
+  };
+  
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+       handleSendMessage();
+       return;
+    }
+    
+    if (activeChatId && user.id) {
+      chatService.setTypingStatus(activeChatId, user.id, true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        chatService.setTypingStatus(activeChatId, user.id, false);
+      }, 2000);
+    }
   };
 
   const submitProgress = async () => {
@@ -683,24 +740,36 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                   <h2 className="text-xl font-bold text-text-light-primary dark:text-text-dark-primary">{ex.name}</h2>
                   <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm mt-1">Exercício {index + 1} de {activeWorkout.exercises.length}</p>
                 </div>
-                <button 
-                  onClick={() => {
-                    const id = index.toString();
-                    setCompletedExercises(prev => 
-                      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-                    );
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                    completedExercises.includes(index.toString())
-                      ? 'bg-primary/20 text-primary cursor-default' 
-                      : 'border border-primary text-primary hover:bg-primary/10'
-                  }`}
-                >
-                  <span className={`material-symbols-outlined ${completedExercises.includes(index.toString()) ? 'fill' : ''}`}>
-                    {completedExercises.includes(index.toString()) ? 'check_circle' : 'check'}
-                  </span>
-                  {completedExercises.includes(index.toString()) ? 'Concluído' : 'Marcar como concluído'}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => {
+                      const id = index.toString();
+                      setCompletedExercises(prev => 
+                        prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+                      );
+                    }}
+                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                      completedExercises.includes(index.toString())
+                        ? 'bg-primary/20 text-primary cursor-default' 
+                        : 'border border-primary text-primary hover:bg-primary/10'
+                    }`}
+                  >
+                    <span className={`material-symbols-outlined ${completedExercises.includes(index.toString()) ? 'fill' : ''}`}>
+                      {completedExercises.includes(index.toString()) ? 'check_circle' : 'check'}
+                    </span>
+                    {completedExercises.includes(index.toString()) ? 'Concluído' : 'Marcar como concluído'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setChatContext({ type: 'exercise', id: index.toString(), name: ex.name });
+                      setActiveTab('chat');
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-2 border border-border-light dark:border-border-dark text-text-light-secondary dark:text-text-dark-secondary rounded-lg hover:text-primary hover:border-primary transition-colors text-sm font-medium"
+                  >
+                    <span className="material-symbols-outlined text-sm">chat</span>
+                    Dúvida
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4 text-center">
@@ -794,60 +863,87 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto py-4 space-y-4 pb-[80px] scroll-smooth px-2" ref={scrollRef}>
         {messages.map((msg) => (
           <div 
             key={msg.id} 
-            className={`flex items-start gap-3 ${msg.senderId === user.id ? 'justify-end' : ''}`}
+            className={`flex flex-col gap-1 w-full ${msg.senderId === user.id ? 'items-end' : 'items-start'}`}
           >
-            {msg.senderId !== user.id && (
-              <div 
-                className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0" 
-                style={{ backgroundImage: `url(${trainer?.avatar})` }}
-              ></div>
-            )}
-            <div className={`flex flex-col gap-1 ${msg.senderId === user.id ? 'items-end' : ''}`}>
-              <div 
-                className={`rounded-xl p-3 max-w-lg ${
-                  msg.senderId === user.id 
-                    ? 'bg-primary text-background-dark rounded-tr-none' 
-                    : 'bg-card-light dark:bg-card-dark text-text-light-primary dark:text-text-dark-primary rounded-tl-none border border-border-light dark:border-border-dark shadow-sm'
-                }`}
-              >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+            {msg.context?.type === 'exercise' && (
+              <div className="max-w-[85%] bg-card-light dark:bg-border-dark/30 rounded-t-xl rounded-bl-xl px-3 py-2 border border-border-light dark:border-border-dark mb-1">
+                 <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase">
+                    <span className="material-symbols-outlined text-[14px]">fitness_center</span>
+                    Dúvida sobre exercício
+                 </div>
+                 <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary font-medium tracking-tight mt-1">"{msg.context.name}"</p>
               </div>
-              <span className="text-text-light-secondary dark:text-text-dark-secondary text-xs px-2">{formatTimestamp(msg.timestamp)}</span>
-            </div>
-            {msg.senderId === user.id && (
-              <div 
-                className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0" 
-                style={{ backgroundImage: `url(${user.avatar})` }}
-              ></div>
             )}
+            <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] w-auto`}>
+              {msg.senderId !== user.id && (
+                <div 
+                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0 mb-1 border border-border-light dark:border-border-dark" 
+                  style={{ backgroundImage: `url(${trainer?.avatar})` }}
+                ></div>
+              )}
+              <div className={`flex flex-col gap-1 rounded-2xl p-3 shadow-sm ${
+                msg.senderId === user.id 
+                  ? 'bg-primary text-background-dark rounded-br-none items-end' 
+                  : 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-light-primary dark:text-text-dark-primary rounded-bl-none items-start'
+              }`}>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className={`text-[9px] font-medium ${msg.senderId === user.id ? 'text-background-dark/70' : 'text-text-light-secondary dark:text-text-dark-secondary/70'}`}>
+                    {formatTimestamp(msg.timestamp)}
+                  </span>
+                  {msg.senderId === user.id && (
+                     <span className="material-symbols-outlined text-[12px] opacity-70">
+                       {msg.readAt ? 'done_all' : 'check'}
+                     </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         ))}
-        {messages.length === 0 && (
-          <div className="h-full flex items-center justify-center text-text-light-secondary dark:text-text-dark-secondary text-sm italic">
-            Nenhuma mensagem ainda. Inicie a conversa com seu Personal!
-          </div>
+        {chatInfo?.typingState?.[trainer?.id] && (
+           <div className="flex items-end gap-2 max-w-[85%] w-auto animate-pulse pb-4">
+             <div 
+                className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-8 w-8 shrink-0 border border-border-light dark:border-border-dark mb-1 opacity-50" 
+                style={{ backgroundImage: `url("${trainer?.avatar || 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1974&auto=format&fit=crop'}")` }}
+             ></div>
+             <div className="bg-card-light dark:bg-card-dark text-text-light-secondary dark:text-text-dark-secondary rounded-2xl rounded-bl-none border border-border-light dark:border-border-dark p-3 text-xs italic opacity-70">
+               Digitando...
+             </div>
+           </div>
         )}
       </div>
 
-      <div className="mt-auto pt-4 border-t border-border-light dark:border-border-dark shrink-0">
-        <div className="relative">
-          <input 
-            className="w-full rounded-full py-3 pl-4 pr-12 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-light-primary dark:text-text-dark-primary focus:ring-primary focus:border-primary transition-colors text-sm" 
-            placeholder="Digite sua mensagem aqui..." 
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.5)]">
+        {chatContext && (
+           <div className="flex justify-between items-center bg-card-light dark:bg-border-dark/50 px-3 py-2 rounded-xl mb-2 text-xs">
+             <span className="text-text-light-secondary dark:text-text-dark-secondary">
+               Contexto: <strong className="text-primary">{chatContext.name}</strong>
+             </span>
+             <button onClick={() => setChatContext(null)} className="text-text-light-secondary hover:text-red-500">
+               <span className="material-symbols-outlined text-sm">close</span>
+             </button>
+           </div>
+        )}
+        <div className="flex gap-2 max-w-full items-end">
+          <input
             type="text"
+            className="flex-1 w-full px-5 py-3.5 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50 text-base md:text-sm shadow-inner transition-all text-text-light-primary dark:text-text-dark-primary"
+            placeholder="Digite algo..."
             value={newMessage || ''}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            onKeyDown={handleInputKeyDown}
           />
           <button 
+            className="h-[52px] w-[52px] bg-primary text-background-dark font-black rounded-full shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center shrink-0 disabled:opacity-50 disabled:scale-100"
             onClick={handleSendMessage}
-            className="absolute inset-y-0 right-0 flex items-center justify-center bg-primary text-background-dark rounded-full w-10 h-10 m-1.5 hover:brightness-110 transition-all shadow-sm"
+            disabled={!newMessage.trim()}
           >
-            <span className="material-symbols-outlined text-xl">send</span>
+            <span className="material-symbols-outlined fill text-xl">send</span>
           </button>
         </div>
       </div>
