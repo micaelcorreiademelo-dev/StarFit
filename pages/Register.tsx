@@ -9,6 +9,7 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRedirectOption, setShowRedirectOption] = useState(false);
+  const [iframeAlert, setIframeAlert] = useState(false);
 
   // New fields
   const [username, setUsername] = useState('');
@@ -68,6 +69,12 @@ const Register: React.FC = () => {
 
   const handleGoogleRegister = async (useRedirect = false) => {
     if (!validateTrainer()) return;
+
+    if (window.top !== window.self) {
+      setIframeAlert(true);
+      setError('O Firebase pode não funcionar por segurança ao fazer login embutido em um ambiente iframe. Para completar o login com segurança, abra o app em uma aba limpa.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -153,8 +160,18 @@ const Register: React.FC = () => {
 
           <div className="bg-card-dark p-8 rounded-xl border border-border-dark shadow-lg space-y-8">
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-sm text-center">
-                {error}
+              <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-sm text-center flex flex-col items-center gap-2">
+                <span>{error}</span>
+                {iframeAlert && (
+                  <a 
+                    href={window.location.href} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="mt-2 text-white bg-red-500/20 hover:bg-red-500/30 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors border border-red-500/30"
+                  >
+                    Abrir app em nova aba <span className="material-symbols-outlined text-sm">open_in_new</span>
+                  </a>
+                )}
               </div>
             )}
 
@@ -243,7 +260,17 @@ const Register: React.FC = () => {
               
               {!useEmail ? (
                  <>
-                   {!showRedirectOption ? (
+                   {iframeAlert ? (
+                     <a
+                       href={window.location.href} 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className="w-full flex items-center justify-center gap-3 bg-primary text-background-dark font-bold py-4 rounded-lg hover:brightness-110 transition-all"
+                     >
+                       <span className="material-symbols-outlined">open_in_new</span>
+                       Abrir app em nova aba
+                     </a>
+                   ) : !showRedirectOption ? (
                      <button 
                        onClick={() => handleGoogleRegister(false)}
                        disabled={loading}

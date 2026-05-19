@@ -42,9 +42,13 @@ const App: React.FC = () => {
           
           // Setup real-time listener for the user document
           if (userUnsubscribe) userUnsubscribe();
+          console.log("[AUTH] Configurando listener do Firestore para perfil do usuário:", firebaseUser.uid);
           userUnsubscribe = onSnapshot(doc(db, 'users', firebaseUser.uid), (doc) => {
             if (doc.exists()) {
+              console.log("[PERFIL] Perfil carregado com sucesso:", doc.id);
               setUser({ id: doc.id, ...doc.data() } as User);
+            } else {
+              console.warn("[PERFIL] Documento do usuário não encontrado no Firestore!");
             }
           });
 

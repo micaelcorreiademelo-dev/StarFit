@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar';
-import { User, ChatMessage } from '../types';
+import { User, ChatMessage, Chat } from '../types';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { dataService } from '../services/dataService';
@@ -114,8 +114,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
 
   useEffect(() => {
     if (!user) return;
+    
+    console.log("[DASHBOARD] Renderizando Dashboard do Aluno:", user.id);
+    console.log("[FIRESTORE] Iniciando busca de treinos do aluno");
 
-    const unsubWorkouts = dataService.subscribeToStudentWorkouts(user.id, setWorkouts);
+    const unsubWorkouts = dataService.subscribeToStudentWorkouts(user.id, (fetchedWorkouts) => {
+      console.log("[FIRESTORE] Treinos recebidos:", fetchedWorkouts.length);
+      setWorkouts(fetchedWorkouts);
+    });
     
     // Listen for progress data
     const qProgress = query(
