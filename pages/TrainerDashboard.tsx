@@ -213,6 +213,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [showRequestToast, setShowRequestToast] = useState(false);
   const prevRequestsCountRef = useRef(0);
   const [studentsData, setStudentsData] = useState<any[]>([]);
+  const [mobileSelectedStudent, setMobileSelectedStudent] = useState<any>(null);
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [libraryExercises, setLibraryExercises] = useState<any[]>([]);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
@@ -1125,8 +1126,207 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     );
   };
 
-  const renderStudents = () => (
-    <div className="flex flex-col gap-6 w-full animate-in fade-in duration-500 pb-20 relative">
+  const renderStudents = () => {
+    if (mobileSelectedStudent) {
+      const student = mobileSelectedStudent;
+      const isTrialExpired = student.status !== "Ativa" && student.trialUntil && new Date() > (student.trialUntil?.toDate ? student.trialUntil.toDate() : new Date(student.trialUntil));
+      const isTrialActive = student.status !== "Ativa" && student.trialUntil && !isTrialExpired;
+
+      return (
+        <div className="flex flex-col gap-6 w-full animate-in slide-in-from-right-8 duration-300 pb-20 relative">
+          <div className="flex items-center gap-4 bg-card-dark p-4 rounded-2xl border border-border-dark sticky top-0 z-10 shadow-lg">
+            <button 
+              onClick={() => setMobileSelectedStudent(null)}
+              className="size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95"
+            >
+              <span className="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+            </button>
+            <div className="flex items-center gap-3">
+              <img src={student.img} alt={student.name} className="size-12 rounded-full object-cover border-2 border-border-dark" />
+              <div className="flex flex-col">
+                <h2 className="text-white font-black text-lg leading-tight uppercase tracking-tight">{student.name}</h2>
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider w-fit mt-1 ${
+                    student.status === "Ativa"
+                      ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+                      : isTrialActive
+                        ? "bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
+                        : "bg-red-500/10 text-red-500 ring-1 ring-red-500/20 border-red-500/30"
+                  }`}
+                >
+                  <span className={`size-1.5 rounded-full ${student.status === "Ativa" ? "bg-primary animate-pulse" : isTrialActive ? "bg-amber-400 animate-pulse" : "bg-red-500"}`}></span>
+                  {student.status === "Ativa" ? "Ativa" : isTrialActive ? "Em Trial" : "Bloqueado"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 gap-3">
+              <a
+                href={`https://wa.me/${student.phone}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2 bg-green-500/10 text-green-500 p-3 rounded-xl font-bold border border-green-500/20 active:scale-95 transition-transform"
+              >
+                <span className="material-symbols-outlined">chat</span>
+                WhatsApp
+              </a>
+              <button
+                onClick={() => setLinkingWorkoutStudent(student)}
+                className="flex items-center justify-center gap-2 bg-blue-500/10 text-blue-400 p-3 rounded-xl font-bold border border-blue-500/20 active:scale-95 transition-transform"
+              >
+                <span className="material-symbols-outlined">fitness_center</span>
+                Vincular Treino
+              </button>
+            </div>
+
+            {/* Info Cards */}
+            <div className="bg-card-dark p-5 rounded-2xl border border-border-dark flex flex-col gap-4 shadow-sm">
+              <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 mb-2 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[18px]">person</span>
+                Dados Pessoais
+              </h3>
+              <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Peso</span>
+                  <span className="text-white font-medium text-sm">{student.weight}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Objetivo</span>
+                  <span className="text-white font-medium text-sm truncate">{student.goal}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Freq. Semanal</span>
+                  <span className="text-white font-medium text-sm">{student.frequency}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Última Ativ.</span>
+                  <span className="text-white font-medium text-sm">{student.lastActivity}</span>
+                </div>
+                <div className="flex flex-col gap-1 col-span-2">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Email</span>
+                  <span className="text-white font-medium text-sm">{student.email}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Plan/Access */}
+            <div className="bg-card-dark p-5 rounded-2xl border border-border-dark flex flex-col gap-4 shadow-sm">
+              <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 mb-2 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[18px]">workspace_premium</span>
+                Plano / Acesso
+              </h3>
+              
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold mb-1">Atribuir Plano</span>
+                <select 
+                  value={student.plan || ''}
+                  onChange={(e) => handleUpdateStudentPlan(student.id, e.target.value)}
+                  className="bg-background-dark border border-border-dark rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full cursor-pointer appearance-none"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 1rem center',
+                    backgroundSize: '1.2em'
+                  }}
+                >
+                  <option value="">Nenhum plano</option>
+                  {trainerCustomPlans.map(tp => (
+                    <option key={tp.id} value={tp.name}>
+                      {tp.name} {tp.hiddenGlobal ? '(Oculto)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold mb-1">Expiração do Acesso</span>
+                <input
+                  type="date"
+                  value={student.expDate || ''}
+                  onChange={(e) => handleUpdateStudentExpDate(student.id, e.target.value)}
+                  className="bg-background-dark border border-border-dark rounded-xl px-3 py-3 text-sm text-primary font-bold shadow-inner focus:outline-none focus:border-primary transition-colors cursor-pointer w-full"
+                />
+              </div>
+
+              {student.status !== "Ativa" && (
+                <button
+                  onClick={() => handleExtendTrial(student.id)}
+                  className="flex items-center justify-center gap-2 h-12 mt-2 bg-amber-500/10 text-amber-500 rounded-xl font-bold border border-amber-500/20 active:scale-95 transition-transform"
+                >
+                  <span className="material-symbols-outlined">history</span>
+                  Prorrogar 24h de Acesso (Trial)
+                </button>
+              )}
+            </div>
+
+            {/* Evolução Física */}
+            <div className="bg-card-dark p-5 rounded-2xl border border-border-dark flex flex-col shadow-sm">
+              <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[18px]">analytics</span>
+                Evolução Física
+              </h3>
+              
+              {selectedStudentProgress.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {selectedStudentProgress.map((record: any, idx: number) => (
+                    <div key={record.id || idx} className="bg-background-dark border border-border-dark p-3 rounded-xl flex flex-col gap-2">
+                       <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                         <span className="text-white font-black text-sm">{record.date?.toDate ? record.date.toDate().toLocaleDateString('pt-BR') : new Date(record.date).toLocaleDateString('pt-BR')}</span>
+                         <span className="text-primary font-black">{record.weight ? `${record.weight}kg` : '-'}</span>
+                       </div>
+                       <div className="grid grid-cols-3 gap-2 mt-1">
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Gordura</span>
+                           <span className="text-white text-xs">{record.bodyFat ? `${record.bodyFat}%` : '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Peito</span>
+                           <span className="text-white text-xs">{record.chest || '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Braços</span>
+                           <span className="text-white text-xs">{record.arms || '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Cintura</span>
+                           <span className="text-white text-xs">{record.waist || '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Quadril</span>
+                           <span className="text-white text-xs">{record.hips || '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Coxas</span>
+                           <span className="text-white text-xs">{record.thighs || '-'}</span>
+                         </div>
+                       </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-text-secondary text-sm italic text-center py-4 bg-background-dark rounded-xl border border-border-dark/50">Nenhuma medida registrada.</p>
+              )}
+            </div>
+
+            {/* Remove */}
+            <button
+               onClick={(e) => {
+                 setStudentToUnlink({ id: student.id, name: student.name });
+               }}
+               className="flex items-center justify-center gap-2 h-12 mt-4 bg-red-500/10 text-red-500 rounded-xl font-bold border border-red-500/20 active:scale-95 transition-transform"
+             >
+               <span className="material-symbols-outlined">person_remove</span>
+               Remover Vínculo com Aluno
+             </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-6 w-full animate-in fade-in duration-500 pb-20 relative">
       {/* Modal Vincular Treino */}
       {linkingWorkoutStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
@@ -1288,7 +1488,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
 
       {/* Table Container matching Admin style */}
-      <div className="overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-xl">
+      <div className="hidden md:block overflow-hidden rounded-2xl border border-border-dark bg-card-dark shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse">
             <thead className="bg-background-dark/30 text-text-secondary text-[10px] uppercase tracking-[0.2em] border-b border-border-dark">
@@ -1603,8 +1803,75 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         </div>
       </div>
 
+      {/* Mobile Student List */}
+      <div className="md:hidden flex flex-col gap-3">
+        {studentsData
+          .filter((s) => {
+            const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesStatus = statusFilter === "Todas" || s.status === statusFilter;
+            return matchesSearch && matchesStatus;
+          })
+          .map((student) => {
+            const isTrialExpired = student.status !== "Ativa" && student.trialUntil && new Date() > (student.trialUntil?.toDate ? student.trialUntil.toDate() : new Date(student.trialUntil));
+            const isTrialActive = student.status !== "Ativa" && student.trialUntil && !isTrialExpired;
+
+            return (
+              <button
+                key={student.id}
+                onClick={() => setMobileSelectedStudent(student)}
+                className="w-full flex items-center gap-4 bg-card-dark p-4 rounded-xl border border-border-dark active:scale-[0.98] transition-transform text-left"
+              >
+                <div className="relative shrink-0">
+                  <img
+                    className="size-14 rounded-full object-cover border-2 border-border-dark"
+                    src={student.img}
+                    alt={student.name}
+                  />
+                  <div
+                    className={`absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-card-dark ${
+                      student.engagement === "green"
+                        ? "bg-primary"
+                        : student.engagement === "yellow"
+                        ? "bg-yellow-400"
+                        : "bg-red-500"
+                    }`}
+                  ></div>
+                </div>
+                
+                <div className="flex flex-col flex-1 min-w-0">
+                  <h3 className="text-white font-black uppercase truncate text-sm">
+                    {student.name}
+                  </h3>
+                  
+                  <div className="flex items-center gap-2 mt-1">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider w-fit ${
+                        student.status === "Ativa"
+                          ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+                          : isTrialActive
+                          ? "bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20"
+                          : "bg-red-500/10 text-red-500 ring-1 ring-red-500/20 border-red-500/30"
+                      }`}
+                    >
+                      <span className={`size-1 rounded-full ${student.status === "Ativa" ? "bg-primary animate-pulse" : isTrialActive ? "bg-amber-400 animate-pulse" : "bg-red-500"}`}></span>
+                      {student.status === "Ativa" ? "Ativa" : isTrialActive ? "Em Trial" : "Bloqueado"}
+                    </span>
+                  </div>
+                </div>
+
+                <span className="material-symbols-outlined text-text-secondary shrink-0">chevron_right</span>
+              </button>
+            );
+          })}
+          {studentsData.length === 0 && (
+            <div className="text-center p-8 bg-card-dark rounded-xl border border-border-dark italic text-text-secondary">
+              Nenhum aluno encontrado.
+            </div>
+          )}
+      </div>
+
       {/* Pagination Container */}
-      <div className="flex items-center justify-between border-t border-border-dark px-4 py-4 sm:px-6 mt-4">
+      <div className="hidden md:flex items-center justify-between border-t border-border-dark px-4 py-4 sm:px-6 mt-4">
         <div className="flex flex-1 justify-between sm:hidden">
           <button className="relative inline-flex items-center rounded-md border border-border-dark bg-card-dark px-4 py-2 text-sm font-medium text-text-secondary hover:text-white transition-colors">
             Anterior
@@ -1654,8 +1921,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
     </div>
   );
+};
 
-  const renderAddStudent = () => (
+const renderAddStudent = () => (
     <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
       {/* Page Heading */}
       <div className="flex flex-col gap-2 mb-8">
