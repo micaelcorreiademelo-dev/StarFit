@@ -155,6 +155,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [studentToUnlink, setStudentToUnlink] = useState<{id: string, name: string} | null>(null);
+  const [editingStudentProfile, setEditingStudentProfile] = useState<any>(null);
+  const [addingEvaluationStudent, setAddingEvaluationStudent] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todas");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -1169,15 +1171,44 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 rel="noreferrer"
                 className="flex items-center justify-center gap-2 bg-green-500/10 text-green-500 p-3 rounded-xl font-bold border border-green-500/20 active:scale-95 transition-transform"
               >
-                <span className="material-symbols-outlined">chat</span>
-                WhatsApp
+                <span className="material-symbols-outlined shrink-0">chat</span>
+                <span className="truncate">WhatsApp</span>
               </a>
               <button
-                onClick={() => setLinkingWorkoutStudent(student)}
-                className="flex items-center justify-center gap-2 bg-blue-500/10 text-blue-400 p-3 rounded-xl font-bold border border-blue-500/20 active:scale-95 transition-transform"
+                onClick={async () => {
+                  try {
+                    await chatService.getOrCreateChat(user.id, student.id);
+                    setActiveTab('chat');
+                    setMobileSelectedStudent(null);
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
+                className="flex items-center justify-center gap-2 bg-purple-500/10 text-purple-400 p-3 rounded-xl font-bold border border-purple-500/20 active:scale-95 transition-transform"
               >
-                <span className="material-symbols-outlined">fitness_center</span>
-                Vincular Treino
+                <span className="material-symbols-outlined shrink-0">forum</span>
+                <span className="truncate">Mensagem</span>
+              </button>
+              <button
+                onClick={() => setEditingStudentProfile(student)}
+                className="flex items-center justify-center gap-2 bg-white/5 text-white p-3 rounded-xl font-bold border border-white/10 active:scale-95 transition-transform"
+              >
+                <span className="material-symbols-outlined shrink-0">edit</span>
+                <span className="truncate">Editar</span>
+              </button>
+              <button
+                onClick={() => setAddingEvaluationStudent(student)}
+                className="flex items-center justify-center gap-2 bg-orange-500/10 text-orange-400 p-3 rounded-xl font-bold border border-orange-500/20 active:scale-95 transition-transform"
+              >
+                <span className="material-symbols-outlined shrink-0">monitor_weight</span>
+                <span className="truncate">Avaliação</span>
+              </button>
+              <button
+                onClick={() => setLinkingWorkoutStudent(student)}
+                className="col-span-2 flex items-center justify-center gap-2 bg-blue-500/10 text-blue-400 p-3 rounded-xl font-bold border border-blue-500/20 active:scale-95 transition-transform"
+              >
+                <span className="material-symbols-outlined shrink-0">fitness_center</span>
+                Vincular Novo Treino
               </button>
             </div>
 
@@ -1250,6 +1281,34 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 />
               </div>
 
+              <div className="flex flex-col gap-2 mt-2 pt-4 border-t border-border-dark">
+                <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Controle de Acesso</span>
+                <div className="grid grid-cols-2 gap-2">
+                   <button
+                     onClick={() => {
+                        dataService.updateUser(student.id, { status: "Bloqueado" });
+                        setStudentsData(prev => prev.map(s => s.id === student.id ? { ...s, status: "Bloqueado" } : s));
+                     }}
+                     disabled={student.status === "Bloqueado"}
+                     className={`flex items-center justify-center gap-2 p-3 rounded-xl font-bold border transition-all ${student.status === "Bloqueado" ? "bg-red-500/20 text-red-500 border-red-500/30 opacity-50" : "bg-white/5 text-white border-white/10 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20"}`}
+                   >
+                     <span className="material-symbols-outlined text-sm">lock</span>
+                     Bloquear
+                   </button>
+                   <button
+                     onClick={() => {
+                        dataService.updateUser(student.id, { status: "Ativa" });
+                        setStudentsData(prev => prev.map(s => s.id === student.id ? { ...s, status: "Ativa" } : s));
+                     }}
+                     disabled={student.status === "Ativa"}
+                     className={`flex items-center justify-center gap-2 p-3 rounded-xl font-bold border transition-all ${student.status === "Ativa" ? "bg-primary/20 text-primary border-primary/30 opacity-50" : "bg-white/5 text-white border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/20"}`}
+                   >
+                     <span className="material-symbols-outlined text-sm">lock_open</span>
+                     Liberar Acesso
+                   </button>
+                </div>
+              </div>
+
               {student.status !== "Ativa" && (
                 <button
                   onClick={() => handleExtendTrial(student.id)}
@@ -1259,6 +1318,33 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   Prorrogar 24h de Acesso (Trial)
                 </button>
               )}
+            </div>
+
+            {/* Treinos Vinculados */}
+            <div className="bg-card-dark p-5 rounded-2xl border border-border-dark flex flex-col gap-4 shadow-sm">
+              <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[18px]">fitness_center</span>
+                Treinos Vinculados
+              </h3>
+              <div className="flex flex-col gap-2">
+                 {workouts.filter(w => w.studentIds?.includes(student.id)).length > 0 ? (
+                    workouts.filter(w => w.studentIds?.includes(student.id)).map(w => (
+                       <button
+                         key={w.id}
+                         onClick={() => {
+                            setMobileSelectedStudent(null);
+                            setActiveTab('workouts');
+                         }}
+                         className="flex items-center justify-between bg-background-dark p-3 rounded-xl border border-border-dark hover:border-primary/50 transition-colors"
+                       >
+                          <span className="text-white font-bold text-sm">{w.name}</span>
+                          <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
+                       </button>
+                    ))
+                 ) : (
+                    <p className="text-text-secondary text-sm italic text-center py-2">Nenhum treino vinculado.</p>
+                 )}
+              </div>
             </div>
 
             {/* Evolução Física */}
@@ -1728,24 +1814,106 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                   </option>
                                 ))}
                               </select>
+
+                              <div className="mt-3">
+                                <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1">
+                                  Controle de Acesso
+                                </p>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => {
+                                      dataService.updateUser(student.id, { status: "Bloqueado" });
+                                      setStudentsData(prev => prev.map(s => s.id === student.id ? { ...s, status: "Bloqueado" } : s));
+                                    }}
+                                    disabled={student.status === "Bloqueado"}
+                                    title="Bloquear Acesso"
+                                    className={`flex-1 h-8 rounded-md flex items-center justify-center border transition-all ${student.status === "Bloqueado" ? "bg-red-500/10 text-red-500/50 border-red-500/20 cursor-not-allowed" : "bg-white/5 text-text-secondary hover:text-red-500 hover:bg-red-500/10 border-white/10 hover:border-red-500/20"}`}
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">lock</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      dataService.updateUser(student.id, { status: "Ativa" });
+                                      setStudentsData(prev => prev.map(s => s.id === student.id ? { ...s, status: "Ativa" } : s));
+                                    }}
+                                    disabled={student.status === "Ativa"}
+                                    title="Liberar Acesso"
+                                    className={`flex-1 h-8 rounded-md flex items-center justify-center border transition-all ${student.status === "Ativa" ? "bg-primary/10 text-primary/50 border-primary/20 cursor-not-allowed" : "bg-white/5 text-text-secondary hover:text-primary hover:bg-primary/10 border-white/10 hover:border-primary/20"}`}
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">lock_open</span>
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex flex-col justify-center items-center md:items-end gap-2 md:col-span-1">
-                              <button 
-                                onClick={() => setLinkingWorkoutStudent(student)}
-                                className="flex items-center justify-center gap-2 w-full h-9 px-4 bg-blue-500/10 text-blue-400 rounded-lg font-bold text-xs hover:bg-blue-500 transition-colors border border-blue-500/20"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  fitness_center
-                                </span>
-                                Vincular Treino
-                              </button>
-                              <button className="flex items-center justify-center gap-2 w-full h-9 px-4 bg-primary/10 text-primary rounded-lg font-bold text-xs hover:bg-primary hover:text-background-dark transition-colors border border-primary/20">
-                                <span className="material-symbols-outlined text-[18px]">
-                                  admin_panel_settings
-                                </span>
-                                Abrir Painel
-                              </button>
+                            <div className="flex flex-col gap-2 md:col-span-1">
+                              <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-0 md:mb-1">
+                                Ações Rápidas
+                              </p>
+                              <div className="grid grid-cols-2 gap-2">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await chatService.getOrCreateChat(user.id, student.id);
+                                      setActiveTab('chat');
+                                    } catch (e) {
+                                      console.error(e);
+                                    }
+                                  }}
+                                  title="Enviar Mensagem"
+                                  className="flex items-center justify-center gap-1 w-full h-8 px-2 bg-purple-500/10 text-purple-400 rounded-md font-bold text-[10px] hover:bg-purple-500 hover:text-white transition-colors border border-purple-500/20"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">forum</span>
+                                  Chat
+                                </button>
+                                <button 
+                                  onClick={() => setLinkingWorkoutStudent(student)}
+                                  title="Vincular Novo Treino"
+                                  className="flex items-center justify-center gap-1 w-full h-8 px-2 bg-blue-500/10 text-blue-400 rounded-md font-bold text-[10px] hover:bg-blue-500 hover:text-white transition-colors border border-blue-500/20"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">fitness_center</span>
+                                  Treino
+                                </button>
+                                <button
+                                  onClick={() => setEditingStudentProfile(student)}
+                                  title="Editar Perfil"
+                                  className="flex items-center justify-center gap-1 w-full h-8 px-2 bg-white/5 text-white rounded-md font-bold text-[10px] hover:bg-white/10 transition-colors border border-white/10"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => setAddingEvaluationStudent(student)}
+                                  title="Nova Avaliação Física"
+                                  className="flex items-center justify-center gap-1 w-full h-8 px-2 bg-orange-500/10 text-orange-400 rounded-md font-bold text-[10px] hover:bg-orange-500 hover:text-white transition-colors border border-orange-500/20"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">monitor_weight</span>
+                                  Avaliação
+                                </button>
+                              </div>
                             </div>
+                          </div>
+
+                          <div className="mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                             <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                               <span className="material-symbols-outlined text-primary">fitness_center</span>
+                               Treinos Vinculados
+                             </h4>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                               {workouts.filter(w => w.studentIds?.includes(student.id)).length > 0 ? (
+                                  workouts.filter(w => w.studentIds?.includes(student.id)).map(w => (
+                                     <button
+                                       key={w.id}
+                                       onClick={() => setActiveTab('workouts')}
+                                       className="flex items-center justify-between bg-background-dark p-3 rounded-xl border border-border-dark hover:border-primary/50 transition-colors"
+                                     >
+                                        <span className="text-white font-bold text-sm truncate">{w.name}</span>
+                                        <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
+                                     </button>
+                                  ))
+                               ) : (
+                                  <p className="text-text-secondary text-sm italic py-2 md:col-span-3">Nenhum treino vinculado.</p>
+                               )}
+                             </div>
                           </div>
                           
                           {/* Progress Table */}
@@ -1921,9 +2089,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
     </div>
   );
-};
+  };
 
-const renderAddStudent = () => (
+  const renderAddStudent = () => (
     <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
       {/* Page Heading */}
       <div className="flex flex-col gap-2 mb-8">
