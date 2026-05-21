@@ -224,6 +224,70 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [trainerCustomPlans, setTrainerCustomPlans] = useState<any[]>([]);
   const [latestChat, setLatestChat] = useState<any>(null);
   const [isChatOpenOnMobile, setIsChatOpenOnMobile] = useState(false);
+  const [editedStudent, setEditedStudent] = useState<any>(null);
+
+  useEffect(() => {
+    if (editingStudentProfile) {
+      setEditedStudent({
+        id: editingStudentProfile.id,
+        name: editingStudentProfile.name || "",
+        cpf: editingStudentProfile.cpf || "",
+        birthDate: editingStudentProfile.birthDate || "",
+        gender: editingStudentProfile.gender || "",
+        phone: editingStudentProfile.phone || "",
+        email: editingStudentProfile.email || "",
+        observations: editingStudentProfile.observations || editingStudentProfile.obs || "",
+        img: editingStudentProfile.img || editingStudentProfile.avatar || "",
+      });
+    } else {
+      setEditedStudent(null);
+    }
+  }, [editingStudentProfile]);
+
+  const handleSaveEditedStudent = async () => {
+    if (!editedStudent) return;
+    try {
+      const updateData = {
+        name: editedStudent.name,
+        cpf: editedStudent.cpf,
+        birthDate: editedStudent.birthDate,
+        gender: editedStudent.gender,
+        phone: editedStudent.phone,
+        email: editedStudent.email,
+        observations: editedStudent.observations,
+        obs: editedStudent.observations,
+        img: editedStudent.img,
+      };
+      await dataService.updateUser(editedStudent.id, updateData);
+      
+      // Update local state is crucial
+      setStudentsData(prev => prev.map(s => s.id === editedStudent.id ? { ...s, ...updateData } : s));
+      if (mobileSelectedStudent && mobileSelectedStudent.id === editedStudent.id) {
+        setMobileSelectedStudent(prev => ({ ...prev, ...updateData }));
+      }
+      setEditingStudentProfile(null);
+    } catch (error) {
+      console.error("Error saving student profile:", error);
+      alert("Erro ao salvar perfil do aluno.");
+    }
+  };
+
+  const toggleWorkoutStatus = async (workout: any, studentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentStatuses = workout.studentStatuses || {};
+    const currentStatus = currentStatuses[studentId] || "Ativo";
+    const newStatus = currentStatus === "Ativo" ? "Finalizado" : "Ativo";
+    const updatedStatuses = { ...currentStatuses, [studentId]: newStatus };
+    
+    try {
+      await dataService.updateWorkout(workout.id, {
+        studentStatuses: updatedStatuses
+      });
+    } catch (error) {
+      console.error("Error updating workout status:", error);
+    }
+  };
+
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState({ title: '', type: 'Consultoria', date: new Date().toISOString().split('T')[0], time: '10:00' });
@@ -1134,20 +1198,200 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       const isTrialExpired = student.status !== "Ativa" && student.trialUntil && new Date() > (student.trialUntil?.toDate ? student.trialUntil.toDate() : new Date(student.trialUntil));
       const isTrialActive = student.status !== "Ativa" && student.trialUntil && !isTrialExpired;
 
+      // EDIT PROFILE PAGE FOR MOBILE VIEW ONLY
+      if (editingStudentProfile && editingStudentProfile.id === student.id) {
+        return (
+          <div className="flex flex-col gap-6 w-full animate-in slide-in-from-right-8 duration-300 pb-20 relative px-0">
+            {/* Title and Back Trigger - Centered on Mobile */}
+            <div className="relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
+              <button 
+                onClick={() => setEditingStudentProfile(null)}
+                className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95 border border-white/5 shadow-md shrink-0"
+              >
+                <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
+              </button>
+              <h1 className="text-white font-black text-xl tracking-tight text-center">Editar Dados do Aluno</h1>
+            </div>
+
+            <div className="bg-card-dark p-4 md:p-6 rounded-xl border border-border-dark flex flex-col gap-6 shadow-xl">
+              {/* Profile Image & Picture URL Input */}
+              <div className="flex flex-col items-center gap-4 border-b border-border-dark pb-6">
+                <div className="relative group size-24">
+                  <img 
+                    src={editedStudent?.img || student.img} 
+                    alt="Perfil" 
+                    className="size-24 rounded-full object-cover border-4 border-primary/20 shadow-md" 
+                  />
+                  <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="material-symbols-outlined text-white">photo_camera</span>
+                  </div>
+                </div>
+                <div className="w-full flex flex-col gap-1.5">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-xs">link</span>
+                    URL da Foto de Perfil
+                  </span>
+                  <input
+                    type="text"
+                    value={editedStudent?.img || ""}
+                    onChange={(e) => setEditedStudent(prev => ({ ...prev, img: e.target.value }))}
+                    placeholder="https://exemplo.com/foto.jpg"
+                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Form Input fields with prefixed icons */}
+              <div className="flex flex-col gap-5">
+                {/* Nome */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-primary">person</span>
+                    Nome Completo
+                  </span>
+                  <input
+                    type="text"
+                    value={editedStudent?.name || ""}
+                    onChange={(e) => setEditedStudent(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Digite o nome completo"
+                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                    required
+                  />
+                </div>
+
+                {/* CPF */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-primary">badge</span>
+                    CPF
+                  </span>
+                  <input
+                    type="text"
+                    value={editedStudent?.cpf || ""}
+                    onChange={(e) => setEditedStudent(prev => ({ ...prev, cpf: e.target.value }))}
+                    placeholder="000.000.000-00"
+                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                  />
+                </div>
+
+                {/* Data de Nascimento */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-primary">calendar_today</span>
+                    Data de Nascimento
+                  </span>
+                  <input
+                    type="text"
+                    value={editedStudent?.birthDate || ""}
+                    onChange={(e) => setEditedStudent(prev => ({ ...prev, birthDate: e.target.value }))}
+                    placeholder="DD/MM/AAAA"
+                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                  />
+                </div>
+
+                {/* Gênero */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-primary">wc</span>
+                    Gênero
+                  </span>
+                  <select
+                    value={editedStudent?.gender || ""}
+                    onChange={(e) => setEditedStudent(prev => ({ ...prev, gender: e.target.value }))}
+                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full appearance-none cursor-pointer"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      backgroundSize: '1.2em'
+                    }}
+                  >
+                    <option value="">Selecione o gênero</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Feminino">Feminino</option>
+                    <option value="Outro">Outro / Prefiro não dizer</option>
+                  </select>
+                </div>
+
+                {/* Telefone */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-primary">call</span>
+                    Telefone
+                  </span>
+                  <input
+                    type="tel"
+                    value={editedStudent?.phone || ""}
+                    onChange={(e) => setEditedStudent(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="(00) 00000-0000"
+                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                  />
+                </div>
+
+                {/* E-mail */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-primary">mail</span>
+                    E-mail
+                  </span>
+                  <input
+                    type="email"
+                    value={editedStudent?.email || ""}
+                    onChange={(e) => setEditedStudent(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="exemplo@email.com"
+                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                  />
+                </div>
+
+                {/* Observações */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm text-primary">description</span>
+                    Observações
+                  </span>
+                  <textarea
+                    value={editedStudent?.observations || ""}
+                    onChange={(e) => setEditedStudent(prev => ({ ...prev, observations: e.target.value }))}
+                    placeholder="Digite observações sobre o aluno (comorbidades, restrições, etc.)"
+                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full h-28 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <button
+                onClick={handleSaveEditedStudent}
+                className="w-full h-14 bg-primary text-background-dark rounded-xl font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4 text-base shadow-lg shadow-primary/10"
+              >
+                <span className="material-symbols-outlined">save</span>
+                Salvar Alterações
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       return (
-        <div className="flex flex-col gap-6 w-full animate-in slide-in-from-right-8 duration-300 pb-20 relative">
-          <div className="flex items-center gap-4 bg-card-dark p-4 rounded-2xl border border-border-dark sticky top-0 z-10 shadow-lg">
+        <div className="flex flex-col gap-6 w-full animate-in slide-in-from-right-8 duration-300 pb-20 relative px-0">
+          
+          {/* Header row containing page title and back button outside card - Centered on Mobile */}
+          <div className="relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
             <button 
               onClick={() => setMobileSelectedStudent(null)}
-              className="size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95"
+              className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95 border border-white/5 shadow-md shrink-0"
             >
-              <span className="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+              <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
             </button>
-            <div className="flex items-center gap-3">
-              <img src={student.img} alt={student.name} className="size-12 rounded-full object-cover border-2 border-border-dark" />
-              <div className="flex flex-col">
-                <h2 className="text-white font-black text-lg leading-tight uppercase tracking-tight">{student.name}</h2>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider w-fit mt-1 ${
+            <h1 className="text-white font-black text-xl tracking-tight text-center">Perfil do Aluno</h1>
+          </div>
+
+          {/* Main Card with status, name, avatar, and whatsapp trigger in extreme right side */}
+          <div className="flex items-center justify-between gap-4 bg-card-dark p-4 rounded-xl border border-border-dark shadow-md">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <img src={student.img} alt={student.name} className="size-14 rounded-full object-cover border-2 border-border-dark" />
+              <div className="flex flex-col min-w-0">
+                <h2 className="text-white font-black text-base leading-tight uppercase tracking-tight truncate">{student.name}</h2>
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider w-fit mt-1.5 ${
                     student.status === "Ativa"
                       ? "bg-primary/10 text-primary ring-1 ring-primary/20"
                       : isTrialActive
@@ -1160,20 +1404,26 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Reduced size WhatsApp button on the outer right edge */}
+            <a
+              href={`https://wa.me/${student.phone}`}
+              target="_blank"
+              rel="noreferrer"
+              className="size-10 flex items-center justify-center bg-green-500/10 text-green-500 rounded-full border border-green-500/20 active:scale-95 transition-all shadow-sm hover:bg-green-500/20 shrink-0"
+              title="Abre WhatsApp"
+            >
+              <svg className="size-5 fill-current" viewBox="0 0 24 24">
+                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.37 5.378.002 12.007.002c3.212.001 6.231 1.254 8.5 3.527 2.268 2.27 3.516 5.29 3.517 8.501-.003 6.637-5.378 12.005-12.01 12.005-.001 0-.001 0-.002 0-2.007-.001-3.98-.501-5.734-1.455L0 24zm6.09-3.9 3.1-.115c.16-.006.326.046.444.15l2.42 2.148c.84-.42 1.636-.967 2.37-1.621l-1.393-2.126c-.089-.136-.112-.307-.061-.462l1.01-3.08a.5.5 0 01.623-.324l3.14.975c.08.384.12.78.12 1.18 0 4.973-4.044 9.016-9.016 9.016-1.52 0-3.003-.385-4.322-1.12l1.516-4.757zm12.39-12.39a10.024 10.024 0 00-7.078-2.934c-5.517 0-10.007 4.49-10.007 10.007 0 1.93.55 3.8 1.593 5.414L1.042 22.04l4.24-1.393c1.55.955 3.326 1.46 5.148 1.46h.005c5.517 0 10.007-4.49 10.007-10.007 0-2.673-1.041-5.186-2.934-7.078zm-3.565 6.375c-.217-.109-1.285-.635-1.484-.707-.2-.072-.346-.109-.492.11-.146.218-.567.707-.695.852-.128.146-.256.164-.473.055-.218-.109-.92-.34-1.752-1.082-.647-.578-1.085-1.292-1.212-1.51-.128-.218-.014-.336.095-.445.097-.098.218-.255.328-.382.11-.127.146-.218.218-.364.073-.145.037-.272-.018-.382-.055-.109-.492-1.185-.674-1.621-.177-.427-.35-.37-.492-.378-.127-.007-.272-.008-.418-.008s-.383.055-.583.273c-.2.218-.765.747-.765 1.82s.783 2.11 1.056 2.474c.273.364 1.542 2.355 3.738 3.303.522.225.93.36 1.25.462.525.167 1.002.143 1.38.087.42-.062 1.285-.525 1.466-1.033.18-.508.18-.944.127-1.033-.055-.089-.2-.146-.418-.255z" />
+              </svg>
+            </a>
           </div>
 
           <div className="flex flex-col gap-4">
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-3">
-              <a
-                href={`https://wa.me/${student.phone}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-center gap-2 bg-green-500/10 text-green-500 p-3 rounded-xl font-bold border border-green-500/20 active:scale-95 transition-transform"
-              >
-                <span className="material-symbols-outlined shrink-0">chat</span>
-                <span className="truncate">WhatsApp</span>
-              </a>
+            
+            {/* Action Buttons reorganized - Horizontal line of icons only */}
+            <div className="grid grid-cols-3 gap-3 w-full">
+              {/* Message button */}
               <button
                 onClick={async () => {
                   try {
@@ -1184,66 +1434,141 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     console.error(e);
                   }
                 }}
-                className="flex items-center justify-center gap-2 bg-purple-500/10 text-purple-400 p-3 rounded-xl font-bold border border-purple-500/20 active:scale-95 transition-transform"
+                className="h-12 flex items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 active:scale-95 transition-all shadow-sm hover:bg-purple-500/20"
+                title="Mensagem"
               >
-                <span className="material-symbols-outlined shrink-0">forum</span>
-                <span className="truncate">Mensagem</span>
+                <span className="material-symbols-outlined font-bold text-xl">forum</span>
               </button>
+
+              {/* Edit button */}
               <button
                 onClick={() => setEditingStudentProfile(student)}
-                className="flex items-center justify-center gap-2 bg-white/5 text-white p-3 rounded-xl font-bold border border-white/10 active:scale-95 transition-transform"
+                className="h-12 flex items-center justify-center rounded-xl bg-white/5 text-white border border-white/10 active:scale-95 transition-all shadow-sm hover:bg-white/10"
+                title="Editar Aluno"
               >
-                <span className="material-symbols-outlined shrink-0">edit</span>
-                <span className="truncate">Editar</span>
+                <span className="material-symbols-outlined font-bold text-xl">edit</span>
               </button>
+
+              {/* Physical Evaluation progress */}
               <button
                 onClick={() => setAddingEvaluationStudent(student)}
-                className="flex items-center justify-center gap-2 bg-orange-500/10 text-orange-400 p-3 rounded-xl font-bold border border-orange-500/20 active:scale-95 transition-transform"
+                className="h-12 flex items-center justify-center rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20 active:scale-95 transition-all shadow-sm hover:bg-orange-500/20"
+                title="Avaliação"
               >
-                <span className="material-symbols-outlined shrink-0">monitor_weight</span>
-                <span className="truncate">Avaliação</span>
-              </button>
-              <button
-                onClick={() => setLinkingWorkoutStudent(student)}
-                className="col-span-2 flex items-center justify-center gap-2 bg-blue-500/10 text-blue-400 p-3 rounded-xl font-bold border border-blue-500/20 active:scale-95 transition-transform"
-              >
-                <span className="material-symbols-outlined shrink-0">fitness_center</span>
-                Vincular Novo Treino
+                <span className="material-symbols-outlined font-bold text-xl">monitor_weight</span>
               </button>
             </div>
 
-            {/* Info Cards */}
-            <div className="bg-card-dark p-5 rounded-2xl border border-border-dark flex flex-col gap-4 shadow-sm">
-              <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 mb-2 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[18px]">person</span>
-                Dados Pessoais
-              </h3>
-              <div className="grid grid-cols-2 gap-y-4 gap-x-2">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Peso</span>
-                  <span className="text-white font-medium text-sm">{student.weight}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Objetivo</span>
-                  <span className="text-white font-medium text-sm truncate">{student.goal}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Freq. Semanal</span>
-                  <span className="text-white font-medium text-sm">{student.frequency}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Última Ativ.</span>
-                  <span className="text-white font-medium text-sm">{student.lastActivity}</span>
-                </div>
-                <div className="flex flex-col gap-1 col-span-2">
-                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Email</span>
-                  <span className="text-white font-medium text-sm">{student.email}</span>
-                </div>
+            {/* Edge-to-Edge Carousel of Workouts & Add Workout integration */}
+            <div className="flex flex-col gap-3 mt-2 pr-0 mr-0">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white font-bold text-sm uppercase tracking-widest flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[18px]">fitness_center</span>
+                  Treinos Vinculados
+                </h3>
+                {/* Small compact link trigger directly beside "Treinos Vinculados" label */}
+                <button
+                  onClick={() => setLinkingWorkoutStudent(student)}
+                  className="size-8 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center active:scale-95 transition-transform shadow-sm hover:bg-blue-500/20"
+                  title="Vincular Novo Treino"
+                >
+                  <span className="material-symbols-outlined text-lg">add</span>
+                </button>
+              </div>
+
+              {/* Vertical list layout for mobile workouts */}
+              <div className="flex flex-col gap-3 w-full">
+                {workouts.filter(w => w.studentIds?.includes(student.id)).length > 0 ? (
+                  workouts.filter(w => w.studentIds?.includes(student.id)).map(w => {
+                    const isAtivo = (w.studentStatuses?.[student.id] || "Ativo") === "Ativo";
+                    return (
+                      <div
+                        key={w.id}
+                        onClick={() => {
+                          setMobileSelectedStudent(null);
+                          setActiveTab('workouts');
+                        }}
+                        className="w-full bg-card-dark p-4 rounded-xl border border-border-dark flex items-center justify-between hover:border-primary/50 transition-colors shadow-lg cursor-pointer animate-none"
+                      >
+                        <span className="text-white font-bold text-sm truncate pr-2">{w.name}</span>
+                        
+                        <div className="flex items-center gap-2">
+                          {/* Manual status choice/badge */}
+                          <button
+                            onClick={(e) => toggleWorkoutStatus(w, student.id, e)}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-colors border shadow-sm shrink-0 ${
+                              isAtivo 
+                                ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20" 
+                                : "bg-white/5 text-text-secondary border-white/10 hover:bg-white/10"
+                            }`}
+                          >
+                            <span className={`size-1.5 rounded-full ${isAtivo ? "bg-primary animate-pulse" : "bg-text-secondary"}`}></span>
+                            {isAtivo ? "Ativo" : "Finalizado"}
+                          </button>
+                          <span className="material-symbols-outlined text-text-secondary shrink-0 select-none">chevron_right</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="w-full bg-card-dark/40 py-4 px-4 rounded-xl border border-border-dark/20 text-center">
+                    <p className="text-text-secondary text-xs italic">Nenhum treino vinculado.</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Plan/Access */}
-            <div className="bg-card-dark p-5 rounded-2xl border border-border-dark flex flex-col gap-4 shadow-sm">
+            {/* Evolução Física */}
+            <div className="bg-card-dark p-4 md:p-5 rounded-xl border border-border-dark flex flex-col shadow-sm">
+              <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[18px]">analytics</span>
+                Evolução Física
+              </h3>
+              
+              {selectedStudentProgress.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {selectedStudentProgress.map((record: any, idx: number) => (
+                    <div key={record.id || idx} className="bg-background-dark border border-border-dark p-3 rounded-xl flex flex-col gap-2">
+                       <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                         <span className="text-white font-black text-sm">{record.date?.toDate ? record.date.toDate().toLocaleDateString('pt-BR') : new Date(record.date).toLocaleDateString('pt-BR')}</span>
+                         <span className="text-primary font-black">{record.weight ? `${record.weight}kg` : '-'}</span>
+                       </div>
+                       <div className="grid grid-cols-3 gap-2 mt-1">
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Gordura</span>
+                           <span className="text-white text-xs">{record.bodyFat ? `${record.bodyFat}%` : '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Peito</span>
+                           <span className="text-white text-xs">{record.chest || '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Braços</span>
+                           <span className="text-white text-xs">{record.arms || '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Cintura</span>
+                           <span className="text-white text-xs">{record.waist || '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Quadril</span>
+                           <span className="text-white text-xs">{record.hips || '-'}</span>
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="text-[9px] text-text-secondary uppercase font-bold">Coxas</span>
+                           <span className="text-white text-xs">{record.thighs || '-'}</span>
+                         </div>
+                       </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-text-secondary text-sm italic text-center py-4 bg-background-dark rounded-xl border border-border-dark/50">Nenhuma medida registrada.</p>
+              )}
+            </div>
+
+            {/* Plan/Access section - REPOSITIONED BELOW PHYSICAL EVOLUTION */}
+            <div className="bg-card-dark p-4 md:p-5 rounded-xl border border-border-dark flex flex-col gap-4 shadow-sm">
               <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 mb-2 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[18px]">workspace_premium</span>
                 Plano / Acesso
@@ -1254,7 +1579,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 <select 
                   value={student.plan || ''}
                   onChange={(e) => handleUpdateStudentPlan(student.id, e.target.value)}
-                  className="bg-background-dark border border-border-dark rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full cursor-pointer appearance-none"
+                  className="bg-background-dark border border-border-dark rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full cursor-pointer appearance-none animate-none"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
@@ -1317,82 +1642,6 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   <span className="material-symbols-outlined">history</span>
                   Prorrogar 24h de Acesso (Trial)
                 </button>
-              )}
-            </div>
-
-            {/* Treinos Vinculados */}
-            <div className="bg-card-dark p-5 rounded-2xl border border-border-dark flex flex-col gap-4 shadow-sm">
-              <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[18px]">fitness_center</span>
-                Treinos Vinculados
-              </h3>
-              <div className="flex flex-col gap-2">
-                 {workouts.filter(w => w.studentIds?.includes(student.id)).length > 0 ? (
-                    workouts.filter(w => w.studentIds?.includes(student.id)).map(w => (
-                       <button
-                         key={w.id}
-                         onClick={() => {
-                            setMobileSelectedStudent(null);
-                            setActiveTab('workouts');
-                         }}
-                         className="flex items-center justify-between bg-background-dark p-3 rounded-xl border border-border-dark hover:border-primary/50 transition-colors"
-                       >
-                          <span className="text-white font-bold text-sm">{w.name}</span>
-                          <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
-                       </button>
-                    ))
-                 ) : (
-                    <p className="text-text-secondary text-sm italic text-center py-2">Nenhum treino vinculado.</p>
-                 )}
-              </div>
-            </div>
-
-            {/* Evolução Física */}
-            <div className="bg-card-dark p-5 rounded-2xl border border-border-dark flex flex-col shadow-sm">
-              <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[18px]">analytics</span>
-                Evolução Física
-              </h3>
-              
-              {selectedStudentProgress.length > 0 ? (
-                <div className="flex flex-col gap-3">
-                  {selectedStudentProgress.map((record: any, idx: number) => (
-                    <div key={record.id || idx} className="bg-background-dark border border-border-dark p-3 rounded-xl flex flex-col gap-2">
-                       <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                         <span className="text-white font-black text-sm">{record.date?.toDate ? record.date.toDate().toLocaleDateString('pt-BR') : new Date(record.date).toLocaleDateString('pt-BR')}</span>
-                         <span className="text-primary font-black">{record.weight ? `${record.weight}kg` : '-'}</span>
-                       </div>
-                       <div className="grid grid-cols-3 gap-2 mt-1">
-                         <div className="flex flex-col">
-                           <span className="text-[9px] text-text-secondary uppercase font-bold">Gordura</span>
-                           <span className="text-white text-xs">{record.bodyFat ? `${record.bodyFat}%` : '-'}</span>
-                         </div>
-                         <div className="flex flex-col">
-                           <span className="text-[9px] text-text-secondary uppercase font-bold">Peito</span>
-                           <span className="text-white text-xs">{record.chest || '-'}</span>
-                         </div>
-                         <div className="flex flex-col">
-                           <span className="text-[9px] text-text-secondary uppercase font-bold">Braços</span>
-                           <span className="text-white text-xs">{record.arms || '-'}</span>
-                         </div>
-                         <div className="flex flex-col">
-                           <span className="text-[9px] text-text-secondary uppercase font-bold">Cintura</span>
-                           <span className="text-white text-xs">{record.waist || '-'}</span>
-                         </div>
-                         <div className="flex flex-col">
-                           <span className="text-[9px] text-text-secondary uppercase font-bold">Quadril</span>
-                           <span className="text-white text-xs">{record.hips || '-'}</span>
-                         </div>
-                         <div className="flex flex-col">
-                           <span className="text-[9px] text-text-secondary uppercase font-bold">Coxas</span>
-                           <span className="text-white text-xs">{record.thighs || '-'}</span>
-                         </div>
-                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-text-secondary text-sm italic text-center py-4 bg-background-dark rounded-xl border border-border-dark/50">Nenhuma medida registrada.</p>
               )}
             </div>
 
@@ -3130,6 +3379,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     }
   };
 
+  const hideNavs = (activeTab === "chat" && isChatOpenOnMobile) || 
+    (activeTab === "students" && (mobileSelectedStudent !== null || editingStudentProfile !== null));
+
   return (
     <div className="flex h-[100dvh] bg-background-dark overflow-hidden">
       <Sidebar
@@ -3142,7 +3394,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       />
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden">
         {/* Mobile Header / Top Navbar */}
-        <header className={`md:hidden flex items-center justify-between px-4 h-16 bg-card-dark border-b border-border-dark shrink-0 z-40 fixed top-0 w-full left-0 right-0 transition-transform duration-300 ease-in-out ${activeTab === 'chat' && isChatOpenOnMobile ? '-translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
+        <header className={`md:hidden flex items-center justify-between px-4 h-16 bg-card-dark border-b border-border-dark shrink-0 z-40 fixed top-0 w-full left-0 right-0 transition-transform duration-300 ease-in-out ${hideNavs ? '-translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary fill text-2xl">
               fitness_center
@@ -3188,14 +3440,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         </header>
 
         {/* Padding for mobile top nav */}
-        <div className={`md:hidden shrink-0 transition-[height] duration-300 ease-in-out ${activeTab === 'chat' && isChatOpenOnMobile ? 'h-0' : 'h-16'}`}></div>
+        <div className={`md:hidden shrink-0 transition-[height] duration-300 ease-in-out ${hideNavs ? 'h-0' : 'h-16'}`}></div>
 
-        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? (isChatOpenOnMobile ? 'p-0 pb-0' : 'p-0 pb-[84px] md:pb-0') : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
+        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? (isChatOpenOnMobile ? 'p-0 pb-0' : 'p-0 pb-[84px] md:pb-0') : hideNavs ? 'overflow-y-auto p-4 md:p-8 pb-10' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
           <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto'}`}>{renderContent()}</div>
         </div>
 
         {/* Mobile Bottom Navbar */}
-        <nav className={`md:hidden fixed bottom-0 left-0 right-0 h-[84px] z-50 transition-transform duration-300 ease-in-out ${activeTab === 'chat' && isChatOpenOnMobile ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
+        <nav className={`md:hidden fixed bottom-1 left-0 right-0 h-[84px] z-50 transition-transform duration-300 ease-in-out ${hideNavs ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 84" preserveAspectRatio="none">
             <path
               d="M0 0 H120 C135 0 140 3 145 10 C 158 52 217 52 230 10 C 235 3 240 0 255 0 H375 V84 H0 Z"
@@ -3225,7 +3477,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </button>
  
             {/* Workout Button - Elevated & Centralized */}
-            <div className={`relative -mt-[110px] transition-transform duration-300 ease-in-out ${activeTab === 'chat' && isChatOpenOnMobile ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
+            <div className={`relative -mt-[110px] transition-transform duration-300 ease-in-out ${hideNavs ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
               <button
                   onClick={() => setActiveTab('workouts')}
                   className={`flex items-center justify-center size-[80px] rounded-full border-4 border-background-dark shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.25)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-105 shadow-[0_12px_35px_rgba(19,236,91,0.4)]' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
