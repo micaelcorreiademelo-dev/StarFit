@@ -446,6 +446,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   // Estados para o Criador de Treinos
   const [activeWorkoutTab, setActiveWorkoutTab] = useState("A");
   const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null);
+  const [preAssignedStudentId, setPreAssignedStudentId] = useState<string | null>(null);
   const [workoutName, setWorkoutName] = useState("");
   const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
@@ -1193,6 +1194,114 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   };
 
   const renderStudents = () => {
+    const linkWorkoutModal = linkingWorkoutStudent && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
+        <div className="bg-card-dark border border-border-dark w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
+          <div className="flex items-center justify-between p-4 border-b border-border-dark bg-background-dark/50">
+            <h3 className="text-white font-bold tracking-tight">Vincular Treino</h3>
+            <button 
+              onClick={() => {
+                setLinkingWorkoutStudent(null);
+                setSelectedWorkoutToLink("");
+              }} 
+              className="text-text-secondary hover:text-white transition-colors"
+              type="button"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div className="p-6 flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                Aluno
+              </label>
+              <p className="text-white font-black text-lg">{linkingWorkoutStudent.name}</p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                Selecionar Ficha
+              </label>
+              <select
+                value={selectedWorkoutToLink || ""}
+                onChange={(e) => setSelectedWorkoutToLink(e.target.value)}
+                className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white focus:border-primary focus:outline-none transition-colors appearance-none"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 1rem center",
+                  backgroundSize: "1.2em"
+                }}
+              >
+                <option value="" disabled>Escolha uma ficha...</option>
+                {workouts.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+                {workouts.length === 0 && (
+                  <option value="" disabled>Nenhuma ficha disponível. Crie uma ficha primeiro.</option>
+                )}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-border-dark">
+              <button
+                onClick={() => {
+                  setEditingWorkoutId("new");
+                  setPreAssignedStudentId(linkingWorkoutStudent.id);
+                  setExercises([]);
+                  setWorkoutName(`Treino Exclusivo - ${linkingWorkoutStudent.name}`);
+                  setActiveTab("workouts");
+                  setLinkingWorkoutStudent(null);
+                  setSelectedWorkoutToLink("");
+                }}
+                className="w-full flex items-center justify-center gap-2 h-12 bg-white/5 text-white rounded-xl font-bold hover:bg-white/10 transition-all border border-white/10"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                Criar Treino Exclusivo
+              </button>
+            </div>
+
+            {selectedWorkoutToLink && (
+              <div className="flex flex-col gap-3 mt-2 animate-in fade-in slide-in-from-top-2">
+                <button
+                  onClick={async () => {
+                    if (selectedWorkoutToLink) {
+                      await dataService.assignWorkoutToStudent(selectedWorkoutToLink, linkingWorkoutStudent.id);
+                      alert(`Treino vinculado a ${linkingWorkoutStudent.name} com sucesso!`);
+                      setLinkingWorkoutStudent(null);
+                      setSelectedWorkoutToLink("");
+                    }
+                  }}
+                  disabled={!selectedWorkoutToLink}
+                  className="w-full flex items-center justify-center gap-2 h-12 bg-primary text-background-dark rounded-xl font-bold shadow-lg shadow-primary/20 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <span className="material-symbols-outlined text-sm">link</span>
+                  Vincular Acesso
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (selectedWorkoutToLink) {
+                      await dataService.assignWorkoutToStudent(selectedWorkoutToLink, linkingWorkoutStudent.id);
+                      const workoutName = workouts.find(w => w.id === selectedWorkoutToLink)?.name || selectedWorkoutToLink;
+                      window.open(`https://wa.me/${linkingWorkoutStudent.phone || ""}?text=Olá ${linkingWorkoutStudent.name}, seu novo treino '${workoutName}' já está disponível no app!`, "_blank");
+                      setLinkingWorkoutStudent(null);
+                      setSelectedWorkoutToLink("");
+                    }
+                  }}
+                  disabled={!selectedWorkoutToLink}
+                  className="w-full flex items-center justify-center gap-2 h-12 bg-green-500/10 text-green-500 rounded-xl font-bold hover:bg-green-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-green-500/20"
+                >
+                  <span className="material-symbols-outlined text-sm">send</span>
+                  Vincular e Notificar (WhatsApp)
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+
     if (mobileSelectedStudent) {
       const student = mobileSelectedStudent;
       const isTrialExpired = student.status !== "Ativa" && student.trialUntil && new Date() > (student.trialUntil?.toDate ? student.trialUntil.toDate() : new Date(student.trialUntil));
@@ -1201,7 +1310,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       // EDIT PROFILE PAGE FOR MOBILE VIEW ONLY
       if (editingStudentProfile && editingStudentProfile.id === student.id) {
         return (
-          <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative">
+          <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-32 relative">
             {/* Title and Back Trigger - Centered on Mobile */}
             <div className="relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
               <button 
@@ -1210,10 +1319,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               >
                 <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
               </button>
-              <h1 className="text-white font-black text-xl tracking-tight text-center">Editar Dados do Aluno</h1>
+              <h1 className="text-white font-black text-xl tracking-tight text-center">Dados do Aluno</h1>
             </div>
 
-            <div className="bg-card-dark px-2.5 py-4 md:p-6 rounded-xl border border-border-dark flex flex-col gap-6 shadow-xl">
+            <div className="flex flex-col gap-6 w-full">
               {/* Profile Image & Picture URL Input */}
               <div className="flex flex-col items-center gap-4 border-b border-border-dark pb-6">
                 <div className="relative group size-24">
@@ -1357,25 +1466,35 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Save Button */}
-              <button
-                onClick={handleSaveEditedStudent}
-                className="w-full h-14 bg-primary text-background-dark rounded-xl font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4 text-base shadow-lg shadow-primary/10"
-              >
-                <span className="material-symbols-outlined">save</span>
-                Salvar Alterações
-              </button>
+            {/* Save Button - Fixed permanently at the bottom of the screen */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-dark/95 backdrop-blur-md border-t border-border-dark z-50 flex justify-center pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <div className="w-full max-w-7xl">
+                <button
+                  onClick={handleSaveEditedStudent}
+                  className="w-full h-14 bg-primary text-background-dark rounded-xl font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-primary/25"
+                >
+                  <span className="material-symbols-outlined">save</span>
+                  Salvar Alterações
+                </button>
+              </div>
             </div>
           </div>
         );
       }
 
       return (
-        <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative">
+        <>
+          <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative">
+          
+          {/* Green Hero Section under the card and buttons */}
+          <div className="absolute top-0 left-0 right-0 h-[280px] bg-primary/20 -mx-4 -mt-4 rounded-b-[2.5rem] z-0 overflow-hidden border-b border-primary/20">
+            <div className="absolute inset-0 bg-gradient-to-b from-primary/30 via-primary/5 to-transparent"></div>
+          </div>
           
           {/* Header row containing page title and back button outside card - Centered on Mobile */}
-          <div className="relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
+          <div className="relative z-10 flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
             <button 
               onClick={() => setMobileSelectedStudent(null)}
               className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95 border border-white/5 shadow-md shrink-0"
@@ -1385,10 +1504,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <h1 className="text-white font-black text-xl tracking-tight text-center">Perfil do Aluno</h1>
           </div>
 
-          {/* Main Card with status, name, avatar, and whatsapp trigger in extreme right side */}
-          <div className="flex items-center justify-between gap-4 bg-card-dark px-2.5 py-4 md:px-6 md:py-6 rounded-xl border border-border-dark shadow-md">
+          {/* Main Card with status, name, avatar */}
+          <div className="relative z-10 flex items-center justify-between gap-4 bg-card-dark px-2.5 py-4 md:px-6 md:py-6 rounded-xl border border-border-dark shadow-md">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <img src={student.img} alt={student.name} className="size-14 rounded-full object-cover border-2 border-border-dark" />
+              <img src={student.img} alt={student.name} className="size-14 rounded-xl object-cover border-2 border-border-dark" />
               <div className="flex flex-col min-w-0">
                 <h2 className="text-white font-black text-base leading-tight uppercase tracking-tight truncate">{student.name}</h2>
                 <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider w-fit mt-1.5 ${
@@ -1404,25 +1523,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 </span>
               </div>
             </div>
-
-            {/* Reduced size WhatsApp button on the outer right edge */}
-            <a
-              href={`https://wa.me/${student.phone}`}
-              target="_blank"
-              rel="noreferrer"
-              className="size-10 flex items-center justify-center bg-green-500/10 text-green-500 rounded-full border border-green-500/20 active:scale-95 transition-all shadow-sm hover:bg-green-500/20 shrink-0"
-              title="Abre WhatsApp"
-            >
-              <svg className="size-5 fill-current" viewBox="0 0 24 24">
-                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.37 5.378.002 12.007.002c3.212.001 6.231 1.254 8.5 3.527 2.268 2.27 3.516 5.29 3.517 8.501-.003 6.637-5.378 12.005-12.01 12.005-.001 0-.001 0-.002 0-2.007-.001-3.98-.501-5.734-1.455L0 24zm6.09-3.9 3.1-.115c.16-.006.326.046.444.15l2.42 2.148c.84-.42 1.636-.967 2.37-1.621l-1.393-2.126c-.089-.136-.112-.307-.061-.462l1.01-3.08a.5.5 0 01.623-.324l3.14.975c.08.384.12.78.12 1.18 0 4.973-4.044 9.016-9.016 9.016-1.52 0-3.003-.385-4.322-1.12l1.516-4.757zm12.39-12.39a10.024 10.024 0 00-7.078-2.934c-5.517 0-10.007 4.49-10.007 10.007 0 1.93.55 3.8 1.593 5.414L1.042 22.04l4.24-1.393c1.55.955 3.326 1.46 5.148 1.46h.005c5.517 0 10.007-4.49 10.007-10.007 0-2.673-1.041-5.186-2.934-7.078zm-3.565 6.375c-.217-.109-1.285-.635-1.484-.707-.2-.072-.346-.109-.492.11-.146.218-.567.707-.695.852-.128.146-.256.164-.473.055-.218-.109-.92-.34-1.752-1.082-.647-.578-1.085-1.292-1.212-1.51-.128-.218-.014-.336.095-.445.097-.098.218-.255.328-.382.11-.127.146-.218.218-.364.073-.145.037-.272-.018-.382-.055-.109-.492-1.185-.674-1.621-.177-.427-.35-.37-.492-.378-.127-.007-.272-.008-.418-.008s-.383.055-.583.273c-.2.218-.765.747-.765 1.82s.783 2.11 1.056 2.474c.273.364 1.542 2.355 3.738 3.303.522.225.93.36 1.25.462.525.167 1.002.143 1.38.087.42-.062 1.285-.525 1.466-1.033.18-.508.18-.944.127-1.033-.055-.089-.2-.146-.418-.255z" />
-              </svg>
-            </a>
           </div>
 
           <div className="flex flex-col gap-4">
             
             {/* Action Buttons reorganized - Horizontal line of icons only */}
-            <div className="grid grid-cols-3 gap-4 w-full">
+            <div className="relative z-10 grid grid-cols-3 gap-4 w-full">
               {/* Message button */}
               <button
                 onClick={async () => {
@@ -1460,7 +1566,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </div>
 
             {/* Edge-to-Edge Carousel of Workouts & Add Workout integration */}
-            <div className="flex flex-col gap-3 mt-2 pr-0 mr-0">
+            <div className="flex flex-col gap-3 mt-10 pr-0 mr-0">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-bold text-sm uppercase tracking-widest flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary text-[18px]">fitness_center</span>
@@ -1469,7 +1575,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 {/* Small compact link trigger directly beside "Treinos Vinculados" label */}
                 <button
                   onClick={() => setLinkingWorkoutStudent(student)}
-                  className="size-8 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center active:scale-95 transition-transform shadow-sm hover:bg-blue-500/20"
+                  className="size-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center active:scale-95 transition-all shadow-sm hover:bg-blue-500/20 font-bold"
                   title="Vincular Novo Treino"
                 >
                   <span className="material-symbols-outlined text-lg">add</span>
@@ -1602,7 +1708,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   type="date"
                   value={student.expDate || ''}
                   onChange={(e) => handleUpdateStudentExpDate(student.id, e.target.value)}
-                  className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-3 text-sm text-primary font-bold shadow-inner focus:outline-none focus:border-primary transition-colors cursor-pointer w-full"
+                  className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-3 text-sm text-primary font-bold shadow-inner focus:outline-none focus:border-primary transition-colors cursor-pointer w-full [&::-webkit-calendar-picker-indicator]:invert"
                 />
               </div>
 
@@ -1629,7 +1735,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                      className={`flex items-center justify-center gap-2 px-2 py-3 md:p-3 rounded-xl font-bold border transition-all ${student.status === "Ativa" ? "bg-primary/20 text-primary border-primary/30 opacity-50" : "bg-white/5 text-white border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/20"}`}
                    >
                      <span className="material-symbols-outlined text-sm">lock_open</span>
-                     Liberar Acesso
+                     Liberar
                    </button>
                 </div>
               </div>
@@ -1657,118 +1763,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
              </button>
           </div>
         </div>
+        {linkWorkoutModal}
+      </>
       );
     }
 
     return (
       <div className="flex flex-col gap-6 w-full max-w-full overflow-hidden animate-in fade-in duration-500 pb-20 relative">
-      {/* Modal Vincular Treino */}
-      {linkingWorkoutStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
-          <div className="bg-card-dark border border-border-dark w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
-            <div className="flex items-center justify-between p-4 border-b border-border-dark bg-background-dark/50">
-              <h3 className="text-white font-bold tracking-tight">Vincular Treino</h3>
-              <button 
-                onClick={() => {
-                  setLinkingWorkoutStudent(null);
-                  setSelectedWorkoutToLink("");
-                }} 
-                className="text-text-secondary hover:text-white transition-colors"
-                type="button"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <div className="p-6 flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
-                  Aluno
-                </label>
-                <p className="text-white font-black text-lg">{linkingWorkoutStudent.name}</p>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">
-                  Selecionar Ficha
-                </label>
-                <select
-                  value={selectedWorkoutToLink || ''}
-                  onChange={(e) => setSelectedWorkoutToLink(e.target.value)}
-                  className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white focus:border-primary focus:outline-none transition-colors appearance-none"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 1rem center',
-                    backgroundSize: '1.2em'
-                  }}
-                >
-                  <option value="" disabled>Escolha uma ficha...</option>
-                  {workouts.map(w => (
-                    <option key={w.id} value={w.id}>{w.name}</option>
-                  ))}
-                  {workouts.length === 0 && (
-                    <option value="" disabled>Nenhuma ficha disponível. Crie uma ficha primeiro.</option>
-                  )}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-border-dark">
-                <button
-                  onClick={() => {
-                    setEditingWorkoutId('new');
-                    setExercises([]);
-                    setWorkoutName(`Treino Exclusivo - ${linkingWorkoutStudent.name}`);
-                    setActiveTab("workouts");
-                    setLinkingWorkoutStudent(null);
-                    setSelectedWorkoutToLink("");
-                  }}
-                  className="w-full flex items-center justify-center gap-2 h-12 bg-white/5 text-white rounded-xl font-bold hover:bg-white/10 transition-all border border-white/10"
-                >
-                  <span className="material-symbols-outlined text-sm">add</span>
-                  Criar Treino Exclusivo
-                </button>
-              </div>
-
-              {selectedWorkoutToLink && (
-                <div className="flex flex-col gap-3 mt-2 animate-in fade-in slide-in-from-top-2">
-                  <button
-                    onClick={async () => {
-                      if (selectedWorkoutToLink) {
-                        await dataService.assignWorkoutToStudent(selectedWorkoutToLink, linkingWorkoutStudent.id);
-                        alert(`Treino vinculado a ${linkingWorkoutStudent.name} com sucesso!`);
-                        setLinkingWorkoutStudent(null);
-                        setSelectedWorkoutToLink("");
-                      }
-                    }}
-                    disabled={!selectedWorkoutToLink}
-                    className="w-full flex items-center justify-center gap-2 h-12 bg-primary text-background-dark rounded-xl font-bold shadow-lg shadow-primary/20 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    <span className="material-symbols-outlined text-sm">link</span>
-                    Vincular Acesso
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      if (selectedWorkoutToLink) {
-                        await dataService.assignWorkoutToStudent(selectedWorkoutToLink, linkingWorkoutStudent.id);
-                        const workoutName = workouts.find(w => w.id === selectedWorkoutToLink)?.name || selectedWorkoutToLink;
-                        window.open(`https://wa.me/${linkingWorkoutStudent.phone || ''}?text=Olá ${linkingWorkoutStudent.name}, seu novo treino '${workoutName}' já está disponível no app!`, '_blank');
-                        setLinkingWorkoutStudent(null);
-                        setSelectedWorkoutToLink("");
-                      }
-                    }}
-                    disabled={!selectedWorkoutToLink}
-                    className="w-full flex items-center justify-center gap-2 h-12 bg-green-500/10 text-green-500 rounded-xl font-bold hover:bg-green-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-green-500/20"
-                  >
-                    <span className="material-symbols-outlined text-sm">send</span>
-                    Vincular e Notificar (WhatsApp)
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {linkWorkoutModal}
 
       {/* Page Heading matching AdminTrainers */}
       <div className="flex justify-between items-start gap-4 mb-4 md:mb-6">
@@ -1968,7 +1970,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
                           {/* WhatsApp */}
                           <a
-                            href={`https://wa.me/${student.phone}`}
+                            className="hidden" href=""
                             target="_blank"
                             rel="noreferrer"
                             title="Falar no WhatsApp"
@@ -1983,7 +1985,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           <button
                             onClick={() => setLinkingWorkoutStudent(student)}
                             title="Vincular Treino"
-                            className="size-8 flex items-center justify-center rounded-lg bg-white/5 text-text-secondary hover:bg-blue-500/20 hover:text-blue-400 transition-all transform hover:scale-110"
+                            className="size-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center active:scale-95 transition-all shadow-sm hover:bg-blue-500/20 font-bold"
                           >
                             <span className="material-symbols-outlined text-lg">
                               fitness_center
@@ -2141,10 +2143,19 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           </div>
 
                           <div className="mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
-                             <h4 className="text-white font-bold mb-4 flex items-center gap-2">
-                               <span className="material-symbols-outlined text-primary">fitness_center</span>
-                               Treinos Vinculados
-                             </h4>
+                             <div className="flex justify-between items-center mb-4">
+                               <h4 className="text-white font-bold flex items-center gap-2">
+                                 <span className="material-symbols-outlined text-primary">fitness_center</span>
+                                 Treinos Vinculados
+                               </h4>
+                               <button
+                                 onClick={() => setLinkingWorkoutStudent(student)}
+                                 className="size-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center active:scale-95 transition-all shadow-sm hover:bg-blue-500/20 font-bold"
+                                 title="Vincular Novo Treino"
+                               >
+                                 <span className="material-symbols-outlined text-lg">add</span>
+                               </button>
+                             </div>
                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                {workouts.filter(w => w.studentIds?.includes(student.id)).length > 0 ? (
                                   workouts.filter(w => w.studentIds?.includes(student.id)).map(w => (
@@ -2626,6 +2637,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <button 
               onClick={() => {
                 setEditingWorkoutId("new");
+                setPreAssignedStudentId(null);
                 setWorkoutName("Nova Ficha");
                 setExercises([]);
               }}
@@ -2659,8 +2671,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                       await dataService.createWorkout({
                         name: workoutName,
                         exercises: exercises,
-                        trainerId: user.id
+                        trainerId: user.id,
+                        studentIds: preAssignedStudentId ? [preAssignedStudentId] : [],
+                        studentStatuses: preAssignedStudentId ? { [preAssignedStudentId]: "Ativo" } : {}
                       });
+                      setPreAssignedStudentId(null);
                     } else {
                       await dataService.updateWorkout(editingWorkoutId, {
                         name: workoutName,
@@ -3440,7 +3455,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         {/* Padding for mobile top nav */}
         <div className={`md:hidden shrink-0 transition-[height] duration-300 ease-in-out ${hideNavs ? 'h-0' : 'h-16'}`}></div>
 
-        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? (isChatOpenOnMobile ? 'p-0 pb-0' : 'p-0 pb-[84px] md:pb-0') : hideNavs ? 'overflow-y-auto px-1.5 py-4 md:p-8 pb-10' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
+        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? (isChatOpenOnMobile ? 'p-0 pb-0' : 'p-0 pb-[84px] md:pb-0') : hideNavs ? 'overflow-y-auto p-4 md:p-8 pb-10' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
           <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto w-full'}`}>{renderContent()}</div>
         </div>
 
