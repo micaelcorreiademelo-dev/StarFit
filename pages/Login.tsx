@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserRole } from '../types';
-import { loginWithGoogle, loginWithGoogleRedirect, loginWithEmail } from '../services/firebase';
+import { loginWithGoogle, loginWithGoogleRedirect, loginWithEmail, registerWithEmail } from '../services/firebase';
 
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -15,11 +15,62 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Automatically detect iframe environment
+    if (window.top !== window.self) {
+      setIframeAlert(true);
+    }
+  }, []);
+
+  const handleFastLogin = async (role: 'admin' | 'trainer' | 'student') => {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+    let targetEmail = '';
+    let displayName = '';
+    if (role === 'admin') {
+      targetEmail = 'admin@starfit.com';
+      displayName = 'Administrador do Sistema (Demo)';
+    } else if (role === 'trainer') {
+      targetEmail = 'trainer@starfit.com';
+      displayName = 'Personal Treinador (Demo)';
+    } else {
+      targetEmail = 'student@starfit.com';
+      displayName = 'Aluno Exemplo (Demo)';
+    }
+
+    try {
+      console.log(`[FAST LOGIN] Tentando login com ${targetEmail}`);
+      await loginWithEmail(targetEmail, 'starfit123');
+    } catch (err: any) {
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        try {
+          console.log(`[FAST REGISTER] Criando conta de demonstração para ${targetEmail}`);
+          // Set role parameter for App.tsx via localStorage sync
+          localStorage.setItem('pending_role', role.toUpperCase());
+          if (role === 'trainer') {
+            localStorage.setItem('pending_username', `@trainer_demo`);
+          }
+          await registerWithEmail(targetEmail, 'starfit123', displayName);
+        } catch (regErr: any) {
+          console.error("Failed to fast-register:", regErr);
+          setError("Erro no cadastro rápido: " + (regErr.message || String(regErr)));
+          localStorage.removeItem('pending_role');
+          localStorage.removeItem('pending_username');
+        }
+      } else {
+        console.error("Fast login error:", err);
+        setError("Erro ao autenticar: " + (err.message || String(err)));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGoogleLogin = async (useRedirect = false) => {
     if (window.top !== window.self) {
       setIframeAlert(true);
-      setError('O Firebase pode não funcionar por segurança ao fazer login embutido em um ambiente iframe. Para completar o login com segurança, abra o app em uma aba limpa.');
-      return;
+      setError('Aviso: O login por Google embutido pode ser bloqueado pelas proteções de cookies de terceiros do navegador. Se isso ocorrer, você pode fazer login usando a opção de E-mail ou clicar no botão de nova aba.');
     }
 
     if (loading) return;
@@ -112,20 +163,62 @@ const Login: React.FC = () => {
                 )}
               </div>
             )}
-
             <div className="flex flex-col gap-4">
               {!useEmail ? (
                 <>
                   {iframeAlert ? (
-                    <a
-                      href={window.location.href} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-3 bg-primary text-background-dark font-bold py-3 rounded-lg hover:brightness-110 transition-all"
-                    >
-                      <span className="material-symbols-outlined">open_in_new</span>
-                      Abrir app em nova aba
-                    </a>
+                    <div className="space-y-4 animate-in fade-in duration-300">
+                      <div className="p-3.5 bg-primary/15 border border-primary/20 rounded-xl text-xs text-text-secondary leading-relaxed">
+                        <span className="font-bold text-white block mb-1">⚡️ Preview do AI Studio Ativo</span>
+                        Navegadores costumam bloquear login com Google (popups/cookies) dentro do frame do editor. Use o Acesso Rápido abaixo para testar o sistema instantaneamente com credenciais reais!
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => handleFastLogin('admin')}
+                          disabled={loading}
+                          className="w-full flex items-center justify-between bg-primary text-background-dark font-black py-3.5 px-4 rounded-xl hover:scale-[1.01] active:scale-95 transition-all text-sm disabled:opacity-50 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg">admin_panel_settings</span>
+                            <span>Acessar como Administrador</span>
+                          </div>
+                          <span className="material-symbols-outlined text-sm">chevron_right</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleFastLogin('trainer')}
+                          disabled={loading}
+                          className="w-full flex items-center justify-between bg-[#1f3a25]/30 text-white border border-[#13ec5b]/20 font-bold py-3.5 px-4 rounded-xl hover:bg-[#1f3a25]/50 hover:scale-[1.01] active:scale-95 transition-all text-sm disabled:opacity-50 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg text-primary">assignment_ind</span>
+                            <span>Acessar como Personal Trainer</span>
+                          </div>
+                          <span className="material-symbols-outlined text-sm text-text-secondary">chevron_right</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleFastLogin('student')}
+                          disabled={loading}
+                          className="w-full flex items-center justify-between bg-neutral-850/50 text-white border border-border-dark font-bold py-3.5 px-4 rounded-xl hover:bg-neutral-800/80 hover:scale-[1.01] active:scale-95 transition-all text-sm disabled:opacity-50 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-lg text-purple-400 font-bold">sports_gymnastics</span>
+                            <span>Acessar como Aluno (Estudante)</span>
+                          </div>
+                          <span className="material-symbols-outlined text-sm text-text-secondary">chevron_right</span>
+                        </button>
+                      </div>
+
+                      <div className="relative flex items-center justify-center py-2">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-dark"></div></div>
+                        <span className="relative px-3 bg-card-dark text-[10px] text-text-secondary uppercase tracking-widest font-bold">Ou Email Tradicional</span>
+                      </div>
+                    </div>
                   ) : !showRedirectOption ? (
                     <button 
                       onClick={() => handleGoogleLogin(false)}
@@ -145,10 +238,12 @@ const Login: React.FC = () => {
                     </button>
                   )}
                   
-                  <div className="relative flex items-center justify-center py-2">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-dark"></div></div>
-                    <span className="relative px-3 bg-card-dark text-xs text-text-secondary">OU</span>
-                  </div>
+                  {!iframeAlert && (
+                    <div className="relative flex items-center justify-center py-2">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-dark"></div></div>
+                      <span className="relative px-3 bg-card-dark text-xs text-text-secondary">OU</span>
+                    </div>
+                  )}
 
                   <button
                     onClick={() => setUseEmail(true)}

@@ -31,7 +31,6 @@ export const loginWithEmail = async (email: string, pass: string) => {
     const result = await signInWithEmailAndPassword(auth, email, pass);
     return result.user;
   } catch (error) {
-    console.error('Error logging in with Email', error);
     throw error;
   }
 };
@@ -44,7 +43,6 @@ export const registerWithEmail = async (email: string, pass: string, name: strin
     }
     return result.user;
   } catch (error) {
-    console.error('Error registering with Email', error);
     throw error;
   }
 };
@@ -120,6 +118,18 @@ export const syncUserToFirestore = async (firebaseUser: FirebaseUser, role: User
       updates.role = 'ADMIN';
       needsUpdate = true;
     }
+    if (firebaseUser.email === 'admin@starfit.com' && existingData.role !== 'ADMIN') {
+      updates.role = 'ADMIN';
+      needsUpdate = true;
+    }
+    if (firebaseUser.email === 'trainer@starfit.com' && existingData.role !== 'TRAINER') {
+      updates.role = 'TRAINER';
+      needsUpdate = true;
+    }
+    if (firebaseUser.email === 'student@starfit.com' && existingData.role !== 'STUDENT') {
+      updates.role = 'STUDENT';
+      needsUpdate = true;
+    }
     
     // Auto-migrate trainers who don't have a username yet by assigning a random one if username isn't passed
     // But if username is explicitly passed during registration flow, we use it.
@@ -143,8 +153,12 @@ export const syncUserToFirestore = async (firebaseUser: FirebaseUser, role: User
 
   // Master Admin Bootstrap
   let finalRole = role;
-  if (firebaseUser.email === 'micaelcorreiademelo@gmail.com') {
+  if (firebaseUser.email === 'micaelcorreiademelo@gmail.com' || firebaseUser.email === 'admin@starfit.com') {
     finalRole = 'ADMIN';
+  } else if (firebaseUser.email === 'trainer@starfit.com') {
+    finalRole = 'TRAINER';
+  } else if (firebaseUser.email === 'student@starfit.com') {
+    finalRole = 'STUDENT';
   }
 
   const newUser: User = {

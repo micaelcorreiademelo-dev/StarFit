@@ -26,6 +26,12 @@ const Register: React.FC = () => {
 
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (window.top !== window.self) {
+      setIframeAlert(true);
+    }
+  }, []);
+
   // Generating suggestions based on any username the user tries to type
   const isValidUsername = (u: string) => /^[a-zA-Z0-9_]{3,20}$/.test(u);
 
@@ -72,8 +78,7 @@ const Register: React.FC = () => {
 
     if (window.top !== window.self) {
       setIframeAlert(true);
-      setError('O Firebase pode não funcionar por segurança ao fazer login embutido em um ambiente iframe. Para completar o login com segurança, abra o app em uma aba limpa.');
-      return;
+      setError('Aviso: O registro com Google embutido pode ser bloqueado pelas proteções de cookies de terceiros do navegador. Se isso ocorrer, você pode registrar-se usando a opção de E-mail ou abrir em uma nova aba.');
     }
 
     setLoading(true);
@@ -261,15 +266,21 @@ const Register: React.FC = () => {
               {!useEmail ? (
                  <>
                    {iframeAlert ? (
-                     <a
-                       href={window.location.href} 
-                       target="_blank" 
-                       rel="noopener noreferrer"
-                       className="w-full flex items-center justify-center gap-3 bg-primary text-background-dark font-bold py-4 rounded-lg hover:brightness-110 transition-all"
-                     >
-                       <span className="material-symbols-outlined">open_in_new</span>
-                       Abrir app em nova aba
-                     </a>
+                     <div className="space-y-3.5 animate-in fade-in duration-300">
+                       <div className="p-3.5 bg-[#1f3a25]/30 border border-[#13ec5b]/20 rounded-xl text-xs text-text-secondary leading-relaxed">
+                         <span className="font-bold text-white block mb-1">⚡️ Preview do AI Studio Ativo</span>
+                         Os navegadores bloqueiam popups do Google dentro do frame do editor. Recomendamos fazer login direto pelo <Link to="/login" className="text-primary font-bold hover:underline">Acesso Rápido de 1-clique</Link> para agilizar seus testes!
+                       </div>
+                       <a
+                         href={window.location.href} 
+                         target="_blank" 
+                         rel="noopener noreferrer"
+                         className="w-full flex items-center justify-center gap-3 bg-neutral-800 text-white font-bold py-3.5 rounded-xl hover:bg-neutral-850 transition-all text-sm cursor-pointer"
+                       >
+                         <span className="material-symbols-outlined text-sm">open_in_new</span>
+                         Registrar abrindo em nova aba
+                       </a>
+                     </div>
                    ) : !showRedirectOption ? (
                      <button 
                        onClick={() => handleGoogleRegister(false)}

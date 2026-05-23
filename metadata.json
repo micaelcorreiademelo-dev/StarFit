@@ -2,5 +2,7 @@
   "name": "StarFit - Fitness Ecosystem",
   "description": "A comprehensive fitness management platform for admins, trainers, and students featuring workout builders, progress tracking, and AI-powered insights.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

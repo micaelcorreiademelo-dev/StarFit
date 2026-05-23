@@ -2,21 +2,95 @@
 /// <reference types="vite-plugin-pwa/client" />
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+
+// 1. Storage Polyfills for third-party iframe blocking context (e.g. Chrome blocking third-party cookies in AI Studio preview)
+let isLocalStorageAvailable = false;
+try {
+  const testKey = '__test_local_storage__';
+  window.localStorage.setItem(testKey, 'test');
+  window.localStorage.removeItem(testKey);
+  isLocalStorageAvailable = true;
+} catch (e) {
+  isLocalStorageAvailable = false;
+}
+
+if (!isLocalStorageAvailable) {
+  console.warn("localStorage is blocked inside iframe context. Using safe in-memory fallback.");
+  const store: Record<string, string> = {};
+  const mockStorage = {
+    getItem: (key: string) => (key in store ? store[key] : null),
+    setItem: (key: string, value: string) => { store[key] = String(value); },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { for (const key in store) { delete store[key]; } },
+    key: (index: number) => Object.keys(store)[index] || null,
+    get length() { return Object.keys(store).length; }
+  };
+  Object.defineProperty(window, 'localStorage', {
+    value: mockStorage,
+    writable: true,
+    configurable: true
+  });
+}
+
+let isSessionStorageAvailable = false;
+try {
+  const testKey = '__test_session_storage__';
+  window.sessionStorage.setItem(testKey, 'test');
+  window.sessionStorage.removeItem(testKey);
+  isSessionStorageAvailable = true;
+} catch (e) {
+  isSessionStorageAvailable = false;
+}
+
+if (!isSessionStorageAvailable) {
+  console.warn("sessionStorage is blocked inside iframe context. Using safe in-memory fallback.");
+  const sStore: Record<string, string> = {};
+  const mockSessionStorage = {
+    getItem: (key: string) => (key in sStore ? sStore[key] : null),
+    setItem: (key: string, value: string) => { sStore[key] = String(value); },
+    removeItem: (key: string) => { delete sStore[key]; },
+    clear: () => { for (const key in sStore) { delete sStore[key]; } },
+    key: (index: number) => Object.keys(sStore)[index] || null,
+    get length() { return Object.keys(sStore).length; }
+  };
+  Object.defineProperty(window, 'sessionStorage', {
+    value: mockSessionStorage,
+    writable: true,
+    configurable: true
+  });
+}
+
+// Now we can safely import other files that might use localStorage at the top level
 import App from './App';
 import { registerSW } from 'virtual:pwa-register';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-// Register PWA service worker with auto-update to break old caches
+// 2. Register/Unregister service worker logically
+// We unregister service workers inside development or iframe preview window to prevent caching of outdated bundles/index.html
 if ('serviceWorker' in navigator) {
-  const updateSW = registerSW({
-    immediate: true,
-    onNeedRefresh() {
-      updateSW(true);
-    },
-    onOfflineReady() {
-      console.log("App ready to work offline");
+  if (window.top !== window.self) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister().then((success) => {
+          if (success) console.log("Stale Service Worker unregistered to prevent cache iframe lockups.");
+        });
+      }
+    }).catch(() => {});
+  } else {
+    try {
+      const updateSW = registerSW({
+        immediate: true,
+        onNeedRefresh() {
+          updateSW(true);
+        },
+        onOfflineReady() {
+          console.log("App ready to work offline");
+        }
+      });
+    } catch (err) {
+      console.warn("PWA registration bypassed due to browser policy:", err);
     }
-  });
+  }
 }
 
 const rootElement = document.getElementById('root');

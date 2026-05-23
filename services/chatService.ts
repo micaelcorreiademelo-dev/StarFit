@@ -1,4 +1,4 @@
-import { db, OperationType, handleFirestoreError } from './firebase';
+import { db, auth, OperationType, handleFirestoreError } from './firebase';
 import { 
   collection, 
   query, 
@@ -19,6 +19,9 @@ import { ChatMessage, Chat } from '../types';
 export const chatService = {
   // Update user presence
   updatePresence: async (userId: string, isOnline: boolean) => {
+    if (!auth.currentUser || auth.currentUser.uid !== userId) {
+      return;
+    }
     try {
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {

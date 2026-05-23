@@ -1201,7 +1201,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       // EDIT PROFILE PAGE FOR MOBILE VIEW ONLY
       if (editingStudentProfile && editingStudentProfile.id === student.id) {
         return (
-          <div className="flex flex-col gap-6 w-full animate-in slide-in-from-right-8 duration-300 pb-20 relative px-0">
+          <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative">
             {/* Title and Back Trigger - Centered on Mobile */}
             <div className="relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
               <button 
@@ -1213,7 +1213,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               <h1 className="text-white font-black text-xl tracking-tight text-center">Editar Dados do Aluno</h1>
             </div>
 
-            <div className="bg-card-dark p-4 md:p-6 rounded-xl border border-border-dark flex flex-col gap-6 shadow-xl">
+            <div className="bg-card-dark px-2.5 py-4 md:p-6 rounded-xl border border-border-dark flex flex-col gap-6 shadow-xl">
               {/* Profile Image & Picture URL Input */}
               <div className="flex flex-col items-center gap-4 border-b border-border-dark pb-6">
                 <div className="relative group size-24">
@@ -1236,7 +1236,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     value={editedStudent?.img || ""}
                     onChange={(e) => setEditedStudent(prev => ({ ...prev, img: e.target.value }))}
                     placeholder="https://exemplo.com/foto.jpg"
-                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                    className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-4 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
                   />
                 </div>
               </div>
@@ -1254,7 +1254,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     value={editedStudent?.name || ""}
                     onChange={(e) => setEditedStudent(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Digite o nome completo"
-                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                    className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-4 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
                     required
                   />
                 </div>
@@ -1270,7 +1270,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     value={editedStudent?.cpf || ""}
                     onChange={(e) => setEditedStudent(prev => ({ ...prev, cpf: e.target.value }))}
                     placeholder="000.000.000-00"
-                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                    className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-4 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
                   />
                 </div>
 
@@ -1285,7 +1285,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     value={editedStudent?.birthDate || ""}
                     onChange={(e) => setEditedStudent(prev => ({ ...prev, birthDate: e.target.value }))}
                     placeholder="DD/MM/AAAA"
-                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                    className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-4 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
                   />
                 </div>
 
@@ -1298,7 +1298,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   <select
                     value={editedStudent?.gender || ""}
                     onChange={(e) => setEditedStudent(prev => ({ ...prev, gender: e.target.value }))}
-                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full appearance-none cursor-pointer"
+                    className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-4 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full appearance-none cursor-pointer"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
                       backgroundRepeat: 'no-repeat',
@@ -1324,7 +1324,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     value={editedStudent?.phone || ""}
                     onChange={(e) => setEditedStudent(prev => ({ ...prev, phone: e.target.value }))}
                     placeholder="(00) 00000-0000"
-                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                    className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-4 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
                   />
                 </div>
 
@@ -1339,7 +1339,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     value={editedStudent?.email || ""}
                     onChange={(e) => setEditedStudent(prev => ({ ...prev, email: e.target.value }))}
                     placeholder="exemplo@email.com"
-                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
+                    className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-4 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full"
                   />
                 </div>
 
@@ -1353,7 +1353,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     value={editedStudent?.observations || ""}
                     onChange={(e) => setEditedStudent(prev => ({ ...prev, observations: e.target.value }))}
                     placeholder="Digite observações sobre o aluno (comorbidades, restrições, etc.)"
-                    className="bg-background-dark border border-border-dark rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full h-28 resize-none"
+                    className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-4 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full h-28 resize-none"
                   />
                 </div>
               </div>
@@ -1372,7 +1372,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       }
 
       return (
-        <div className="flex flex-col gap-6 w-full animate-in slide-in-from-right-8 duration-300 pb-20 relative px-0">
+        <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative">
           
           {/* Header row containing page title and back button outside card - Centered on Mobile */}
           <div className="relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
@@ -1386,7 +1386,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           </div>
 
           {/* Main Card with status, name, avatar, and whatsapp trigger in extreme right side */}
-          <div className="flex items-center justify-between gap-4 bg-card-dark p-4 rounded-xl border border-border-dark shadow-md">
+          <div className="flex items-center justify-between gap-4 bg-card-dark px-2.5 py-4 md:px-6 md:py-6 rounded-xl border border-border-dark shadow-md">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <img src={student.img} alt={student.name} className="size-14 rounded-full object-cover border-2 border-border-dark" />
               <div className="flex flex-col min-w-0">
@@ -1422,7 +1422,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           <div className="flex flex-col gap-4">
             
             {/* Action Buttons reorganized - Horizontal line of icons only */}
-            <div className="grid grid-cols-3 gap-3 w-full">
+            <div className="grid grid-cols-3 gap-4 w-full">
               {/* Message button */}
               <button
                 onClick={async () => {
@@ -1488,7 +1488,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           setMobileSelectedStudent(null);
                           setActiveTab('workouts');
                         }}
-                        className="w-full bg-card-dark p-4 rounded-xl border border-border-dark flex items-center justify-between hover:border-primary/50 transition-colors shadow-lg cursor-pointer animate-none"
+                        className="w-full bg-card-dark px-2.5 py-4 md:px-6 md:py-6 rounded-xl border border-border-dark flex items-center justify-between hover:border-primary/50 transition-colors shadow-lg cursor-pointer animate-none"
                       >
                         <span className="text-white font-bold text-sm truncate pr-2">{w.name}</span>
                         
@@ -1511,7 +1511,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     );
                   })
                 ) : (
-                  <div className="w-full bg-card-dark/40 py-4 px-4 rounded-xl border border-border-dark/20 text-center">
+                  <div className="w-full bg-card-dark/40 py-4 px-2.5 md:px-6 rounded-xl border border-border-dark/20 text-center">
                     <p className="text-text-secondary text-xs italic">Nenhum treino vinculado.</p>
                   </div>
                 )}
@@ -1519,7 +1519,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </div>
 
             {/* Evolução Física */}
-            <div className="bg-card-dark p-4 md:p-5 rounded-xl border border-border-dark flex flex-col shadow-sm">
+            <div className="bg-card-dark px-2.5 py-4 md:px-5 md:py-5 rounded-xl border border-border-dark flex flex-col shadow-sm">
               <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[18px]">analytics</span>
                 Evolução Física
@@ -1528,7 +1528,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               {selectedStudentProgress.length > 0 ? (
                 <div className="flex flex-col gap-3">
                   {selectedStudentProgress.map((record: any, idx: number) => (
-                    <div key={record.id || idx} className="bg-background-dark border border-border-dark p-3 rounded-xl flex flex-col gap-2">
+                    <div key={record.id || idx} className="bg-background-dark border border-border-dark px-2 py-3 md:px-3 md:py-3 rounded-xl flex flex-col gap-2">
                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
                          <span className="text-white font-black text-sm">{record.date?.toDate ? record.date.toDate().toLocaleDateString('pt-BR') : new Date(record.date).toLocaleDateString('pt-BR')}</span>
                          <span className="text-primary font-black">{record.weight ? `${record.weight}kg` : '-'}</span>
@@ -1568,7 +1568,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </div>
 
             {/* Plan/Access section - REPOSITIONED BELOW PHYSICAL EVOLUTION */}
-            <div className="bg-card-dark p-4 md:p-5 rounded-xl border border-border-dark flex flex-col gap-4 shadow-sm">
+            <div className="bg-card-dark px-2.5 py-4 md:px-5 md:py-5 rounded-xl border border-border-dark flex flex-col gap-4 shadow-sm">
               <h3 className="text-white font-bold text-sm uppercase tracking-widest border-b border-border-dark pb-2 mb-2 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[18px]">workspace_premium</span>
                 Plano / Acesso
@@ -1579,7 +1579,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 <select 
                   value={student.plan || ''}
                   onChange={(e) => handleUpdateStudentPlan(student.id, e.target.value)}
-                  className="bg-background-dark border border-border-dark rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full cursor-pointer appearance-none animate-none"
+                  className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-3 text-sm text-white focus:outline-none focus:border-primary transition-colors w-full cursor-pointer appearance-none animate-none"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
@@ -1602,7 +1602,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   type="date"
                   value={student.expDate || ''}
                   onChange={(e) => handleUpdateStudentExpDate(student.id, e.target.value)}
-                  className="bg-background-dark border border-border-dark rounded-xl px-3 py-3 text-sm text-primary font-bold shadow-inner focus:outline-none focus:border-primary transition-colors cursor-pointer w-full"
+                  className="bg-background-dark border border-border-dark rounded-xl px-2.5 py-3 md:px-3 text-sm text-primary font-bold shadow-inner focus:outline-none focus:border-primary transition-colors cursor-pointer w-full"
                 />
               </div>
 
@@ -1615,7 +1615,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         setStudentsData(prev => prev.map(s => s.id === student.id ? { ...s, status: "Bloqueado" } : s));
                      }}
                      disabled={student.status === "Bloqueado"}
-                     className={`flex items-center justify-center gap-2 p-3 rounded-xl font-bold border transition-all ${student.status === "Bloqueado" ? "bg-red-500/20 text-red-500 border-red-500/30 opacity-50" : "bg-white/5 text-white border-white/10 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20"}`}
+                     className={`flex items-center justify-center gap-2 px-2 py-3 md:p-3 rounded-xl font-bold border transition-all ${student.status === "Bloqueado" ? "bg-red-500/20 text-red-500 border-red-500/30 opacity-50" : "bg-white/5 text-white border-white/10 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20"}`}
                    >
                      <span className="material-symbols-outlined text-sm">lock</span>
                      Bloquear
@@ -1626,7 +1626,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         setStudentsData(prev => prev.map(s => s.id === student.id ? { ...s, status: "Ativa" } : s));
                      }}
                      disabled={student.status === "Ativa"}
-                     className={`flex items-center justify-center gap-2 p-3 rounded-xl font-bold border transition-all ${student.status === "Ativa" ? "bg-primary/20 text-primary border-primary/30 opacity-50" : "bg-white/5 text-white border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/20"}`}
+                     className={`flex items-center justify-center gap-2 px-2 py-3 md:p-3 rounded-xl font-bold border transition-all ${student.status === "Ativa" ? "bg-primary/20 text-primary border-primary/30 opacity-50" : "bg-white/5 text-white border-white/10 hover:bg-primary/10 hover:text-primary hover:border-primary/20"}`}
                    >
                      <span className="material-symbols-outlined text-sm">lock_open</span>
                      Liberar Acesso
@@ -1661,7 +1661,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     }
 
     return (
-      <div className="flex flex-col gap-6 w-full animate-in fade-in duration-500 pb-20 relative">
+      <div className="flex flex-col gap-6 w-full max-w-full overflow-hidden animate-in fade-in duration-500 pb-20 relative">
       {/* Modal Vincular Treino */}
       {linkingWorkoutStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
@@ -1771,46 +1771,47 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       )}
 
       {/* Page Heading matching AdminTrainers */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-2">
+      <div className="flex justify-between items-start gap-4 mb-4 md:mb-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter">
             Gestão de Alunos
           </h1>
-          <p className="text-text-secondary">
+          <p className="text-xs sm:text-sm text-text-secondary max-w-[190px] sm:max-w-none">
             Acompanhe, edite e gerencie o acesso de todos os seus alunos.
           </p>
         </div>
         <button
           onClick={() => setActiveTab("add-student")}
-          className="flex items-center justify-center gap-2 h-10 px-6 bg-primary text-background-dark rounded-lg text-sm font-black shadow-[0_4px_20px_rgba(var(--color-primary),0.3)] hover:scale-105 transition-transform w-full md:w-auto"
+          className="flex items-center justify-center gap-2 h-10 w-10 md:w-auto md:px-6 bg-primary text-background-dark rounded-xl md:rounded-lg text-sm font-black shadow-[0_4px_20px_rgba(var(--color-primary),0.3)] hover:scale-105 transition-transform shrink-0"
+          title="Novo Aluno"
         >
-          <span className="material-symbols-outlined font-bold">add</span>
-          <span>NOVO ALUNO</span>
+          <span className="material-symbols-outlined font-black text-lg md:text-sm">add</span>
+          <span className="hidden md:inline">NOVO ALUNO</span>
         </button>
       </div>
 
       {/* Toolbar & Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-2">
-        <div className="flex-1">
-          <div className="flex w-full items-stretch rounded-xl h-12 bg-card-dark border border-border-dark focus-within:border-primary transition-all">
-            <div className="text-text-secondary flex items-center justify-center pl-4">
-              <span className="material-symbols-outlined">search</span>
+      <div className="flex flex-col md:flex-row gap-3 mb-4 w-full max-w-full overflow-hidden">
+        <div className="flex-1 w-full max-w-full">
+          <div className="flex w-full items-stretch rounded-xl h-11 md:h-12 bg-card-dark border border-border-dark focus-within:border-primary transition-all">
+            <div className="text-text-secondary flex items-center justify-center pl-3.5 md:pl-4">
+              <span className="material-symbols-outlined text-[20px]">search</span>
             </div>
             <input
-              className="w-full bg-transparent border-none text-white focus:ring-0 px-3 text-sm font-medium placeholder:text-text-secondary/50"
-              placeholder="Buscar aluno por nome, e-mail ou identificador..."
+              className="w-full bg-transparent border-none text-white focus:ring-0 px-2.5 md:px-3 text-xs md:text-sm font-medium placeholder:text-text-secondary/50"
+              placeholder="Buscar aluno por nome ou e-mail..."
               type="text"
               value={searchTerm || ''}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 overflow-x-auto w-full max-w-full pb-1 scrollbar-none shrink-0 md:mx-0 md:px-0">
           {["Todas", "Ativa", "Vencida", "Cancelada"].map((filter) => (
             <button
               key={filter}
               onClick={() => setStatusFilter(filter)}
-              className={`flex h-12 items-center gap-x-2 rounded-xl px-4 text-xs font-bold uppercase tracking-widest transition-all ${
+              className={`flex h-10 md:h-12 items-center gap-x-1.5 rounded-xl px-4 text-[10px] md:text-xs font-bold uppercase tracking-wider md:tracking-widest shrink-0 transition-all ${
                 statusFilter === filter
                   ? "bg-primary text-background-dark"
                   : "bg-card-dark text-text-secondary border border-border-dark hover:text-white"
@@ -2221,7 +2222,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
 
       {/* Mobile Student List */}
-      <div className="md:hidden flex flex-col gap-3">
+      <div className="md:hidden flex flex-col gap-3 w-full max-w-full overflow-hidden">
         {studentsData
           .filter((s) => {
             const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -2236,7 +2237,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               <button
                 key={student.id}
                 onClick={() => setMobileSelectedStudent(student)}
-                className="w-full flex items-center gap-4 bg-card-dark p-4 rounded-xl border border-border-dark active:scale-[0.98] transition-transform text-left"
+                className="w-full max-w-full overflow-hidden flex items-center gap-4 bg-card-dark p-4 rounded-xl border border-border-dark active:scale-[0.98] transition-transform text-left"
               >
                 <div className="relative shrink-0">
                   <img
@@ -3442,8 +3443,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         {/* Padding for mobile top nav */}
         <div className={`md:hidden shrink-0 transition-[height] duration-300 ease-in-out ${hideNavs ? 'h-0' : 'h-16'}`}></div>
 
-        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? (isChatOpenOnMobile ? 'p-0 pb-0' : 'p-0 pb-[84px] md:pb-0') : hideNavs ? 'overflow-y-auto p-4 md:p-8 pb-10' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
-          <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto'}`}>{renderContent()}</div>
+        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? (isChatOpenOnMobile ? 'p-0 pb-0' : 'p-0 pb-[84px] md:pb-0') : hideNavs ? 'overflow-y-auto px-1.5 py-4 md:p-8 pb-10' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
+          <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto w-full'}`}>{renderContent()}</div>
         </div>
 
         {/* Mobile Bottom Navbar */}
