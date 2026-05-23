@@ -1776,9 +1776,6 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter">
             Gestão de Alunos
           </h1>
-          <p className="text-xs sm:text-sm text-text-secondary max-w-[190px] sm:max-w-none">
-            Acompanhe, edite e gerencie o acesso de todos os seus alunos.
-          </p>
         </div>
         <button
           onClick={() => setActiveTab("add-student")}
