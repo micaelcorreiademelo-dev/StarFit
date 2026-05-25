@@ -26,6 +26,13 @@ service cloud.firestore {
       );
     }
 
+    function isTrainer() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER'
+      );
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -184,9 +191,10 @@ service cloud.firestore {
 
     // --- Progress ---
     match /progress/{progressId} {
-      allow read: if isSignedIn() && (isAdmin() || 
-        ('studentId' in resource.data && resource.data.studentId == request.auth.uid) || 
-        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid)
+      allow read: if isSignedIn() && (
+        isAdmin() || 
+        isTrainer() || 
+        ('studentId' in resource.data && resource.data.studentId == request.auth.uid)
       );
       allow create: if isSignedIn() && (isAdmin() || ('studentId' in incoming() && incoming().studentId == request.auth.uid));
       allow update: if isSignedIn() && (isAdmin() || ('studentId' in existing() && existing().studentId == request.auth.uid));

@@ -66,87 +66,80 @@ const GROWTH_DATA = [
   { month: "Jun", value: 40 },
 ];
 
-const LIBRARY_EXERCISES: LibraryExercise[] = [
-  {
-    id: "1",
-    name: "Supino Reto com Barra",
-    category: "Peito",
-    difficulty: "Avançado",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAEuvqhS1E53noe84Ef3h3Vr-vZkFCgGr7pmcVmawNqmcnoVHJglkIWOkH_vaYHVJkyi8y3v89nTTQWeOB9FV134NXHlTkeKUBnkLm3L1Pi8Xo5s-8LSW1gdT8SF4uVfC6Ok9DFnlFYol0qprahGqy_JBM9QgT0HmgF3z3inkS3L8ur6OtxBrNc3VX2fW-BgY9UkDdzC0_6uVnZZkNwvV9Pt5DoobE4uPQB8NrO38hwxKGjOPnPfYY8mb_lL9-xWr8CyHsaaUVDbvc",
-  },
-  {
-    id: "2",
-    name: "Agachamento Livre",
-    category: "Pernas",
-    difficulty: "Avançado",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAUOIw88-8-gpilKFj0k_wUq90Wu4fBC93PIEdGXumJNTHE6kjVi1UUR929T0ob5dbnxLR7kbpr8hLXm0MpqNgzewg1anLOMj06V4Y9z4Llh8EcYXrz0BP3XTuJ9_l0F9dNMHiuSDH7L5_WVxZNkV9qvo-Wl_N2VhDfMTt1ODZ0f7kkNRediJfVjGWZ12p0pCOGbz66542BAmafChpYJKRfcAd_sJETRjUuQymDFiR61PPq8UjZdjoGqHbId8qn2xauQdIjnJi4VBk",
-  },
-  {
-    id: "3",
-    name: "Remada Curvada",
-    category: "Costas",
-    difficulty: "Intermediário",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDo2jRkTkjObRspOxbdyZHz_B8XCpr4dqtSTZrCGpwNVTNlQWOq-VQX3ECpyqxrzEZII217dq7voJSdw_DbCzV4vriHBOBa689qN3Y7gTC5aTd0theL7XlxZCjqXbqh_tkNctms7AaOJgQV1-zDudOIz0WaM7tyu2bt3tbFDNkQeBsrkZrLp5lhssvmLSQ0vr-Bq2dtmj1IqCsXL3gcg8pBPVDxue-tQKV_6BjOz067eTJKSkWXMHyphD4BxtmZWKo2eeOu6KT_J7c",
-  },
-  {
-    id: "4",
-    name: "Levantamento Terra",
-    category: "Costas",
-    difficulty: "Avançado",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDuvcVEIfJ8aBCmTuaqJUajtHQ7SE1QSV6DI65P-STsg71qFSpH5g9wN8f0Z1rAWDCnm0SX3cXgTPKP_K8BOFCzUPqKczml85p0gSiqiIb9Qjr2vUlRAw6zPDat5SMkwnqVqMAbEVAjA7GbY5CMp18_h4VJsYbhz9tNu4gm6oGjO9rPY21poazH2bTwauVw1q2tRRaiY0OmnIsVZvzy5MikL6WjWVgLnumXREpUZtbM89Szj0LKV20W_afilr2nRPlWBDs7RIX203E",
-  },
-  {
-    id: "5",
-    name: "Desenvolvimento de Ombros",
-    category: "Ombros",
-    difficulty: "Intermediário",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBCFqIbf4khIg7jNUk16gFD_oZ3_OFM4_AsTorw33XGe3_YdGIR6Hzvc53C9KHMx8pQJDbuaIJ0XGdyJsTUz-wKedlLh5PgSfJxk3m-BVv44Fi-Te-AYi906FtDrYBVbWgMRUCU7WcVhScK6xpCf0I3bRMY6GYBhGrR6Gk4qqlZwINbTbHLpfnoDqo6jcpcbdMaXQ2To1NxLXIY1PJ22QEpmIb4B8InfJS2ogGi-EZ_rsPMrmrYpkpGlqbYHXd0xLioUm7MkdRYhsE",
-  },
-  {
-    id: "6",
-    name: "Flexão de Braço",
-    category: "Peito",
-    difficulty: "Iniciante",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBBh3JRSHlzm1k6N7DPwxS4sk7ZSIwpa34rO9x7f2MK9pZoU846mdhOLSBpkFm48XDMO2st6KOxx1eknXMGyqv0Hqzw_WdWD8l3uv0zVPVyMEayvzgc7wY7Tnkn3cKald2nq7sMsD4P3_HRsMwXRqg6_cDzFgqMCaoav8NC23n2BHUP-Bzygh3VMpuyjyZg9VPBB3gzDGYD33r62PkjVwHkJRhj_SVW-sn__hvtsvQKKbS2ldeuDZ8RMp8zd2w01acbOAGdMGtA_jE",
-  },
-  {
-    id: "7",
-    name: "Puxada Alta",
-    category: "Costas",
-    difficulty: "Iniciante",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDmDcPghcMo4tfxbig5ATIDXz6RFyz1gMHuzOlLMSzK10iSK3mCkria9XzVLXywKYqWWPXB1bfEzPoQGJFDi8nyqbIkrj8nzJIn4mrqM_4EmreqiQabHeHaaHxhbKZU_zoLq_NDYube9KLsYtTOUHmSAQkQT4aG_Oh4TyD-iuaIw7XxYboBGZE3h4T9qII0r5pdtdrFOVwSI4n3JeWiDpgjFP4CB6v1j8_LRwnphkd_2-qY7w07d8x_uoMsu8AyByY2B3hF4hauKHs",
-  },
-  {
-    id: "8",
-    name: "Afundo com Halteres",
-    category: "Pernas",
-    difficulty: "Intermediário",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDLzIWmq8uV6tUMRkkeAibsmdToX7ifa8Zm2tCPMJ4c5plqpvSKn2aeAOGlsWRyIxPhU_oHAkWE7aaBN112kRC2yYL6iufIrYAr80QlKA7MuqIwhIZY1qQPxIi8MIlgjfGuwouQ4j90T-SYobfbI1IDR2_8SaTCHJxWnf9auyjC3vgBnWCKZEasjfvW1KaRrlXQksgxK72IzCpEnOL9x4tVoizqpg4VugA90ssqYA2s_OdlFGey-RxWUdx_QDN2Nwy9lepuVqS7YJc",
-  },
-  {
-    id: "9",
-    name: "Rosca Direta",
-    category: "Bíceps",
-    difficulty: "Iniciante",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBI8cesI2BXLe0HtcSl-uyY0xGqtHAxjrbBGmAjaHlYgnyvEWwtFlH6YnQxkadPCtdi2wL5D8LAmuWvLiaW3e9PYAlzKimp64AiA_g49WupR6ZY1Q6kyGqg-ULhnxeIqSpMVuEH0QQSNQgeG5lVkR9nKMN3og3m_5c0rlhUoWU3AeAFOdDSLP4LDki9q4C_UhfJpJ6NWdLrMnYmudcg6DfCh_fARYK28uH_2_Ktdo6E-lvu0tlShfuSX3ukYoh5WTFTF62lWNt_d4E",
-  },
-  {
-    id: "10",
-    name: "Tríceps na Polia",
-    category: "Tríceps",
-    difficulty: "Iniciante",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCWiaN4zGH9R50V5BeVxo4uS5Udkw35uuIFo9NMFEDep9bqkx-8YvzBewMSRvHFvTG1rMYi6c26ttZP_owcUAKtwVA-UCfgJ-k2bv0xIb58fczXQiyX4KDFlaYJgs1f36AuqczXhX8CoMM38dTXKNyDsBOfwPAQKx-I9hyvcSJQwVeTfklPc3odmMJYZ4cBRgCL_MYiggQgHh9jPvqPdIZ44mMRYvas-U9YdeYbQS_0pJcvMOQAV3OwbfI3LQubQxeU0IDiw04xXB8",
-  },
+const LIBRARY_EXERCISES: any[] = [
+  // ABDOMINAL
+  { id: "b-1", name: "Abdominal Supra", category: "Abdominal", difficulty: "Iniciante", desc: "Exercício clássico focado na região superior do abdômen." },
+  { id: "b-2", name: "Abdominal Infra", category: "Abdominal", difficulty: "Iniciante", desc: "Focado na região inferior do abdômen, elevação de pernas." },
+  { id: "b-3", name: "Abdominal Oblíquo", category: "Abdominal", difficulty: "Iniciante", desc: "Trabalha as regiões laterais do abdômen." },
+  { id: "b-4", name: "Prancha Abdominal", category: "Abdominal", difficulty: "Intermediário", desc: "Exercício isométrico de estabilização do core." },
+  { id: "b-5", name: "Abdominal na Polia", category: "Abdominal", difficulty: "Intermediário", desc: "Abdominal ajoelhado com resistência da polia." },
+
+  // AERÓBICO
+  { id: "b-6", name: "Corrida na Esteira", category: "Aeróbico", difficulty: "Iniciante", desc: "Treinamento cardiovascular com velocidade e inclinação reguláveis." },
+  { id: "b-7", name: "Bicicleta Ergométrica", category: "Aeróbico", difficulty: "Iniciante", desc: "Exercício aeróbico de baixo impacto para articulações." },
+  { id: "b-8", name: "Elíptico / Transport", category: "Aeróbico", difficulty: "Iniciante", desc: "Excelente para queima calórica sem impacto nos joelhos." },
+  { id: "b-9", name: "Pular Corda", category: "Aeróbico", difficulty: "Intermediário", desc: "Treino de alta intensidade, coordenação e agilidade." },
+  { id: "b-10", name: "Subir Escada", category: "Aeróbico", difficulty: "Avançado", desc: "Simulador de escadas para alta intensidade cardiovascular." },
+
+  // ANTEBRAÇO
+  { id: "b-11", name: "Rosca Inversa", category: "Antebraço", difficulty: "Intermediário", desc: "Rosca com pegada pronada focada nos braquiorradiais." },
+  { id: "b-12", name: "Rosca Punho", category: "Antebraço", difficulty: "Iniciante", desc: "Flexão de punhos com barra para flexores do antebraço." },
+
+  // BÍCEPS
+  { id: "b-13", name: "Rosca Direta com Barra", category: "Bíceps", difficulty: "Iniciante", desc: "O clássico construtor de bíceps com barra reta ou W." },
+  { id: "b-14", name: "Rosca Alternada", category: "Bíceps", difficulty: "Iniciante", desc: "Rosca com halteres alternando os braços com rotação." },
+  { id: "b-15", name: "Rosca Martelo", category: "Bíceps", difficulty: "Iniciante", desc: "Pegada neutra focada no braquiorradial e bíceps." },
+  { id: "b-16", name: "Rosca Concentrada", category: "Bíceps", difficulty: "Intermediário", desc: "Rosca unilateral apoiado na coxa para pico do bíceps." },
+  { id: "b-17", name: "Rosca Scott", category: "Bíceps", difficulty: "Intermediário", desc: "Isolamento total do bíceps no banco Scott." },
+
+  // COSTAS
+  { id: "b-18", name: "Remada Curvada", category: "Costas", difficulty: "Intermediário", desc: "Trabalho completo da dorsal e musculatura das costas com barra." },
+  { id: "b-19", name: "Pulldown", category: "Costas", difficulty: "Intermediário", desc: "Remada com os braços estendidos na polia para latíssimo." },
+  { id: "b-20", name: "Puxada Alta na Polia", category: "Costas", difficulty: "Iniciante", desc: "Exercício fundamental para largura das costas." },
+  { id: "b-21", name: "Levantamento Terra", category: "Costas", difficulty: "Avançado", desc: "Exercício composto para toda a cadeia posterior." },
+  { id: "b-22", name: "Remada Serrote (Unilateral)", category: "Costas", difficulty: "Iniciante", desc: "Remada unilateral com halteres no banco." },
+
+  // GLÚTEO
+  { id: "b-23", name: "Elevação Pélvica", category: "Glúteo", difficulty: "Intermediário", desc: "Melhor exercício isolado para ativação máxima de glúteos." },
+  { id: "b-24", name: "Cadeira Abdutora", category: "Glúteo", difficulty: "Iniciante", desc: "Focado em glúteo médio e estabilizadores." },
+  { id: "b-25", name: "Glúteo Coice no Cabo", category: "Glúteo", difficulty: "Intermediário", desc: "Extensão de quadril na polia baixa." },
+
+  // OMBRO
+  { id: "b-26", name: "Desenvolvimento com Halteres", category: "Ombro", difficulty: "Intermediário", desc: "Foco principal em deltoides anterior e lateral." },
+  { id: "b-27", name: "Desenvolvimento Militar", category: "Ombro", difficulty: "Avançado", desc: "Desenvolvimento em pé com barra, exige estabilidade do core." },
+  { id: "b-28", name: "Elevação Lateral", category: "Ombro", difficulty: "Iniciante", desc: "Exercício de isolamento para cabeça lateral do deltoide." },
+  { id: "b-29", name: "Elevação Frontal", category: "Ombro", difficulty: "Iniciante", desc: "Foco no deltoide anterior." },
+  { id: "b-30", name: "Crucifixo Inverso", category: "Ombro", difficulty: "Iniciante", desc: "Trabalha a porção posterior do ombro." },
+
+  // PANTURRILHA
+  { id: "b-31", name: "Panturrilha em Pé", category: "Panturrilha", difficulty: "Iniciante", desc: "Elevação de calcanhares para gastrocnêmio." },
+  { id: "b-32", name: "Panturrilha Sentado (Gêmeos)", category: "Panturrilha", difficulty: "Iniciante", desc: "Trabalho específico do músculo sóleo." },
+  { id: "b-33", name: "Panturrilha no Leg Press", category: "Panturrilha", difficulty: "Iniciante", desc: "Elevação de calcanhares no aparelho leg press." },
+
+  // PEITORAL
+  { id: "b-34", name: "Supino Reto com Barra", category: "Peitoral", difficulty: "Intermediário", desc: "O construtor principal de força e volume de peito." },
+  { id: "b-35", name: "Supino Inclinado com Halteres", category: "Peitoral", difficulty: "Intermediário", desc: "Foco na porção clavicular (superior) do peitoral." },
+  { id: "b-36", name: "Supino Declinado", category: "Peitoral", difficulty: "Intermediário", desc: "Foco na porção inferior do peito." },
+  { id: "b-37", name: "Crucifixo Reto com Halteres", category: "Peitoral", difficulty: "Iniciante", desc: "Abertura isolando as fibras do peitoral." },
+  { id: "b-38", name: "Crossover na Polia", category: "Peitoral", difficulty: "Intermediário", desc: "Polia média/alta focada em isolamento e contração." },
+
+  // PERNAS
+  { id: "b-39", name: "Agachamento Livre", category: "Pernas", difficulty: "Avançado", desc: "O rei dos exercícios de perna, recruta quadríceps e glúteos." },
+  { id: "b-40", name: "Leg Press 45º", category: "Pernas", difficulty: "Intermediário", desc: "Trabalho forte de quadríceps com segurança nas costas." },
+  { id: "b-41", name: "Cadeira Extensora", category: "Pernas", difficulty: "Iniciante", desc: "Isolamento total e bombeamento de quadríceps." },
+  { id: "b-42", name: "Mesa Flexora", category: "Pernas", difficulty: "Iniciante", desc: "Isolamento focado nos isquiotibiais (trás da coxa)." },
+  { id: "b-43", name: "Stiff", category: "Pernas", difficulty: "Intermediário", desc: "Trabalho excêntrico poderoso de posterior de coxa e glúteos." },
+  { id: "b-44", name: "Hack Machine", category: "Pernas", difficulty: "Intermediário", desc: "Agachamento no trilho para quadríceps de forma guiada." },
+
+  // TRAPÉZIO
+  { id: "b-45", name: "Encolhimento de Ombros", category: "Trapézio", difficulty: "Iniciante", desc: "Elevação do trapézio superior com halteres ou barra." },
+  { id: "b-46", name: "Remada Alta Barra", category: "Trapézio", difficulty: "Intermediário", desc: "Trabalha deltoide lateral e trapézio." },
+
+  // TRÍCEPS
+  { id: "b-47", name: "Tríceps de Testa", category: "Tríceps", difficulty: "Intermediário", desc: "Extensão poderosa no banco focando a porção longa." },
+  { id: "b-48", name: "Tríceps Pulley (Polia)", category: "Tríceps", difficulty: "Iniciante", desc: "Extensão clássica com barra reta ou V na polia alta." },
+  { id: "b-49", name: "Tríceps Corda", category: "Tríceps", difficulty: "Iniciante", desc: "Variação na corda permitindo maior rotação e contração final." },
+  { id: "b-50", name: "Tríceps Coice", category: "Tríceps", difficulty: "Iniciante", desc: "Extensão unilateral com halteres focada em contração isométrica." }
 ];
 
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
@@ -231,12 +224,34 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [isMobileActionMenuOpen, setIsMobileActionMenuOpen] = useState(false);
   const [isSelectingStudentForWorkout, setIsSelectingStudentForWorkout] = useState(false);
   const [studentSearchForWorkout, setStudentSearchForWorkout] = useState("");
+  const [isCreatingWorkoutForStudentFlow, setIsCreatingWorkoutForStudentFlow] = useState(false);
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [mobileWorkoutFlowState, setMobileWorkoutFlowState] = useState<string | null>(null);
+  const [isSettingUpBlankWorkout, setIsSettingUpBlankWorkout] = useState(false);
+  const [blankWorkoutName, setBlankWorkoutName] = useState("");
+  const [blankWorkoutDays, setBlankWorkoutDays] = useState(3);
+  const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const [copySearchQuery, setCopySearchQuery] = useState("");
+
+  const getStudentNamesForWorkout = (workout: any) => {
+    if (!workout.studentIds || workout.studentIds.length === 0) return "Ficha Modelo";
+    return workout.studentIds.map((sid: string) => {
+      const student = studentsData.find(s => s.id === sid);
+      return student ? student.name : "Aluno";
+    }).join(", ");
+  };
 
   useEffect(() => {
     if (activeTab !== 'chat') {
       setChatInitialStudentId(null);
       setChatBackToStudent(null);
       setTabBeforeChat(null);
+    }
+    if (activeTab !== 'students') {
+      setIsCreatingWorkoutForStudentFlow(false);
+      setIsBottomSheetOpen(false);
+      setIsSettingUpBlankWorkout(false);
+      setMobileWorkoutFlowState(null);
     }
     setIsMobileActionMenuOpen(false);
   }, [activeTab]);
@@ -465,6 +480,80 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [workoutName, setWorkoutName] = useState("");
   const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+
+  // Estados e Construtores Reformulados Profissionais do Painel de Treinos
+  const [subWorkouts, setSubWorkouts] = useState<any[]>([]);
+  const [activeSubWorkoutIndex, setActiveSubWorkoutIndex] = useState<number | null>(null);
+  const [workoutEditorStep, setWorkoutEditorStep] = useState<"ficha" | "prescrever" | "detalhe">("ficha");
+  const [subWorkoutSearchQuery, setSubWorkoutSearchQuery] = useState("");
+  const [selectedMuscleGroupFilter, setSelectedMuscleGroupFilter] = useState<string | null>(null);
+
+  // Detalhes do Exercício Ativo Form
+  const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<any | null>(null);
+  const [isManualExercise, setIsManualExercise] = useState(false);
+  const [isSpecialSeries, setIsSpecialSeries] = useState(false);
+  const [editingConfiguredExerciseId, setEditingConfiguredExerciseId] = useState<string | null>(null);
+
+  const [detailSeriesForm, setDetailSeriesForm] = useState<"Repetição" | "Minuto" | "Segundo">("Repetição");
+  const [detailLoadConfig, setDetailLoadConfig] = useState<"Kg" | "Libras" | "Pesos" | "%">("Kg");
+  const [detailRest, setDetailRest] = useState<number>(60);
+  const [detailSeries, setDetailSeries] = useState<any[]>([{ id: "1", reps: "10", weight: "12" }]);
+  const [detailVideoUrl, setDetailVideoUrl] = useState("");
+  const [detailNotes, setDetailNotes] = useState("");
+  const [accordionExpanded, setAccordionExpanded] = useState(false);
+
+  // Drag and Drop SubWorkouts
+  const [draggedSubWorkoutIndex, setDraggedSubWorkoutIndex] = useState<number | null>(null);
+
+  const handleSubWorkoutDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedSubWorkoutIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleSubWorkoutDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedSubWorkoutIndex === null || draggedSubWorkoutIndex === targetIndex) return;
+    const reordered = [...subWorkouts];
+    const [removed] = reordered.splice(draggedSubWorkoutIndex, 1);
+    reordered.splice(targetIndex, 0, removed);
+    setSubWorkouts(reordered);
+    setDraggedSubWorkoutIndex(null);
+  };
+
+  const moveSubWorkout = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= subWorkouts.length) return;
+    const reordered = [...subWorkouts];
+    const temp = reordered[index];
+    reordered[index] = reordered[targetIndex];
+    reordered[targetIndex] = temp;
+    setSubWorkouts(reordered);
+  };
+
+  // Helper inside adaptLegacyExercise:
+  const adaptLegacyExercise = (legacyEx: any): any => {
+    const setsCount = parseInt(legacyEx.sets) || 3;
+    const loadedSeries: any[] = [];
+    for (let i = 0; i < setsCount; i++) {
+      loadedSeries.push({
+        id: `${Date.now()}-${i}-${Math.random()}`,
+        reps: legacyEx.reps || "12",
+        weight: ""
+      });
+    }
+    return {
+      id: legacyEx.id || `${Date.now()}-${Math.random()}`,
+      name: legacyEx.name || "Exercício",
+      category: "GERAL",
+      setsCount: setsCount,
+      series: loadedSeries,
+      seriesForm: "Repetição",
+      loadConfig: "Kg",
+      rest: parseInt(legacyEx.rest) || 60,
+      videoUrl: "",
+      notes: legacyEx.notes || ""
+    };
+  };
 
   const handleDragStart = (index: number) => {
     setDraggedItemIndex(index);
@@ -1317,7 +1406,323 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
     );
 
+    const renderBlankWorkoutSetup = () => {
+      const student = mobileSelectedStudent;
+      if (!student) return null;
+
+      return (
+        <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-32 relative">
+          {/* Title and Back Trigger - Centered on Mobile */}
+          <div className="relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
+            <button 
+              onClick={() => {
+                setIsSettingUpBlankWorkout(false);
+                setIsBottomSheetOpen(true);
+              }}
+              className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95 border border-white/5 shadow-md shrink-0"
+            >
+              <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
+            </button>
+            <h1 className="text-white font-black text-xl tracking-tight text-center">Nova ficha de treinos</h1>
+          </div>
+
+          <div className="bg-card-dark border border-border-dark p-6 rounded-2xl flex flex-col gap-6 shadow-md transition-all">
+            <div className="flex items-center gap-3 border-b border-border-dark pb-4">
+              <img src={student.img} className="size-10 rounded-full object-cover border border-border-dark" />
+              <div>
+                <p className="text-xs text-text-secondary">Criando ficha para o aluno</p>
+                <h3 className="text-white font-bold text-sm uppercase">{student.name}</h3>
+              </div>
+            </div>
+
+            {/* Seção 1: Nome da ficha */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm text-primary">label</span>
+                Escolha o nome da ficha de treino
+              </label>
+              <input
+                type="text"
+                value={blankWorkoutName}
+                onChange={(e) => setBlankWorkoutName(e.target.value)}
+                placeholder="Ex: Treino ABC, Hipertrofia Masculina, etc."
+                className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white placeholder:text-text-secondary/40 focus:border-primary focus:outline-none transition-colors"
+              />
+              <p className="text-[10px] text-text-secondary/70">O nome informado será utilizado automaticamente como nome da ficha criada e você poderá editá-lo depois se preferir.</p>
+            </div>
+
+            {/* Seção 2: Quantas vezes por semana */}
+            <div className="flex flex-col gap-2.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
+                Quantas vezes por semana o aluno fará essa ficha de treino?
+              </label>
+              <div className="grid grid-cols-5 gap-1.5 mt-1">
+                {[1, 2, 3, 4, 5].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setBlankWorkoutDays(d)}
+                    className={`h-12 rounded-xl flex flex-col items-center justify-center font-black transition-all border ${
+                      blankWorkoutDays === d
+                        ? "bg-primary text-background-dark border-primary shadow-lg shadow-primary/20"
+                        : "bg-background-dark text-text-secondary border-border-dark hover:text-white"
+                    }`}
+                  >
+                    <span className="text-sm">{d}</span>
+                    <span className="text-[8px] uppercase font-bold tracking-tighter mt-0.5">
+                      {d === 1 ? "vez" : "vezes"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Action Button - Bottom Fixed */}
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-dark/95 backdrop-blur-md border-t border-border-dark z-50 flex justify-center pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <div className="w-full max-w-md">
+              <button
+                onClick={() => {
+                  const letters = ["A", "B", "C", "D", "E"];
+                  const subs = Array.from({ length: blankWorkoutDays }).map((_, idx) => ({
+                    id: letters[idx],
+                    name: `Treino ${letters[idx]}`,
+                    exercises: []
+                  }));
+                  
+                  // Initialize workouts editor state
+                  setSubWorkouts(subs);
+                  setWorkoutName(blankWorkoutName.trim() || `Treino de ${student.name}`);
+                  setPreAssignedStudentId(student.id);
+                  setEditingWorkoutId("new");
+                  setWorkoutEditorStep("ficha");
+                  setActiveSubWorkoutIndex(null);
+                  
+                  // Navigate to Workouts tab
+                  setActiveTab("workouts");
+
+                  // Clean up mobile wizard
+                  setIsSettingUpBlankWorkout(false);
+                  setIsCreatingWorkoutForStudentFlow(false);
+                  setMobileSelectedStudent(null);
+                }}
+                className="w-full h-14 bg-primary text-background-dark rounded-xl font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-primary/25"
+              >
+                <span className="material-symbols-outlined">rocket_launch</span>
+                Criar Estrutura Inicial
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const renderSelectModelPage = () => {
+      const student = mobileSelectedStudent;
+      if (!student) return null;
+
+      // Filter templates (workouts with no assigned student, or simply any saved workout)
+      const filteredWorkouts = workouts.filter(w => {
+        const isTemplate = !w.studentIds || w.studentIds.length === 0;
+        const matchesSearch = w.name?.toLowerCase().includes(modelSearchQuery.toLowerCase());
+        return isTemplate && matchesSearch;
+      });
+
+      return (
+        <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative">
+          {/* Title and Back Trigger - Centered on Mobile */}
+          <div className="relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
+            <button 
+              onClick={() => {
+                setMobileWorkoutFlowState(null);
+                setIsBottomSheetOpen(true);
+              }}
+              className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95 border border-white/5 shadow-md shrink-0"
+            >
+              <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
+            </button>
+            <h1 className="text-white font-black text-xl tracking-tight text-center font-bold">Biblioteca de Fichas</h1>
+          </div>
+
+          {/* Search */}
+          <div className="flex w-full items-stretch rounded-xl h-11 bg-card-dark border border-border-dark focus-within:border-primary transition-all">
+            <div className="text-text-secondary flex items-center justify-center pl-3.5">
+              <span className="material-symbols-outlined text-[20px]">search</span>
+            </div>
+            <input
+              className="w-full bg-transparent border-none text-white focus:ring-0 px-2.5 text-xs font-semibold placeholder:text-text-secondary/40"
+              placeholder="Buscar ficha modelo por nome..."
+              type="text"
+              value={modelSearchQuery}
+              onChange={(e) => setModelSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {/* List */}
+          <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
+            {filteredWorkouts.map((w) => (
+              <button
+                key={w.id}
+                onClick={() => {
+                  setWorkoutName(w.name);
+                  setSubWorkouts(w.subWorkouts || []);
+                  setPreAssignedStudentId(student.id);
+                  setEditingWorkoutId("new");
+                  setWorkoutEditorStep("ficha");
+                  setActiveSubWorkoutIndex(null);
+                  
+                  // Redirect
+                  setActiveTab("workouts");
+
+                  // Clean up mobile wizard
+                  setMobileWorkoutFlowState(null);
+                  setIsCreatingWorkoutForStudentFlow(false);
+                  setMobileSelectedStudent(null);
+                }}
+                className="w-full bg-card-dark p-4 rounded-xl border border-border-dark hover:border-primary/50 text-left transition-all active:scale-[0.98] flex items-center justify-between gap-4"
+              >
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                  <span className="text-white font-black text-sm truncate uppercase">{w.name}</span>
+                  <div className="flex items-center gap-3 text-[10px] text-text-secondary uppercase tracking-wider font-bold">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[12px] text-primary">layers</span>
+                      {w.subWorkouts?.length || 0} Treinos (A/B/C)
+                    </span>
+                  </div>
+                </div>
+                <div className="size-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center hover:bg-primary/25">
+                  <span className="material-symbols-outlined text-lg">content_copy</span>
+                </div>
+              </button>
+            ))}
+
+            {filteredWorkouts.length === 0 && (
+              <div className="text-center py-10 bg-card-dark rounded-xl border border-border-dark border-dashed">
+                <span className="material-symbols-outlined text-4xl text-text-secondary/30 mb-2">layers_clear</span>
+                <p className="text-text-secondary text-xs font-semibold">Nenhuma ficha modelo encontrada na biblioteca.</p>
+                <p className="text-[10px] text-text-secondary/60 mt-1">Dica: Crie uma ficha sem aluno e salve para guardá-la na biblioteca.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const renderSelectCopyStudentPage = () => {
+      const student = mobileSelectedStudent;
+      if (!student) return null;
+
+      // Filter workouts with students assigned
+      const filteredWorkouts = workouts.filter(w => {
+        const isStudentWorkout = w.studentIds && w.studentIds.length > 0;
+        const matchesSearch = w.name?.toLowerCase().includes(copySearchQuery.toLowerCase());
+        
+        // Also matches student names
+        const studentNames = getStudentNamesForWorkout(w).toLowerCase();
+        const matchesStudentSearch = studentNames.includes(copySearchQuery.toLowerCase());
+        
+        return isStudentWorkout && (matchesSearch || matchesStudentSearch);
+      });
+
+      return (
+        <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative">
+          {/* Title and Back Trigger - Centered on Mobile */}
+          <div className="relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
+            <button 
+              onClick={() => {
+                setMobileWorkoutFlowState(null);
+                setIsBottomSheetOpen(true);
+              }}
+              className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95 border border-white/5 shadow-md shrink-0"
+            >
+              <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
+            </button>
+            <h1 className="text-white font-black text-xl tracking-tight text-center font-bold">Fichas de Outros Alunos</h1>
+          </div>
+
+          {/* Search */}
+          <div className="flex w-full items-stretch rounded-xl h-11 bg-card-dark border border-border-dark focus-within:border-primary transition-all">
+            <div className="text-text-secondary flex items-center justify-center pl-3.5">
+              <span className="material-symbols-outlined text-[20px]">search</span>
+            </div>
+            <input
+              className="w-full bg-transparent border-none text-white focus:ring-0 px-2.5 text-xs font-semibold placeholder:text-text-secondary/40"
+              placeholder="Buscar por nome da ficha ou do aluno..."
+              type="text"
+              value={copySearchQuery}
+              onChange={(e) => setCopySearchQuery(e.target.value)}
+            />
+          </div>
+
+          {/* List */}
+          <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
+            {filteredWorkouts.map((w) => {
+              const studentNames = getStudentNamesForWorkout(w);
+              return (
+                <button
+                  key={w.id}
+                  onClick={() => {
+                    setWorkoutName(w.name);
+                    setSubWorkouts(w.subWorkouts || []);
+                    setPreAssignedStudentId(student.id);
+                    setEditingWorkoutId("new");
+                    setWorkoutEditorStep("ficha");
+                    setActiveSubWorkoutIndex(null);
+                    
+                    // Redirect
+                    setActiveTab("workouts");
+
+                    // Clean up mobile wizard
+                    setMobileWorkoutFlowState(null);
+                    setIsCreatingWorkoutForStudentFlow(false);
+                    setMobileSelectedStudent(null);
+                  }}
+                  className="w-full bg-card-dark p-4 rounded-xl border border-border-dark hover:border-primary/50 text-left transition-all active:scale-[0.98] flex items-center justify-between gap-4"
+                >
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <span className="text-white font-black text-sm truncate uppercase">{w.name}</span>
+                    <p className="text-[10px] text-text-secondary/90 font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                      <span className="material-symbols-outlined text-[12px] text-primary">person</span>
+                      Aluno: {studentNames}
+                    </p>
+                    <div className="flex items-center gap-3 text-[10px] text-text-secondary uppercase tracking-widest font-black mt-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[12px] text-primary">calendar_today</span>
+                        {w.subWorkouts?.length || 0} Segmentos (A/B/C)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="size-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center hover:bg-primary/25">
+                    <span className="material-symbols-outlined text-lg">content_copy</span>
+                  </div>
+                </button>
+              );
+            })}
+
+            {filteredWorkouts.length === 0 && (
+              <div className="text-center py-10 bg-card-dark rounded-xl border border-border-dark border-dashed">
+                <span className="material-symbols-outlined text-4xl text-text-secondary/30 mb-2">content_copy_off</span>
+                <p className="text-text-secondary text-xs font-semibold">Nenhuma ficha ativa de aluno encontrada.</p>
+                <p className="text-[10px] text-text-secondary/60 mt-1">Dica: Adicione fichas aos seus alunos para vê-las aqui.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
     if (mobileSelectedStudent) {
+      if (isSettingUpBlankWorkout) {
+        return renderBlankWorkoutSetup();
+      }
+      if (mobileWorkoutFlowState === "select_model") {
+        return renderSelectModelPage();
+      }
+      if (mobileWorkoutFlowState === "select_copy_student") {
+        return renderSelectCopyStudentPage();
+      }
+
       const student = mobileSelectedStudent;
       const isTrialExpired = student.status !== "Ativa" && student.trialUntil && new Date() > (student.trialUntil?.toDate ? student.trialUntil.toDate() : new Date(student.trialUntil));
       const isTrialActive = student.status !== "Ativa" && student.trialUntil && !isTrialExpired;
@@ -1792,7 +2197,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       <div className="flex justify-between items-start gap-4 mb-4 md:mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter">
-            Gestão de Alunos
+            <span className="md:hidden">
+              {isCreatingWorkoutForStudentFlow ? "Nova ficha de treino" : "Gestão de Alunos"}
+            </span>
+            <span className="hidden md:inline">Gestão de Alunos</span>
           </h1>
         </div>
         <button
@@ -2260,7 +2668,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             return (
               <button
                 key={student.id}
-                onClick={() => setMobileSelectedStudent(student)}
+                onClick={() => {
+                  setMobileSelectedStudent(student);
+                  if (isCreatingWorkoutForStudentFlow) {
+                    setIsBottomSheetOpen(true);
+                  }
+                }}
                 className="w-full max-w-full overflow-hidden flex items-center gap-4 bg-card-dark p-4 rounded-xl border border-border-dark active:scale-[0.98] transition-transform text-left"
               >
                 <div className="relative shrink-0">
@@ -2562,9 +2975,60 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     </div>
   );
 
+  const startEditingWorkout = (w: any) => {
+    if (!w || w === 'new') {
+      setEditingWorkoutId("new");
+      setWorkoutName("Nova Ficha");
+      setSubWorkouts([
+        { id: "A", name: "Treino A", exercises: [] },
+        { id: "B", name: "Treino B", exercises: [] },
+        { id: "C", name: "Treino C", exercises: [] },
+        { id: "D", name: "Treino D", exercises: [] },
+        { id: "E", name: "Treino E", exercises: [] }
+      ]);
+      setWorkoutEditorStep("ficha");
+      setActiveSubWorkoutIndex(null);
+    } else {
+      setEditingWorkoutId(w.id);
+      setWorkoutName(w.name || w.title || "Treino sem nome");
+      if (w.subWorkouts && w.subWorkouts.length > 0) {
+        setSubWorkouts(w.subWorkouts);
+      } else {
+        setSubWorkouts([
+          { id: "A", name: "Treino A", exercises: (w.exercises || []).map(adaptLegacyExercise) },
+          { id: "B", name: "Treino B", exercises: [] },
+          { id: "C", name: "Treino C", exercises: [] },
+          { id: "D", name: "Treino D", exercises: [] },
+          { id: "E", name: "Treino E", exercises: [] }
+        ]);
+      }
+      setWorkoutEditorStep("ficha");
+      setActiveSubWorkoutIndex(null);
+    }
+  };
+
   const renderWorkouts = () => (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500 pb-24">
-      <div className="flex flex-col gap-2">
+      {/* Mobile-only back header matching existing pattern */}
+      <div className="md:hidden relative flex items-center justify-center w-full min-h-[44px] px-12 mb-2 shrink-0">
+        <button 
+          onClick={() => {
+            if (editingWorkoutId) {
+              setEditingWorkoutId(null);
+            } else {
+              setActiveTab('dashboard');
+            }
+          }}
+          className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95 border border-white/5 shadow-md shrink-0"
+        >
+          <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
+        </button>
+        <h1 className="text-white font-black text-xl tracking-tight text-center">
+          {editingWorkoutId ? 'Editar Treino' : 'Gestão de Treinos'}
+        </h1>
+      </div>
+
+      <div className="hidden md:flex flex-col gap-2">
         <h1 className="text-white text-4xl font-black leading-tight tracking-[-0.033em]">
           Gestão de Treinos
         </h1>
@@ -2575,7 +3039,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Sidebar de Treinos */}
-        <div className="lg:col-span-1 flex flex-col gap-4">
+        <div className={`lg:col-span-1 flex flex-col gap-4 ${editingWorkoutId ? 'hidden lg:flex' : 'flex'}`}>
           <div className="bg-card-dark rounded-xl border border-border-dark p-4 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h3 className="text-white font-bold">Fichas Recentes</h3>
@@ -2586,11 +3050,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 className={`flex flex-col rounded-lg bg-background-dark border ${editingWorkoutId === w.id ? 'border-primary ring-1 ring-primary/50' : 'border-border-dark hover:border-primary/50'} transition-all group overflow-hidden`}
               >
                 <button 
-                  onClick={() => {
-                    setEditingWorkoutId(w.id);
-                    setWorkoutName(w.name || w.title || "Treino sem nome");
-                    setExercises(w.exercises || []);
-                  }}
+                  onClick={() => startEditingWorkout(w)}
                   className="flex items-center justify-between p-3 text-left w-full focus:outline-none"
                 >
                   <span className={`text-sm font-medium ${editingWorkoutId === w.id ? 'text-primary font-bold' : 'text-text-primary group-hover:text-white'}`}>
@@ -2652,10 +3112,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             ))}
             <button 
               onClick={() => {
-                setEditingWorkoutId("new");
                 setPreAssignedStudentId(null);
-                setWorkoutName("Nova Ficha");
-                setExercises([]);
+                startEditingWorkout('new');
               }}
               className="w-full py-3 mt-2 rounded-lg border border-dashed border-primary/30 text-primary font-bold text-sm hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
             >
@@ -2665,168 +3123,822 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           </div>
         </div>
 
-        {/* Editor de Treino */}
-        <div className="lg:col-span-3 flex flex-col gap-6">
-          {editingWorkoutId ? (
-            <div className="bg-card-dark rounded-xl border border-border-dark flex flex-col shadow-[0_0_20px_rgba(0,0,0,0.1)] overflow-hidden">
-              <div className="p-6 border-b border-border-dark flex items-center justify-between">
-                <input 
-                  type="text" 
-                  value={workoutName}
-                  onChange={(e) => setWorkoutName(e.target.value)}
-                  className="bg-transparent border-none text-white text-2xl font-black w-full focus:outline-none focus:ring-0 placeholder-text-secondary/50"
-                  placeholder="Nome do Treino (ex: Treino A - Costas e Bíceps)"
-                />
-                <button
-                  onClick={async () => {
-                    if (!workoutName.trim()) {
-                      alert("O treino precisa de um nome.");
-                      return;
-                    }
-                    if (editingWorkoutId === 'new') {
-                      await dataService.createWorkout({
-                        name: workoutName,
-                        exercises: exercises,
-                        trainerId: user.id,
-                        studentIds: preAssignedStudentId ? [preAssignedStudentId] : [],
-                        studentStatuses: preAssignedStudentId ? { [preAssignedStudentId]: "Ativo" } : {}
-                      });
-                      setPreAssignedStudentId(null);
-                    } else {
-                      await dataService.updateWorkout(editingWorkoutId, {
-                        name: workoutName,
-                        exercises: exercises
-                      });
-                    }
-                    setEditingWorkoutId(null);
-                    alert("Treino salvo com sucesso!");
-                  }}
-                  className="flex min-w-[120px] items-center justify-center gap-2 px-6 py-2 bg-primary text-background-dark hover:brightness-110 transition-colors rounded-lg font-bold shadow-lg shadow-primary/20 shrink-0"
-                >
-                  <span className="material-symbols-outlined text-base">save</span>
-                  Salvar
-                </button>
-              </div>
+        {/* Editor de Treino Reformulado e Profissional */}
+        <div className={`lg:col-span-3 flex flex-col gap-6 ${!editingWorkoutId ? 'hidden lg:flex' : 'flex'}`}>
+          {(() => {
+            const openExerciseDetailForNew = (libEx: any) => {
+              setSelectedLibraryExercise(libEx);
+              setIsManualExercise(false);
+              setIsSpecialSeries(false);
+              setEditingConfiguredExerciseId(null);
+              setDetailSeriesForm("Repetição");
+              setDetailLoadConfig("Kg");
+              setDetailRest(60);
+              setDetailSeries([
+                { id: "s1", reps: "10", weight: "" },
+                { id: "s2", reps: "10", weight: "" },
+                { id: "s3", reps: "10", weight: "" }
+              ]);
+              setDetailVideoUrl("");
+              setDetailNotes("");
+              setWorkoutEditorStep("detalhe");
+            };
 
-              <div className="p-6 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-white font-bold uppercase tracking-widest text-sm flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-primary text-[18px]">format_list_numbered</span>
-                    Exercícios do Treino ({exercises.length})
-                  </h3>
-                  <button
-                    onClick={addExercise}
-                    className="flex items-center gap-1.5 px-4 py-1.5 border border-dashed border-primary/30 text-primary hover:bg-primary/10 transition-colors rounded-lg text-xs font-bold"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">add</span>
-                    Adicionar Manual
-                  </button>
-                </div>
+            const openExerciseDetailForEdit = (ex: any) => {
+              setSelectedLibraryExercise({ name: ex.name, category: ex.category });
+              setIsManualExercise(ex.isManual || false);
+              setIsSpecialSeries(ex.isSpecial || false);
+              setEditingConfiguredExerciseId(ex.id);
+              setDetailSeriesForm(ex.seriesForm || "Repetição");
+              setDetailLoadConfig(ex.loadConfig || "Kg");
+              setDetailRest(ex.rest || 60);
+              setDetailSeries(ex.series || [{ id: "s1", reps: "10", weight: "" }]);
+              setDetailVideoUrl(ex.videoUrl || "");
+              setDetailNotes(ex.notes || "");
+              setWorkoutEditorStep("detalhe");
+            };
 
-                <div className="flex flex-col gap-3">
-                  {exercises.map((ex, index) => (
-                    <div 
-                      key={ex.id}
-                      className="group flex flex-col sm:flex-row gap-4 p-4 border border-border-dark bg-background-dark/50 rounded-xl relative hover:border-primary/50 transition-all"
-                    >
-                      <button className="absolute -left-3 top-1/2 -translate-y-1/2 bg-card-dark border border-border-dark rounded-full size-6 flex items-center justify-center text-text-secondary cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="material-symbols-outlined text-[14px]">drag_indicator</span>
-                      </button>
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={ex.name}
-                          onChange={(e) => {
-                            const newEx = [...exercises];
-                            newEx[index].name = e.target.value;
-                            setExercises(newEx);
-                          }}
-                          placeholder="Nome do Exercício"
-                          className="bg-transparent text-white font-bold text-lg w-full focus:outline-none focus:ring-0 placeholder-text-secondary/50 mb-2 border-b border-transparent focus:border-border-dark transition-colors pb-1"
-                        />
-                        <div className="flex items-center gap-4 flex-wrap">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">Séries</span>
-                            <input
-                              type="text"
-                              value={ex.sets}
-                              onChange={(e) => {
-                                const newEx = [...exercises];
-                                newEx[index].sets = e.target.value;
-                                setExercises(newEx);
-                              }}
-                              className="w-16 bg-card-dark border border-border-dark rounded px-2 py-1 text-white text-center focus:border-primary focus:outline-none transition-colors"
-                            />
+            const openExerciseDetailForManual = () => {
+              setSelectedLibraryExercise({ name: "", category: "Geral" });
+              setIsManualExercise(true);
+              setIsSpecialSeries(false);
+              setEditingConfiguredExerciseId(null);
+              setDetailSeriesForm("Repetição");
+              setDetailLoadConfig("Kg");
+              setDetailRest(60);
+              setDetailSeries([{ id: "s1", reps: "10", weight: "" }]);
+              setDetailVideoUrl("");
+              setDetailNotes("");
+              setWorkoutEditorStep("detalhe");
+            };
+
+            const openExerciseDetailForSpecial = () => {
+              setSelectedLibraryExercise({ name: "", category: "Especial" });
+              setIsManualExercise(false);
+              setIsSpecialSeries(true);
+              setEditingConfiguredExerciseId(null);
+              setDetailSeriesForm("Repetição");
+              setDetailLoadConfig("Kg");
+              setDetailRest(90);
+              setDetailSeries([
+                { id: "s1", reps: "10", weight: "" },
+                { id: "s2", reps: "10", weight: "" }
+              ]);
+              setDetailVideoUrl("");
+              setDetailNotes("Descreva os exercícios conjugados/agrupados...");
+              setWorkoutEditorStep("detalhe");
+            };
+
+            const saveExerciseDetail = () => {
+              if (activeSubWorkoutIndex === null) return;
+              
+              const finalName = (selectedLibraryExercise?.name || "").trim();
+              if (!finalName) {
+                alert("Por favor, preencha o nome do exercício.");
+                return;
+              }
+
+              const exData: any = {
+                id: editingConfiguredExerciseId || `ex-${Date.now()}-${Math.random()}`,
+                name: finalName,
+                category: selectedLibraryExercise?.category || "Geral",
+                isManual: isManualExercise,
+                isSpecial: isSpecialSeries,
+                seriesForm: detailSeriesForm,
+                loadConfig: detailLoadConfig,
+                rest: detailRest,
+                series: detailSeries,
+                videoUrl: detailVideoUrl,
+                notes: detailNotes
+              };
+
+              const targetSubWorkout = subWorkouts[activeSubWorkoutIndex];
+              let updatedExercises = [...(targetSubWorkout.exercises || [])];
+
+              if (editingConfiguredExerciseId) {
+                updatedExercises = updatedExercises.map(ex => ex.id === editingConfiguredExerciseId ? exData : ex);
+              } else {
+                updatedExercises.push(exData);
+              }
+
+              const updatedSubWorkouts = [...subWorkouts];
+              updatedSubWorkouts[activeSubWorkoutIndex] = {
+                ...targetSubWorkout,
+                exercises: updatedExercises
+              };
+
+              setSubWorkouts(updatedSubWorkouts);
+              setWorkoutEditorStep("prescrever");
+              setAccordionExpanded(true);
+            };
+
+            const deleteConfiguredExercise = (exId: string) => {
+              if (activeSubWorkoutIndex === null) return;
+              const targetSubWorkout = subWorkouts[activeSubWorkoutIndex];
+              const updatedExercises = (targetSubWorkout.exercises || []).filter((ex: any) => ex.id !== exId);
+              
+              const updatedSubWorkouts = [...subWorkouts];
+              updatedSubWorkouts[activeSubWorkoutIndex] = {
+                ...targetSubWorkout,
+                exercises: updatedExercises
+              };
+
+              setSubWorkouts(updatedSubWorkouts);
+            };
+
+            const saveEntireFicha = async () => {
+              if (!workoutName.trim()) {
+                alert("A ficha precisa de um nome.");
+                return;
+              }
+
+              const flatExercisesList: any[] = [];
+              subWorkouts.forEach(sw => {
+                if (sw.exercises && sw.exercises.length > 0) {
+                  sw.exercises.forEach((ex: any) => {
+                    flatExercisesList.push({
+                      id: ex.id,
+                      name: ex.name,
+                      sets: ex.series?.length ? ex.series.length.toString() : "3",
+                      reps: ex.series?.[0]?.reps || "10",
+                      rest: ex.rest ? ex.rest.toString() : "60",
+                      notes: ex.notes || ""
+                    });
+                  });
+                }
+              });
+
+              const payload = {
+                name: workoutName,
+                title: workoutName,
+                subWorkouts: subWorkouts,
+                exercises: flatExercisesList,
+                trainerId: user.id
+              };
+
+              try {
+                if (editingWorkoutId === 'new') {
+                  await dataService.createWorkout({
+                    ...payload,
+                    studentIds: preAssignedStudentId ? [preAssignedStudentId] : [],
+                    studentStatuses: preAssignedStudentId ? { [preAssignedStudentId]: "Ativo" } : {}
+                  });
+                  setPreAssignedStudentId(null);
+                } else {
+                  await dataService.updateWorkout(editingWorkoutId!, payload);
+                }
+                setEditingWorkoutId(null);
+                setWorkoutEditorStep("ficha");
+                alert("Ficha de treino salva com sucesso!");
+              } catch (e) {
+                console.error(e);
+                alert("Erro ao salvar ficha de treino.");
+              }
+            };
+
+            if (editingWorkoutId) {
+              return (
+                <div className="bg-card-dark rounded-2xl border border-border-dark flex flex-col shadow-[0_4px_30px_rgba(0,0,0,0.3)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  
+                  {/* STAGE 1: FICHA - GESTÃO DOS TREINOS */}
+                  {workoutEditorStep === "ficha" && (
+                    <div className="flex flex-col">
+                      <div className="p-6 border-b border-border-dark flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-background-dark/30">
+                        <div className="flex-1">
+                          <p className="text-xs text-primary font-black uppercase tracking-widest mb-1">Passo 1: Organizar Treinos</p>
+                          <input 
+                            type="text" 
+                            value={workoutName}
+                            onChange={(e) => setWorkoutName(e.target.value)}
+                            className="bg-transparent border-b border-transparent hover:border-border-dark focus:border-primary text-white text-2xl font-black w-full focus:outline-none transition-all pb-1 placeholder-text-secondary/30"
+                            placeholder="Nome da Ficha (ex: Hipertrofia Masculina)"
+                          />
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          <button
+                            onClick={() => {
+                              setEditingWorkoutId(null);
+                              setWorkoutEditorStep("ficha");
+                            }}
+                            className="px-5 py-2.5 rounded-lg border border-border-dark text-text-primary hover:text-white hover:bg-white/5 transition-colors text-sm font-bold"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={saveEntireFicha}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-primary text-background-dark hover:brightness-110 active:scale-[0.98] transition-all rounded-lg font-black shadow-lg shadow-primary/20 text-sm"
+                          >
+                            <span className="material-symbols-outlined text-base">save</span>
+                            Salvar Ficha
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-6 flex flex-col gap-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                              <span className="material-symbols-outlined text-primary">layers</span>
+                              Divisão de Treinos ({subWorkouts.length})
+                            </h3>
+                            <p className="text-text-secondary text-xs mt-1">Arraste os cards para reordenar a ficha ou adicione novos treinos.</p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">Reps</span>
-                            <input
-                              type="text"
-                              value={ex.reps}
-                              onChange={(e) => {
-                                const newEx = [...exercises];
-                                newEx[index].reps = e.target.value;
-                                setExercises(newEx);
-                              }}
-                              className="w-20 bg-card-dark border border-border-dark rounded px-2 py-1 text-white text-center focus:border-primary focus:outline-none transition-colors"
-                            />
+                          <button
+                            onClick={() => {
+                              const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                              const nextLetter = letters[subWorkouts.length] || `Set ${subWorkouts.length + 1}`;
+                              setSubWorkouts([
+                                ...subWorkouts,
+                                { id: `SW-${Date.now()}`, name: `Treino ${nextLetter}`, exercises: [] }
+                              ]);
+                            }}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/45 rounded-lg text-xs font-black transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">add</span>
+                            Adicionar Treino
+                          </button>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                          {subWorkouts.map((sw, index) => (
+                            <div
+                              key={sw.id || index}
+                              draggable
+                              onDragStart={(e) => handleSubWorkoutDragStart(e, index)}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => handleSubWorkoutDrop(e, index)}
+                              className="group bg-background-dark/40 border border-border-dark hover:border-primary/40 rounded-xl p-4 flex items-center justify-between gap-4 transition-all"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div 
+                                  title="Arraste para reordenar"
+                                  className="size-8 rounded-lg bg-card-dark border border-border-dark flex items-center justify-center text-text-secondary cursor-grab active:cursor-grabbing group-hover:text-primary transition-colors"
+                                >
+                                  <span className="material-symbols-outlined text-xl">drag_indicator</span>
+                                </div>
+                                <div className="flex flex-col gap-1 sm:hidden">
+                                  <button 
+                                    disabled={index === 0}
+                                    onClick={() => moveSubWorkout(index, 'up')}
+                                    className="text-text-secondary disabled:opacity-20 flex"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">keyboard_arrow_up</span>
+                                  </button>
+                                  <button 
+                                    disabled={index === subWorkouts.length - 1}
+                                    onClick={() => moveSubWorkout(index, 'down')}
+                                    className="text-text-secondary disabled:opacity-20 flex"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+                                  </button>
+                                </div>
+                                <div className="hidden sm:flex items-center gap-1">
+                                  <button
+                                    disabled={index === 0}
+                                    onClick={() => moveSubWorkout(index, 'up')}
+                                    className="size-6 rounded bg-card-dark border border-border-dark text-text-secondary hover:text-white hover:border-primary/30 flex items-center justify-center disabled:opacity-20 disabled:pointer-events-none transition-all"
+                                    title="Mover para cima"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
+                                  </button>
+                                  <button
+                                    disabled={index === subWorkouts.length - 1}
+                                    onClick={() => moveSubWorkout(index, 'down')}
+                                    className="size-6 rounded bg-card-dark border border-border-dark text-text-secondary hover:text-white hover:border-primary/30 flex items-center justify-center disabled:opacity-20 disabled:pointer-events-none transition-all"
+                                    title="Mover para baixo"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">arrow_downward</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="flex-1 flex flex-col min-w-0">
+                                <input
+                                  type="text"
+                                  value={sw.name}
+                                  onChange={(e) => {
+                                    const updated = [...subWorkouts];
+                                    updated[index].name = e.target.value;
+                                    setSubWorkouts(updated);
+                                  }}
+                                  className="bg-transparent border-none text-white text-base font-bold focus:outline-none focus:ring-0 w-full p-0 leading-tight"
+                                  placeholder="Nome do Treino (ex: Treino A)"
+                                />
+                                <p className="text-text-secondary text-[10px] uppercase font-bold tracking-widest mt-1 flex items-center gap-1.5">
+                                  <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
+                                  {sw.exercises?.length || 0} exercícios prescritos
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={() => {
+                                    setActiveSubWorkoutIndex(index);
+                                    setWorkoutEditorStep("prescrever");
+                                    setAccordionExpanded(sw.exercises?.length > 0);
+                                  }}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-primary/20 hover:bg-primary text-primary hover:text-background-dark border border-primary/20 hover:border-primary rounded-lg text-xs font-black transition-all"
+                                >
+                                  <span className="material-symbols-outlined text-sm">fitness_center</span>
+                                  Prescrever
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm(`Excluir o ${sw.name}? Todos os exercícios acoplados serão apagados.`)) {
+                                      const updated = subWorkouts.filter((_, i) => i !== index);
+                                      setSubWorkouts(updated);
+                                    }
+                                  }}
+                                  className="size-9 rounded-lg bg-red-500/10 hover:bg-red-500 border border-transparent hover:border-red-600 text-red-500 hover:text-white flex items-center justify-center transition-all"
+                                  title="Excluir treino"
+                                >
+                                  <span className="material-symbols-outlined text-base">delete</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+
+                          {subWorkouts.length === 0 && (
+                            <div className="py-12 border-2 border-dashed border-border-dark rounded-xl flex flex-col items-center justify-center text-center">
+                              <span className="material-symbols-outlined text-4xl text-text-secondary mb-2 opacity-50 font-light">layers_clear</span>
+                              <p className="text-text-secondary text-sm">Nenhum treino adicionado a esta ficha.</p>
+                              <button
+                                onClick={() => {
+                                  setSubWorkouts([
+                                    { id: "A", name: "Treino A", exercises: [] },
+                                    { id: "B", name: "Treino B", exercises: [] },
+                                    { id: "C", name: "Treino C", exercises: [] }
+                                  ]);
+                                }}
+                                className="mt-4 text-primary font-bold text-sm hover:underline"
+                              >
+                                Gerar Treino A, B, C automaticamente
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STAGE 2: PRESCREVER EXERCÍCIOS AO TREINO ATIVO */}
+                  {workoutEditorStep === "prescrever" && activeSubWorkoutIndex !== null && (
+                    <div className="flex flex-col animate-in fade-in duration-200">
+                      <div className="p-6 border-b border-border-dark flex items-center justify-between gap-4 bg-background-dark/30">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setWorkoutEditorStep("ficha")}
+                            className="size-10 rounded-xl bg-white/5 border border-white/5 text-text-secondary hover:text-white hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center shrink-0"
+                          >
+                            <span className="material-symbols-outlined text-lg">arrow_back</span>
+                          </button>
+                          <div>
+                            <p className="text-xs text-primary font-black uppercase tracking-widest leading-none mb-1">Passo 2: Biblioteca de Exercícios</p>
+                            <h2 className="text-white font-black text-xl tracking-tight leading-tight">Prescrição do {subWorkouts[activeSubWorkoutIndex]?.name}</h2>
                           </div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => {
-                          const newEx = [...exercises];
-                          newEx.splice(index, 1);
-                          setExercises(newEx);
-                        }}
-                        className="self-start sm:self-center text-text-secondary hover:text-red-500 transition-colors p-2"
-                        title="Remover exercício"
-                      >
-                        <span className="material-symbols-outlined text-xl">delete</span>
-                      </button>
-                    </div>
-                  ))}
-                  {exercises.length === 0 && (
-                    <div className="py-12 border-2 border-dashed border-border-dark rounded-xl flex flex-col items-center justify-center text-center">
-                      <span className="material-symbols-outlined text-4xl text-text-secondary mb-2 opacity-50">note_stack</span>
-                      <p className="text-text-secondary text-sm">Esta ficha ainda não tem exercícios.</p>
-                      <button onClick={addExercise} className="mt-4 text-primary font-bold text-sm flex items-center gap-1 hover:underline">
-                        Adicione um exercício agora <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                      </button>
+
+                      <div className="p-6 flex flex-col gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <button
+                            onClick={openExerciseDetailForManual}
+                            className="flex items-center justify-center gap-2.5 h-14 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold border border-white/5 hover:border-white/10 transition-all active:scale-[0.98]"
+                          >
+                            <span className="material-symbols-outlined text-primary">add_box</span>
+                            Criar exercício manualmente
+                          </button>
+                          <button
+                            onClick={openExerciseDetailForSpecial}
+                            className="flex items-center justify-center gap-2.5 h-14 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-bold border border-primary/10 hover:border-primary/20 transition-all active:scale-[0.98]"
+                          >
+                            <span className="material-symbols-outlined text-primary">stars</span>
+                            Criar séries especiais
+                          </button>
+                        </div>
+
+                        <div className="relative">
+                          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary text-xl">search</span>
+                          <input
+                            type="text"
+                            value={subWorkoutSearchQuery}
+                            onChange={(e) => setSubWorkoutSearchQuery(e.target.value)}
+                            placeholder="Buscar por nome do exercício (ex: Supino reto, Rosca...)"
+                            className="w-full h-14 rounded-xl bg-background-dark/70 border border-border-dark text-white text-base focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 pl-12 pr-4 transition-all placeholder-text-secondary/50"
+                          />
+                          {subWorkoutSearchQuery && (
+                            <button 
+                              onClick={() => setSubWorkoutSearchQuery("")}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white"
+                            >
+                              <span className="material-symbols-outlined text-lg">close</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2.5">
+                          <p className="text-text-primary text-xs font-black tracking-widest uppercase">Filtrar por Grupo Muscular</p>
+                          <div className="flex flex-wrap gap-1.5 py-1 max-h-[140px] overflow-y-auto custom-scrollbar">
+                            <button
+                              onClick={() => setSelectedMuscleGroupFilter(null)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                selectedMuscleGroupFilter === null
+                                  ? "bg-primary text-background-dark border-primary font-black shadow-md shadow-primary/10"
+                                  : "bg-white/5 text-text-secondary border-border-dark hover:text-white hover:bg-white/10"
+                              }`}
+                            >
+                              TODOS
+                            </button>
+                            {[
+                              "ABDOMINAL",
+                              "AERÓBICO",
+                              "ANTEBRAÇO",
+                              "BÍCEPS",
+                              "COSTAS",
+                              "GLÚTEO",
+                              "OMBRO",
+                              "PANTURRILHA",
+                              "PEITORAL",
+                              "PERNAS",
+                              "TRAPÉZIO",
+                              "TRÍCEPS"
+                            ].map((filter) => (
+                              <button
+                                key={filter}
+                                onClick={() => setSelectedMuscleGroupFilter(selectedMuscleGroupFilter === filter ? null : filter)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                  selectedMuscleGroupFilter === filter
+                                    ? "bg-primary text-background-dark border-primary font-black shadow-md shadow-primary/10"
+                                    : "bg-white/5 text-text-secondary border-border-dark hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                {filter}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <p className="text-text-primary text-xs font-black tracking-widest uppercase">Escolher Exercício da Biblioteca</p>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
+                            {LIBRARY_EXERCISES.filter((ex) => {
+                              const matchesSearch = ex.name.toLowerCase().includes(subWorkoutSearchQuery.toLowerCase());
+                              const matchesMuscle = selectedMuscleGroupFilter 
+                                ? ex.category.toLowerCase() === selectedMuscleGroupFilter.toLowerCase()
+                                : true;
+                              return matchesSearch && matchesMuscle;
+                            }).map((libEx) => (
+                              <div
+                                key={libEx.id}
+                                className="bg-background-dark/30 hover:bg-background-dark/60 border border-border-dark hover:border-primary/30 p-3.5 rounded-xl flex items-center justify-between gap-4 transition-colors"
+                              >
+                                <div className="flex flex-col min-w-0">
+                                  <h4 className="text-white font-bold text-sm truncate leading-tight">{libEx.name}</h4>
+                                  <p className="text-text-secondary text-[10px] uppercase font-semibold mt-1 tracking-wider">{libEx.category} • {libEx.difficulty}</p>
+                                </div>
+                                <button
+                                  onClick={() => openExerciseDetailForNew(libEx)}
+                                  className="size-9 rounded-lg bg-primary/10 hover:bg-primary border border-primary/20 hover:border-primary text-primary hover:text-background-dark flex items-center justify-center transition-all shrink-0 active:scale-95"
+                                  title="Configurar Exercício"
+                                >
+                                  <span className="material-symbols-outlined text-base">add</span>
+                                </button>
+                              </div>
+                            ))}
+
+                            {LIBRARY_EXERCISES.filter((ex) => {
+                              const matchesSearch = ex.name.toLowerCase().includes(subWorkoutSearchQuery.toLowerCase());
+                              const matchesMuscle = selectedMuscleGroupFilter 
+                                ? ex.category.toLowerCase() === selectedMuscleGroupFilter.toLowerCase()
+                                : true;
+                              return matchesSearch && matchesMuscle;
+                            }).length === 0 && (
+                              <div className="col-span-full py-8 text-center text-text-secondary border border-dashed border-border-dark rounded-xl">
+                                <span className="material-symbols-outlined text-3xl mb-1 opacity-50">search_off</span>
+                                <p className="text-xs">Nenhum exercício encontrado para a busca e filtro selecionados.</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="border border-border-dark rounded-xl bg-background-dark/30 mt-4 overflow-hidden">
+                          <button
+                            onClick={() => setAccordionExpanded(!accordionExpanded)}
+                            className="w-full p-4 flex items-center justify-between font-black text-sm text-white hover:bg-white/5 transition-all focus:outline-none"
+                            type="button"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-primary text-lg">fact_check</span>
+                              <span>{subWorkouts[activeSubWorkoutIndex]?.exercises?.length || 0} Exercícios Configurados no {subWorkouts[activeSubWorkoutIndex]?.name}</span>
+                            </div>
+                            <span className="material-symbols-outlined text-text-secondary transition-transform">
+                              {accordionExpanded ? "expand_less" : "expand_more"}
+                            </span>
+                          </button>
+
+                          {accordionExpanded && (
+                            <div className="p-4 border-t border-border-dark flex flex-col gap-2.5 bg-background-dark/10 max-h-[280px] overflow-y-auto custom-scrollbar">
+                              {(subWorkouts[activeSubWorkoutIndex]?.exercises || []).map((ex: any, idx: number) => (
+                                <div 
+                                  key={ex.id || idx}
+                                  className="bg-card-dark border border-border-dark p-3 rounded-lg flex items-center justify-between gap-4 transition-all hover:bg-card-dark/80"
+                                >
+                                  <div 
+                                    onClick={() => openExerciseDetailForEdit(ex)}
+                                    className="flex-1 min-w-0 cursor-pointer group"
+                                  >
+                                    <h5 className="text-white font-bold text-sm leading-tight group-hover:text-primary transition-colors">{ex.name}</h5>
+                                    <div className="flex items-center gap-3 text-[10px] font-bold text-text-secondary mt-1 uppercase tracking-wider">
+                                      <span>{ex.series?.length || 0} Séries ({ex.seriesForm})</span>
+                                      <span>•</span>
+                                      <span>Pausa: {ex.rest}s</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0 font-bold">
+                                    <button
+                                      onClick={() => openExerciseDetailForEdit(ex)}
+                                      className="size-8 rounded bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white flex items-center justify-center transition-all"
+                                      title="Editar"
+                                    >
+                                      <span className="material-symbols-outlined text-base">edit</span>
+                                    </button>
+                                    <button
+                                      onClick={() => deleteConfiguredExercise(ex.id)}
+                                      className="size-8 rounded bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition-all"
+                                      title="Remover"
+                                    >
+                                      <span className="material-symbols-outlined text-base">delete</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {(subWorkouts[activeSubWorkoutIndex]?.exercises || []).length === 0 && (
+                                <p className="py-4 text-center text-xs text-text-secondary italic">Ainda não há exercícios salvos para este treino.</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="pt-4 flex justify-end">
+                          <button 
+                            onClick={() => setWorkoutEditorStep("ficha")}
+                            className="px-6 py-2.5 bg-background-dark border border-border-dark rounded-lg text-white font-bold text-sm hover:brightness-110 active:scale-95 transition-all"
+                          >
+                            Pronto, Voltar para Ficha
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
+
+                  {/* STAGE 3: DETALHE DO EXERCÍCIO */}
+                  {workoutEditorStep === "detalhe" && selectedLibraryExercise && (
+                    <div className="flex flex-col animate-in slide-in-from-right-10 duration-200">
+                      <div className="p-6 border-b border-border-dark flex items-center justify-between gap-4 bg-background-dark/30">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setWorkoutEditorStep("prescrever")}
+                            className="size-10 rounded-xl bg-white/5 border border-white/5 text-text-secondary hover:text-white hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center shrink-0"
+                          >
+                            <span className="material-symbols-outlined text-lg">arrow_back</span>
+                          </button>
+                          <div>
+                            <p className="text-xs text-primary font-black uppercase tracking-widest leading-none mb-1">Passo 3: Parâmetros do Exercício</p>
+                            <h2 className="text-white font-black text-xl tracking-tight leading-tight">Configurar: {selectedLibraryExercise.name || "Exercício"}</h2>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-6 flex flex-col gap-6">
+                        {(isManualExercise || isSpecialSeries) && (
+                          <label className="flex flex-col gap-2">
+                            <span className="text-text-primary text-xs font-black tracking-widest uppercase">Nome Customizado do Exercício</span>
+                            <input
+                              type="text"
+                              value={selectedLibraryExercise.name}
+                              onChange={(e) => setSelectedLibraryExercise({...selectedLibraryExercise, name: e.target.value})}
+                              className="w-full h-12 rounded-lg bg-background-dark/55 border border-border-dark text-white px-4 focus:outline-none focus:border-primary text-sm font-bold"
+                              placeholder={isSpecialSeries ? "ex: Bi-set: Supino reto + Crucifixo" : "ex: Flexão declinada"}
+                            />
+                          </label>
+                        )}
+
+                        <div className="flex flex-col gap-2.5">
+                          <span className="text-text-primary text-xs font-black tracking-widest uppercase">1 - Forma da Série</span>
+                          <div className="grid grid-cols-3 gap-2">
+                            {(["Repetição", "Minuto", "Segundo"] as const).map((form) => (
+                              <button
+                                key={form}
+                                type="button"
+                                onClick={() => setDetailSeriesForm(form)}
+                                className={`h-11 rounded-lg text-xs font-bold transition-all border flex items-center justify-center gap-1.5 ${
+                                  detailSeriesForm === form
+                                    ? "bg-primary text-background-dark border-primary font-black shadow-md shadow-primary/10"
+                                    : "bg-white/5 text-text-secondary border-border-dark hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                {form === "Repetição" ? "Repetições" : form === "Minuto" ? "Minutos" : "Segundos"}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2.5">
+                          <span className="text-text-primary text-xs font-black tracking-widest uppercase">2 - Configuração de Carga</span>
+                          <div className="grid grid-cols-4 gap-2">
+                            {(["Kg", "Libras", "Pesos", "%"] as const).map((config) => (
+                              <button
+                                key={config}
+                                type="button"
+                                onClick={() => setDetailLoadConfig(config)}
+                                className={`h-11 rounded-lg text-xs font-bold transition-all border flex items-center justify-center ${
+                                  detailLoadConfig === config
+                                    ? "bg-primary text-background-dark border-primary font-black shadow-md shadow-primary/10"
+                                    : "bg-white/5 text-text-secondary border-border-dark hover:text-white hover:bg-white/10"
+                                }`}
+                              >
+                                {config}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2.5 bg-background-dark/30 border border-border-dark p-4 rounded-xl">
+                          <div className="flex justify-between items-center">
+                            <span className="text-text-primary text-xs font-black tracking-widest uppercase">3 - Pausa entre as Séries</span>
+                            <span className="text-primary font-black text-sm uppercase bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-md">
+                              {detailRest >= 60 
+                                ? `${Math.floor(detailRest / 60)}m ${detailRest % 60}s` 
+                                : `${detailRest} seg`}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="300"
+                            step="5"
+                            value={detailRest}
+                            onChange={(e) => setDetailRest(parseInt(e.target.value))}
+                            className="w-full accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer mt-2"
+                          />
+                          <div className="flex justify-between text-[10px] text-text-secondary uppercase font-bold mt-1">
+                            <span>Sem Pausa</span>
+                            <span>1 M</span>
+                            <span>2 M</span>
+                            <span>3 M</span>
+                            <span>5 M</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-text-primary text-xs font-black tracking-widest uppercase">4 - Configuração das Séries</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDetailSeries([
+                                  ...detailSeries,
+                                  { id: `s-${Date.now()}-${Math.random()}`, reps: "10", weight: "" }
+                                ]);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-[11px] font-black transition-all"
+                            >
+                              <span className="material-symbols-outlined text-[12px]">add</span>
+                              Adicionar Série
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col gap-2.5">
+                            {detailSeries.map((set, sIdx) => (
+                              <div 
+                                key={set.id || sIdx}
+                                className="bg-background-dark/40 border border-border-dark p-3 rounded-lg flex items-center justify-between gap-4 animate-in fade-in zoom-in-95"
+                              >
+                                <span className="text-white text-xs font-black uppercase tracking-wider shrink-0 min-w-[50px]">Série {sIdx + 1}</span>
+                                
+                                <div className="flex-1 flex items-center gap-3 min-w-0">
+                                  <div className="flex-1 flex flex-col gap-1 min-w-0">
+                                    <span className="text-[9px] font-bold text-text-secondary uppercase tracking-widest leading-none">Reps / Tempo</span>
+                                    <input
+                                      type="text"
+                                      value={set.reps}
+                                      onChange={(e) => {
+                                        const updated = [...detailSeries];
+                                        updated[sIdx].reps = e.target.value;
+                                        setDetailSeries(updated);
+                                      }}
+                                      placeholder="Ex: 8 a 10"
+                                      className="w-full h-10 rounded bg-card-dark border border-border-dark text-white text-xs text-center font-bold focus:border-primary focus:outline-none"
+                                    />
+                                  </div>
+
+                                  <div className="flex-1 flex flex-col gap-1 min-w-0">
+                                    <span className="text-[9px] font-bold text-text-secondary uppercase tracking-widest leading-none">Carga ({detailLoadConfig})</span>
+                                    <input
+                                      type="text"
+                                      value={set.weight}
+                                      onChange={(e) => {
+                                        const updated = [...detailSeries];
+                                        updated[sIdx].weight = e.target.value;
+                                        setDetailSeries(updated);
+                                      }}
+                                      placeholder="P. Corporal"
+                                      className="w-full h-10 rounded bg-card-dark border border-border-dark text-white text-xs text-center font-bold focus:border-primary focus:outline-none"
+                                    />
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  disabled={detailSeries.length <= 1}
+                                  onClick={() => {
+                                    setDetailSeries(detailSeries.filter((_, i) => i !== sIdx));
+                                  }}
+                                  className="size-9 rounded bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition-all disabled:opacity-20 shrink-0 font-bold"
+                                  title="Excluir"
+                                >
+                                  <span className="material-symbols-outlined text-sm font-bold">close</span>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <span className="text-text-primary text-xs font-black tracking-widest uppercase">5 - Link de Vídeo demonstrativo (YouTube)</span>
+                          <input
+                            type="url"
+                            value={detailVideoUrl}
+                            onChange={(e) => setDetailVideoUrl(e.target.value)}
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            className="w-full h-12 rounded-lg bg-background-dark/55 border border-border-dark text-white px-4 text-xs focus:outline-none focus:border-primary font-mono font-bold"
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <span className="text-text-primary text-xs font-black tracking-widest uppercase">6 - Instruções / Observações do Personal</span>
+                          <textarea
+                            value={detailNotes}
+                            onChange={(e) => setDetailNotes(e.target.value)}
+                            placeholder="Descreva a amplitude de movimento, cadência, pico de contração ou observações técnicas..."
+                            className="w-full rounded-lg bg-background-dark/55 border border-border-dark text-white p-4 focus:outline-none focus:border-primary text-xs min-h-[90px] transition-all font-bold"
+                          />
+                        </div>
+
+                        <div className="flex justify-between gap-4 pt-4 border-t border-border-dark mt-2 font-bold">
+                          <button
+                            type="button"
+                            onClick={() => setWorkoutEditorStep("prescrever")}
+                            className="px-6 py-3 border border-border-dark text-text-primary hover:text-white hover:bg-white/5 rounded-lg text-xs font-bold transition-all shrink-0"
+                          >
+                            Descartar e Voltar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={saveExerciseDetail}
+                            className="flex-1 max-w-xs h-12 bg-primary text-background-dark rounded-lg hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center font-black text-sm shadow-lg shadow-primary/10"
+                          >
+                            Confirmar e Salvar Exercício
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-card-dark rounded-xl border border-border-dark p-12 shadow-sm flex flex-col items-center justify-center text-center gap-4">
-              <div className="size-16 rounded-full bg-white/5 flex items-center justify-center text-text-secondary">
-                <span className="material-symbols-outlined text-4xl">
-                  fitness_center
-                </span>
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-lg">
-                  Nenhum treino selecionado
-                </h3>
-                <p className="text-text-secondary text-sm max-w-xs mx-auto">
-                  Selecione uma ficha ao lado ou crie uma nova para começar a
-                  editar os treinos.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setEditingWorkoutId("new");
-                  setWorkoutName("Nova Ficha");
-                  setExercises([]);
-                }}
-                className="mt-2 flex items-center gap-2 px-6 py-2 rounded-lg bg-primary text-background-dark hover:brightness-110 transition-colors text-sm font-bold shadow-lg shadow-primary/20"
-              >
-                <span className="material-symbols-outlined text-base">add</span>
-                Nova Ficha
-              </button>
-            </div>
-          )}
+              );
+            } else {
+              return (
+                <div className="bg-card-dark rounded-xl border border-border-dark p-12 shadow-sm flex flex-col items-center justify-center text-center gap-4">
+                  <div className="size-16 rounded-full bg-white/5 flex items-center justify-center text-text-secondary border border-border-dark">
+                    <span className="material-symbols-outlined text-4xl text-primary/70">
+                      fitness_center
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold text-lg">
+                      Nenhuma Ficha Selecionada
+                    </h3>
+                    <p className="text-text-secondary text-sm max-w-xs mx-auto">
+                      Selecione uma ficha ao lado ou crie uma nova para começar a editar os treinos e prescrever exercícios de forma avançada.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setPreAssignedStudentId(null);
+                      startEditingWorkout('new');
+                    }}
+                    className="mt-2 flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-background-dark hover:brightness-110 transition-colors text-sm font-bold shadow-lg shadow-primary/20"
+                  >
+                    <span className="material-symbols-outlined text-base">add</span>
+                    Nova Ficha de Treino
+                  </button>
+                </div>
+              );
+            }
+          })()}
         </div>
       </div>
     </div>
@@ -3434,6 +4546,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     (activeTab === "students" && (mobileSelectedStudent !== null || editingStudentProfile !== null));
 
   const hideBottomNav = activeTab === "chat" || 
+    activeTab === "workouts" ||
     (activeTab === "students" && (mobileSelectedStudent !== null || editingStudentProfile !== null));
 
   return (
@@ -3586,12 +4699,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
               <button
                   onClick={() => setIsMobileActionMenuOpen(!isMobileActionMenuOpen)}
-                  className={`flex items-center justify-center rounded-full border-4 shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.25)] transition-all ease-out duration-250 active:scale-95 ${
+                  className={`flex items-center justify-center rounded-full transition-all ease-out duration-250 active:scale-95 ${
                     isMobileActionMenuOpen 
-                      ? 'size-[68px] bg-primary text-background-dark border-primary shadow-[0_12px_35px_rgba(19,236,91,0.4)]' 
+                      ? 'size-[68px] bg-primary text-background-dark border-0 border-transparent shadow-[0_12px_35px_rgba(19,236,91,0.4)]' 
                       : (activeTab === 'workouts')
-                        ? 'size-[80px] bg-primary text-background-dark scale-105 border-primary shadow-[0_12px_35px_rgba(19,236,91,0.4)]' 
-                        : 'size-[80px] bg-primary text-background-dark/90 border-background-dark hover:brightness-110'
+                        ? 'size-[80px] bg-primary text-background-dark scale-105 border-4 border-background-dark shadow-[0_12px_35px_rgba(19,236,91,0.4)]' 
+                        : 'size-[80px] bg-primary text-background-dark/90 border-4 border-background-dark shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.25)] hover:brightness-110'
                   }`}
               >
                   {isMobileActionMenuOpen ? (

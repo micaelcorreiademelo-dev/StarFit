@@ -31,6 +31,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const [workoutTab, setWorkoutTab] = useState<'upcoming' | 'history'>('upcoming');
   const [isTraining, setIsTraining] = useState(false);
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
+  const [selectedSubWorkoutIndex, setSelectedSubWorkoutIndex] = useState(0);
   const [newMessage, setNewMessage] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
@@ -715,94 +716,211 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     const activeWorkout = workouts.find(w => !w.completed) || workouts[0];
     if (!activeWorkout) return <div className="p-8 text-center text-text-secondary">Nenhum treino disponível.</div>;
 
+    const currentSubWorkout = activeWorkout.subWorkouts && activeWorkout.subWorkouts.length > 0
+      ? activeWorkout.subWorkouts[selectedSubWorkoutIndex]
+      : null;
+
+    const displayExercises = currentSubWorkout
+      ? (currentSubWorkout.exercises || [])
+      : (activeWorkout.exercises || []);
+
     return (
-      <div className="max-w-7xl mx-auto pb-20">
-        <div className="flex items-center justify-between gap-4 mb-8">
+      <div className="max-w-7xl mx-auto pb-20 animate-in fade-in duration-300">
+        {/* Title & Back nav Row */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">
-              {activeWorkout.title}
+              {activeWorkout.name || activeWorkout.title}
             </h1>
-            <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">
-              Siga os exercícios abaixo para completar seu treino.
+            <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-medium">
+              Siga os parâmetros prescritos pelo seu personal trainer abaixo.
             </p>
           </div>
           <button 
-            onClick={() => setIsTraining(false)}
-            className="flex items-center gap-2 text-text-secondary hover:text-primary transition-colors font-medium"
+            onClick={() => {
+              setIsTraining(false);
+              setCompletedExercises([]);
+            }}
+            className="flex self-start md:self-center items-center gap-2 px-4 py-2 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-light-secondary dark:text-text-dark-secondary hover:text-primary transition-colors font-bold text-sm"
           >
             <span className="material-symbols-outlined">arrow_back</span>
-            Sair
+            Voltar
           </button>
         </div>
 
+        {/* Dynamic subworkouts tabs (Treino A, Treino B, etc.) */}
+        {activeWorkout.subWorkouts && activeWorkout.subWorkouts.length > 0 && (
+          <div className="flex flex-wrap gap-2.5 mb-8 bg-card-light dark:bg-card-dark p-2 rounded-2xl border border-border-light dark:border-border-dark shadow-inner">
+            {activeWorkout.subWorkouts.map((sw: any, idx: number) => (
+              <button
+                key={sw.id || idx}
+                onClick={() => {
+                  setSelectedSubWorkoutIndex(idx);
+                  setCompletedExercises([]);
+                }}
+                className={`flex-1 min-w-[120px] py-3 px-4 rounded-xl text-center font-black text-sm transition-all focus:outline-none ${
+                  selectedSubWorkoutIndex === idx
+                    ? "bg-primary text-background-dark shadow-lg shadow-primary/20 scale-[1.01]"
+                    : "text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-text-dark-primary hover:bg-background-light dark:hover:bg-background-dark"
+                }`}
+              >
+                {sw.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Exercises Loop */}
         <div className="space-y-6">
-          {(activeWorkout.exercises || []).map((ex: any, index: number) => (
-            <div 
-              key={index} 
-              className={`bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-6 flex flex-col gap-4 transition-opacity ${completedExercises.includes(index.toString()) ? 'opacity-60' : ''}`}
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-xl font-bold text-text-light-primary dark:text-text-dark-primary">{ex.name}</h2>
-                  <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm mt-1">Exercício {index + 1} de {activeWorkout.exercises.length}</p>
+          {displayExercises.map((ex: any, index: number) => {
+            const isFullExCompleted = completedExercises.includes(`full-${index}`);
+            return (
+              <div 
+                key={index} 
+                className={`bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark shadow-sm p-6 flex flex-col gap-4 transition-all duration-200 ${isFullExCompleted ? 'opacity-55' : ''}`}
+              >
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="min-w-0">
+                    {ex.isSpecial && (
+                      <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-black tracking-widest uppercase bg-primary/20 text-primary mb-2 border border-primary/20 animate-pulse">Série Especial</span>
+                    )}
+                    <h2 className="text-xl font-black tracking-tight text-text-light-primary dark:text-text-dark-primary truncate">{ex.name}</h2>
+                    <p className="text-text-light-secondary dark:text-text-dark-secondary text-[11px] font-bold uppercase tracking-wider mt-1">{ex.category || "GERAL"} • Exercício {index + 1} de {displayExercises.length}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                    <button
+                      onClick={() => {
+                        const id = `full-${index}`;
+                        setCompletedExercises(prev => 
+                          prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+                        );
+                      }}
+                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl transition-all text-sm font-black ${
+                        isFullExCompleted
+                          ? 'bg-primary/20 text-primary border border-transparent' 
+                          : 'border border-primary text-primary hover:bg-primary/10'
+                      }`}
+                    >
+                      <span className={`material-symbols-outlined ${isFullExCompleted ? 'fill' : ''}`}>
+                        {isFullExCompleted ? 'check_circle' : 'check'}
+                      </span>
+                      {isFullExCompleted ? 'Concluído' : 'Concluir'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setChatContext({ type: 'exercise', id: index.toString(), name: ex.name });
+                        setActiveTab('chat');
+                      }}
+                      className="size-11 flex items-center justify-center border border-border-light dark:border-border-dark text-text-light-secondary dark:text-text-dark-secondary rounded-xl hover:text-primary hover:border-primary transition-colors hover:bg-white/5"
+                      title="Tirar Dúvida com o Personal"
+                    >
+                      <span className="material-symbols-outlined text-lg">chat</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => {
-                      const id = index.toString();
-                      setCompletedExercises(prev => 
-                        prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-                      );
-                    }}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                      completedExercises.includes(index.toString())
-                        ? 'bg-primary/20 text-primary cursor-default' 
-                        : 'border border-primary text-primary hover:bg-primary/10'
-                    }`}
-                  >
-                    <span className={`material-symbols-outlined ${completedExercises.includes(index.toString()) ? 'fill' : ''}`}>
-                      {completedExercises.includes(index.toString()) ? 'check_circle' : 'check'}
-                    </span>
-                    {completedExercises.includes(index.toString()) ? 'Concluído' : 'Marcar como concluído'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setChatContext({ type: 'exercise', id: index.toString(), name: ex.name });
-                      setActiveTab('chat');
-                    }}
-                    className="flex items-center justify-center gap-2 px-4 py-2 border border-border-light dark:border-border-dark text-text-light-secondary dark:text-text-dark-secondary rounded-lg hover:text-primary hover:border-primary transition-colors text-sm font-medium"
-                  >
-                    <span className="material-symbols-outlined text-sm">chat</span>
-                    Dúvida
-                  </button>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-background-light dark:bg-background-dark p-3 rounded-lg">
-                  <p className="text-[10px] uppercase font-bold text-text-light-secondary dark:text-text-dark-secondary mb-1">Séries</p>
-                  <p className="text-xl font-bold text-primary">{ex.sets}</p>
-                </div>
-                <div className="bg-background-light dark:bg-background-dark p-3 rounded-lg">
-                  <p className="text-[10px] uppercase font-bold text-text-light-secondary dark:text-text-dark-secondary mb-1">Reps</p>
-                  <p className="text-xl font-bold text-primary">{ex.reps}</p>
-                </div>
-                <div className="bg-background-light dark:bg-background-dark p-3 rounded-lg">
-                  <p className="text-[10px] uppercase font-bold text-text-light-secondary dark:text-text-dark-secondary mb-1">Descanso</p>
-                  <p className="text-xl font-bold text-primary">{ex.rest}</p>
-                </div>
-              </div>
+                {/* Highly structured detailed series vs fallback */}
+                {ex.series && ex.series.length > 0 ? (
+                  <div className="border border-border-light dark:border-border-dark rounded-xl overflow-hidden bg-background-light/30 dark:bg-background-dark/30 font-sans">
+                    <div className="grid grid-cols-4 gap-2 bg-background-light dark:bg-background-dark p-3 text-[10px] font-black uppercase text-text-light-secondary dark:text-text-dark-secondary border-b border-border-light dark:border-border-dark text-center tracking-wider">
+                      <span>Série</span>
+                      <span>Objetivo ({ex.seriesForm === "Minuto" ? "Tempo" : "Reps"})</span>
+                      <span>Carga ({ex.loadConfig || "Kg"})</span>
+                      <span>Marcar</span>
+                    </div>
+                    <div className="divide-y divide-border-light dark:divide-border-dark">
+                      {ex.series.map((s: any, sIdx: number) => {
+                        const keyId = `set-${index}-${sIdx}`;
+                        const isSetCompleted = completedExercises.includes(keyId);
+                        return (
+                          <div 
+                            key={s.id || sIdx} 
+                            className={`grid grid-cols-4 gap-2 p-3 text-sm items-center text-center transition-all ${isSetCompleted ? 'bg-primary/5 line-through opacity-55' : ''}`}
+                          >
+                            <span className="font-extrabold text-text-light-primary dark:text-text-dark-primary text-xs">A{sIdx + 1}</span>
+                            <span className="font-bold text-text-light-secondary dark:text-text-dark-secondary">{s.reps || "10"} {ex.seriesForm === "Minuto" ? "min" : ex.seriesForm === "Segundo" ? "seg" : "reps"}</span>
+                            <span className="font-black text-primary font-mono text-xs">{s.weight ? `${s.weight} ${ex.loadConfig || "Kg"}` : "Peso Corporal"}</span>
+                            <div className="flex items-center justify-center">
+                              <button
+                                onClick={() => {
+                                  setCompletedExercises(prev => 
+                                    prev.includes(keyId) ? prev.filter(item => item !== keyId) : [...prev, keyId]
+                                  );
+                                }}
+                                className={`size-6 rounded-md flex items-center justify-center transition-all border ${
+                                  isSetCompleted 
+                                    ? 'bg-primary border-primary text-background-dark' 
+                                    : 'border-border-light dark:border-border-dark hover:border-primary text-text-light-secondary dark:text-text-dark-secondary hover:bg-white/5'
+                                }`}
+                              >
+                                <span className="material-symbols-outlined text-[14px] font-black">{isSetCompleted ? 'check' : ''}</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="bg-background-light dark:bg-background-dark p-3 rounded-xl border border-border-light dark:border-border-dark">
+                      <p className="text-[10px] uppercase font-bold text-text-light-secondary dark:text-text-dark-secondary mb-1">Séries</p>
+                      <p className="text-xl font-black text-primary">{ex.sets || "3"}</p>
+                    </div>
+                    <div className="bg-background-light dark:bg-background-dark p-3 rounded-xl border border-border-light dark:border-border-dark">
+                      <p className="text-[10px] uppercase font-bold text-text-light-secondary dark:text-text-dark-secondary mb-1">Reps</p>
+                      <p className="text-xl font-black text-primary">{ex.reps || "10"}</p>
+                    </div>
+                    <div className="bg-background-light dark:bg-background-dark p-3 rounded-xl border border-border-light dark:border-border-dark">
+                      <p className="text-[10px] uppercase font-bold text-text-light-secondary dark:text-text-dark-secondary mb-1">Pausa</p>
+                      <p className="text-xl font-black text-primary">{ex.rest || "60"}s</p>
+                    </div>
+                  </div>
+                )}
 
-              {ex.notes && (
-                <div className="border-t border-border-light dark:border-border-dark pt-4 space-y-2">
-                  <p className="text-sm font-medium text-text-light-primary dark:text-text-dark-primary">Observações do Personal:</p>
-                  <p className="text-sm text-text-light-secondary dark:text-text-dark-secondary">{ex.notes}</p>
+                {/* Rest / Pausa live and video demonstrative watch link if registered */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-3.5 border-t border-dashed border-border-light dark:border-border-dark">
+                  <div className="flex items-center gap-1.5 text-[11px] text-text-light-secondary dark:text-text-dark-secondary font-extrabold uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-[17px] text-primary">timer</span>
+                    <span>Descanso Recomendado: {ex.rest >= 60 ? `${Math.floor(ex.rest / 60)}m ${ex.rest % 60}s` : `${ex.rest}s`}</span>
+                  </div>
+                  
+                  {ex.videoUrl && (
+                    <a 
+                      href={ex.videoUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="flex items-center gap-1.5 text-xs text-secondary hover:underline font-black uppercase tracking-wider"
+                    >
+                      <span className="material-symbols-outlined text-[17px]">play_circle</span>
+                      <span>Assistir Vídeo de Execução</span>
+                    </a>
+                  )}
                 </div>
-              )}
+
+                {ex.notes && (
+                  <div className="bg-background-light/40 dark:bg-background-dark/40 border border-border-light dark:border-border-dark p-4 rounded-xl">
+                    <p className="text-xs font-black uppercase tracking-widest text-text-light-primary dark:text-text-dark-primary mb-1 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-primary">tips_and_updates</span>
+                      Instruções Técnicas:
+                    </p>
+                    <p className="text-sm text-text-light-secondary dark:text-text-dark-secondary leading-relaxed whitespace-pre-line">{ex.notes}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {displayExercises.length === 0 && (
+            <div className="py-16 text-center bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark">
+              <span className="material-symbols-outlined text-5xl text-text-secondary mb-3 font-light animate-bounce">fitness_center</span>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary font-bold text-lg">Nenhum exercício cadastrado no {currentSubWorkout?.name || "Treino"}.</p>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary text-xs mt-1">Fale com seu personal trainer para prescrever exercícios a você.</p>
             </div>
-          ))}
+          )}
         </div>
 
+        {/* Finish workout button */}
         <div className="mt-12 flex flex-col items-center gap-4">
            <button 
             disabled={activeWorkout.completed}
@@ -813,9 +931,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                 setCompletedExercises([]);
               }
             }}
-            className="w-full max-w-sm h-14 bg-primary text-background-dark font-black text-lg rounded-2xl shadow-xl shadow-primary/30 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+            className="w-full max-w-sm h-14 bg-primary text-background-dark font-black text-lg rounded-2xl shadow-xl shadow-primary/30 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {activeWorkout.completed ? 'Treino já Concluído' : 'Finalizar Treino'}
+            {activeWorkout.completed ? 'Treino já Concluído' : 'Finalizar Sessão de Treino'}
           </button>
         </div>
       </div>
