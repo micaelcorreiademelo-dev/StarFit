@@ -218,6 +218,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [mobileSelectedStudent, setMobileSelectedStudent] = useState<any>(null);
   const [chatInitialStudentId, setChatInitialStudentId] = useState<string | null>(null);
   const [chatBackToStudent, setChatBackToStudent] = useState<any | null>(null);
+  const [tabBeforeChat, setTabBeforeChat] = useState<string | null>(null);
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [libraryExercises, setLibraryExercises] = useState<any[]>([]);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
@@ -227,12 +228,17 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [latestChat, setLatestChat] = useState<any>(null);
   const [isChatOpenOnMobile, setIsChatOpenOnMobile] = useState(false);
   const [editedStudent, setEditedStudent] = useState<any>(null);
+  const [isMobileActionMenuOpen, setIsMobileActionMenuOpen] = useState(false);
+  const [isSelectingStudentForWorkout, setIsSelectingStudentForWorkout] = useState(false);
+  const [studentSearchForWorkout, setStudentSearchForWorkout] = useState("");
 
   useEffect(() => {
     if (activeTab !== 'chat') {
       setChatInitialStudentId(null);
       setChatBackToStudent(null);
+      setTabBeforeChat(null);
     }
+    setIsMobileActionMenuOpen(false);
   }, [activeTab]);
 
   useEffect(() => {
@@ -3398,7 +3404,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               }
             }}
             onExitChat={() => {
-              setActiveTab('students');
+              if (tabBeforeChat) {
+                setActiveTab(tabBeforeChat);
+                setTabBeforeChat(null);
+              } else {
+                setActiveTab('students');
+              }
             }}
           />
         );
@@ -3419,7 +3430,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     }
   };
 
-  const hideNavs = activeTab === "chat" || 
+  const hideTopNav = (activeTab === "chat" && isChatOpenOnMobile) || 
+    (activeTab === "students" && (mobileSelectedStudent !== null || editingStudentProfile !== null));
+
+  const hideBottomNav = activeTab === "chat" || 
     (activeTab === "students" && (mobileSelectedStudent !== null || editingStudentProfile !== null));
 
   return (
@@ -3434,7 +3448,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       />
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden">
         {/* Mobile Header / Top Navbar */}
-        <header className={`md:hidden flex items-center justify-between px-4 h-16 bg-primary border-b border-primary shrink-0 z-40 fixed top-0 w-full left-0 right-0 transition-transform duration-300 ease-in-out ${hideNavs ? '-translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
+        <header className={`md:hidden flex items-center justify-between px-4 h-16 bg-primary border-b border-primary shrink-0 z-40 fixed top-0 w-full left-0 right-0 transition-transform duration-300 ease-in-out ${hideTopNav ? '-translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-background-dark fill text-2xl">
               fitness_center
@@ -3453,7 +3467,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     <span className="material-symbols-outlined">qr_code</span>
                  </button>
                  <button
-                    onClick={() => setActiveTab('chat')}
+                    onClick={() => {
+                       setTabBeforeChat(activeTab);
+                       setActiveTab('chat');
+                    }}
                     className="flex items-center justify-center size-10 rounded-lg text-background-dark hover:bg-background-dark/10 transition-all font-bold"
                  >
                     <span className="material-symbols-outlined">chat</span>
@@ -3480,14 +3497,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         </header>
 
         {/* Padding for mobile top nav */}
-        <div className={`md:hidden shrink-0 transition-[height] duration-300 ease-in-out ${hideNavs ? 'h-0' : 'h-16'}`}></div>
+        <div className={`md:hidden shrink-0 transition-[height] duration-300 ease-in-out ${hideTopNav ? 'h-0' : 'h-16'}`}></div>
 
-        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? 'p-0 pb-0 md:pb-0' : hideNavs ? 'overflow-y-auto p-4 md:p-8 pb-10' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
+        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? 'p-0 pb-0 md:pb-0' : hideTopNav ? 'overflow-y-auto p-4 md:p-8 pb-10' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
           <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto w-full'}`}>{renderContent()}</div>
         </div>
 
         {/* Mobile Bottom Navbar */}
-        <nav className={`md:hidden fixed bottom-1 left-0 right-0 h-[84px] z-50 transition-transform duration-300 ease-in-out ${hideNavs ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
+        <nav className={`md:hidden fixed bottom-1 left-0 right-0 h-[84px] z-50 transition-transform duration-300 ease-in-out ${hideBottomNav ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 84" preserveAspectRatio="none">
             <path
               d="M0 0 H120 C135 0 140 3 145 10 C 158 52 217 52 230 10 C 235 3 240 0 255 0 H375 V84 H0 Z"
@@ -3517,12 +3534,71 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </button>
  
             {/* Workout Button - Elevated & Centralized */}
-            <div className={`relative -mt-[110px] transition-transform duration-300 ease-in-out ${hideNavs ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
+            <div className={`relative w-[80px] h-[80px] -mt-[110px] flex items-center justify-center transition-transform duration-300 ease-in-out ${hideBottomNav ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'} z-50`}>
+              {/* Floating Menu options */}
+              {isMobileActionMenuOpen && (
+                <div className="absolute bottom-[95px] left-1/2 -translate-x-1/2 flex flex-col gap-3 min-w-[220px] items-center z-[1000] drop-shadow-2xl">
+                  {/* Option 1: Para um aluno */}
+                  <div className="w-full transition-all animate-in slide-in-from-bottom-4 duration-300 ease-out fill-mode-both">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMobileActionMenuOpen(false);
+                        setIsSelectingStudentForWorkout(true);
+                      }}
+                      className="w-full bg-card-dark/95 backdrop-blur-md border border-border-dark active:border-primary/50 text-white rounded-2xl p-3 flex items-center gap-3.5 shadow-[0_12px_30px_rgba(0,0,0,0.7)] hover:brightness-110 active:scale-95 transition-all text-left"
+                    >
+                      <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                        <span className="material-symbols-outlined font-bold text-xl">person_add</span>
+                      </div>
+                      <div className="flex flex-col select-none">
+                        <span className="text-sm font-black text-white leading-tight">Criar ficha</span>
+                        <span className="text-[11px] text-text-secondary">Para um aluno</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Option 2: Modelo */}
+                  <div className="w-full transition-all animate-in slide-in-from-bottom-4 duration-300 ease-out delay-75 fill-mode-both">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingWorkoutId("new");
+                        setPreAssignedStudentId(null);
+                        setWorkoutName("Ficha Modelo");
+                        setExercises([]);
+                        setActiveTab("workouts");
+                        setIsMobileActionMenuOpen(false);
+                      }}
+                      className="w-full bg-card-dark/95 backdrop-blur-md border border-border-dark active:border-primary/50 text-white rounded-2xl p-3 flex items-center gap-3.5 shadow-[0_12px_30px_rgba(0,0,0,0.7)] hover:brightness-110 active:scale-95 transition-all text-left"
+                    >
+                      <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                        <span className="material-symbols-outlined font-bold text-xl">layers</span>
+                      </div>
+                      <div className="flex flex-col select-none">
+                        <span className="text-sm font-black text-white leading-tight">Criar ficha</span>
+                        <span className="text-[11px] text-text-secondary">Modelo</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <button
-                  onClick={() => setActiveTab('workouts')}
-                  className={`flex items-center justify-center size-[80px] rounded-full border-4 border-background-dark shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.25)] transition-all active:scale-95 ${(activeTab === 'workouts') ? 'bg-primary text-background-dark scale-105 shadow-[0_12px_35px_rgba(19,236,91,0.4)]' : 'bg-primary text-background-dark/90 hover:brightness-110'}`}
+                  onClick={() => setIsMobileActionMenuOpen(!isMobileActionMenuOpen)}
+                  className={`flex items-center justify-center rounded-full border-4 shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.25)] transition-all ease-out duration-250 active:scale-95 ${
+                    isMobileActionMenuOpen 
+                      ? 'size-[68px] bg-primary text-background-dark border-primary shadow-[0_12px_35px_rgba(19,236,91,0.4)]' 
+                      : (activeTab === 'workouts')
+                        ? 'size-[80px] bg-primary text-background-dark scale-105 border-primary shadow-[0_12px_35px_rgba(19,236,91,0.4)]' 
+                        : 'size-[80px] bg-primary text-background-dark/90 border-background-dark hover:brightness-110'
+                  }`}
               >
-                  <span className="material-symbols-outlined text-[40px] drop-shadow-sm font-bold">fitness_center</span>
+                  {isMobileActionMenuOpen ? (
+                    <span className="material-symbols-outlined text-[28px] drop-shadow-sm font-bold animate-in spin-in-12 duration-250">close</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-[40px] drop-shadow-sm font-bold animate-in zoom-in-50 duration-200">fitness_center</span>
+                  )}
               </button>
             </div>
 
@@ -3543,6 +3619,89 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </button>
           </div>
         </nav>
+
+        {/* Mobile floating action menu blurred backdrop overlay */}
+        {isMobileActionMenuOpen && (
+          <div 
+            onClick={() => setIsMobileActionMenuOpen(false)}
+            className="md:hidden fixed inset-0 bg-background-dark/60 backdrop-blur-sm z-40 transition-all duration-300 animate-in fade-in cursor-pointer"
+          />
+        )}
+
+        {/* Student selection modal for mobile workout creation */}
+        {isSelectingStudentForWorkout && (
+          <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-card-dark border border-border-dark w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
+              <div className="flex items-center justify-between p-4 border-b border-border-dark bg-background-dark/50 shrink-0">
+                <h3 className="text-white font-bold tracking-tight text-sm">
+                  Selecionar Aluno para o Treino
+                </h3>
+                <button 
+                  onClick={() => {
+                    setIsSelectingStudentForWorkout(false);
+                    setStudentSearchForWorkout("");
+                  }}
+                  className="text-text-secondary hover:text-white transition-colors"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              {/* Student Search */}
+              <div className="p-3 bg-background-dark/20 border-b border-border-dark shrink-0">
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-sm">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Pesquisar aluno..."
+                    value={studentSearchForWorkout}
+                    onChange={(e) => setStudentSearchForWorkout(e.target.value)}
+                    className="w-full bg-background-dark/50 border border-border-dark/60 rounded-xl py-2 pl-9 pr-4 text-white text-sm focus:outline-none focus:border-primary transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Student List */}
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+                {studentsData.filter(s => s.name.toLowerCase().includes(studentSearchForWorkout.toLowerCase())).length === 0 ? (
+                  <div className="text-center py-8 text-text-secondary">
+                    <span className="material-symbols-outlined text-4xl mb-2 opacity-55">group_off</span>
+                    <p className="text-sm">Nenhum aluno encontrado</p>
+                  </div>
+                ) : (
+                  studentsData
+                    .filter(s => s.name.toLowerCase().includes(studentSearchForWorkout.toLowerCase()))
+                    .map((student) => (
+                      <button
+                        key={student.id}
+                        onClick={() => {
+                          setEditingWorkoutId("new");
+                          setPreAssignedStudentId(student.id);
+                          setWorkoutName(`Treino Exclusivo - ${student.name}`);
+                          setExercises([]);
+                          setActiveTab("workouts");
+                          setIsSelectingStudentForWorkout(false);
+                          setStudentSearchForWorkout("");
+                        }}
+                        className="w-full flex items-center gap-3 p-3 bg-background-dark/40 hover:bg-white/5 border border-border-dark/50 rounded-xl hover:border-primary/30 transition-all text-left"
+                      >
+                        <div className="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+                          {student.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                          <span className="text-sm font-bold text-white truncate">{student.name}</span>
+                          {student.username && <span className="text-xs text-text-secondary truncate">{student.username}</span>}
+                        </div>
+                        <span className="material-symbols-outlined text-sm text-text-secondary ml-auto shrink-0">arrow_forward</span>
+                      </button>
+                    ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Announcements Modal */}
