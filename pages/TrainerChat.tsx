@@ -7,11 +7,13 @@ import { dataService } from '../services/dataService';
 interface TrainerChatProps {
   user: User;
   onChatStateChange?: (isOpen: boolean) => void;
+  initialStudentId?: string | null;
+  onBackToStudentProfile?: () => void;
 }
 
 export type ChatFilter = 'all' | 'online' | 'offline' | 'unanswered' | 'favorites';
 
-const TrainerChat: React.FC<TrainerChatProps> = ({ user, onChatStateChange }) => {
+const TrainerChat: React.FC<TrainerChatProps> = ({ user, onChatStateChange, initialStudentId, onBackToStudentProfile }) => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -23,7 +25,14 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user, onChatStateChange }) =>
   const [filter, setFilter] = useState<ChatFilter>('all');
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(initialStudentId || null);
+
+  // Sync initial student ID if it changes
+  useEffect(() => {
+    if (initialStudentId) {
+      setSelectedStudentId(initialStudentId);
+    }
+  }, [initialStudentId]);
 
   // Mark online presence
   useEffect(() => {
@@ -264,8 +273,14 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user, onChatStateChange }) =>
             <header className="flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-3 pb-3 border-b border-border-dark bg-card-dark shrink-0 w-full z-20 shadow-sm">
               <div className="flex items-center gap-3 overflow-hidden">
                 <button 
-                  onClick={() => setSelectedStudentId(null)}
-                  className="md:hidden flex items-center justify-center size-10 rounded-full hover:bg-white/5 text-text-secondary hover:text-white transition-colors shrink-0 -ml-2"
+                  onClick={() => {
+                    if (onBackToStudentProfile && selectedStudentId === initialStudentId) {
+                      onBackToStudentProfile();
+                    } else {
+                      setSelectedStudentId(null);
+                    }
+                  }}
+                  className={`items-center justify-center size-10 rounded-full hover:bg-white/5 text-text-secondary hover:text-white transition-colors shrink-0 -ml-2 md:hidden ${onBackToStudentProfile && selectedStudentId === initialStudentId ? '!flex' : 'flex'}`}
                 >
                   <span className="material-symbols-outlined">arrow_back</span>
                 </button>

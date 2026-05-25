@@ -216,6 +216,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const prevRequestsCountRef = useRef(0);
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const [mobileSelectedStudent, setMobileSelectedStudent] = useState<any>(null);
+  const [chatInitialStudentId, setChatInitialStudentId] = useState<string | null>(null);
+  const [chatBackToStudent, setChatBackToStudent] = useState<any | null>(null);
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [libraryExercises, setLibraryExercises] = useState<any[]>([]);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
@@ -225,6 +227,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [latestChat, setLatestChat] = useState<any>(null);
   const [isChatOpenOnMobile, setIsChatOpenOnMobile] = useState(false);
   const [editedStudent, setEditedStudent] = useState<any>(null);
+
+  useEffect(() => {
+    if (activeTab !== 'chat') {
+      setChatInitialStudentId(null);
+      setChatBackToStudent(null);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (editingStudentProfile) {
@@ -750,7 +759,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         </div>
 
         {/* Warnings Section */}
-        <div className="flex flex-col gap-4">
+        <div className="hidden md:flex flex-col gap-4">
           <h2 className="text-white text-xl font-bold tracking-tight">
             Avisos Importantes
           </h2>
@@ -821,7 +830,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       </div>
 
       {/* Recent Activities Section */}
-      <div className="flex flex-col gap-4">
+      <div className="hidden md:flex flex-col gap-4">
         <h2 className="text-white text-xl font-bold tracking-tight">
           Últimas Atividades dos Alunos
         </h2>
@@ -1489,19 +1498,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative">
           
           {/* Green Hero Section under the card and buttons */}
-          <div className="absolute top-0 left-0 right-0 h-[280px] bg-primary/20 -mx-4 -mt-4 rounded-b-[2.5rem] z-0 overflow-hidden border-b border-primary/20">
-            <div className="absolute inset-0 bg-gradient-to-b from-primary/30 via-primary/5 to-transparent"></div>
+          <div className="absolute top-0 left-0 right-0 h-[280px] bg-primary -mx-4 -mt-4 rounded-b-[2.5rem] z-0 overflow-hidden border-b border-primary">
           </div>
           
           {/* Header row containing page title and back button outside card - Centered on Mobile */}
           <div className="relative z-10 flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
             <button 
               onClick={() => setMobileSelectedStudent(null)}
-              className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-white/5 text-text-secondary hover:text-white transition-all active:scale-95 border border-white/5 shadow-md shrink-0"
+              className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-background-dark/10 text-background-dark hover:bg-background-dark/20 transition-all active:scale-95 border border-background-dark/10 shadow-sm shrink-0 font-bold"
             >
-              <span className="material-symbols-outlined text-xl">arrow_back_ios_new</span>
+              <span className="material-symbols-outlined text-xl font-bold">arrow_back_ios_new</span>
             </button>
-            <h1 className="text-white font-black text-xl tracking-tight text-center">Perfil do Aluno</h1>
+            <h1 className="text-background-dark font-black text-xl tracking-tight text-center">Perfil do Aluno</h1>
           </div>
 
           {/* Main Card with status, name, avatar */}
@@ -1528,19 +1536,21 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           <div className="flex flex-col gap-4">
             
             {/* Action Buttons reorganized - Horizontal line of icons only */}
-            <div className="relative z-10 grid grid-cols-3 gap-4 w-full">
+            <div className="relative z-10 flex justify-center gap-4 w-full">
               {/* Message button */}
               <button
                 onClick={async () => {
                   try {
                     await chatService.getOrCreateChat(user.id, student.id);
+                    setChatInitialStudentId(student.id);
+                    setChatBackToStudent(student);
                     setActiveTab('chat');
                     setMobileSelectedStudent(null);
                   } catch (e) {
                     console.error(e);
                   }
                 }}
-                className="h-12 flex items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 active:scale-95 transition-all shadow-sm hover:bg-purple-500/20"
+                className="w-20 h-12 flex items-center justify-center rounded-xl bg-background-dark/10 text-background-dark border border-background-dark/10 active:scale-95 transition-all shadow-sm hover:bg-background-dark/20"
                 title="Mensagem"
               >
                 <span className="material-symbols-outlined font-bold text-xl">forum</span>
@@ -1549,7 +1559,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               {/* Edit button */}
               <button
                 onClick={() => setEditingStudentProfile(student)}
-                className="h-12 flex items-center justify-center rounded-xl bg-white/5 text-white border border-white/10 active:scale-95 transition-all shadow-sm hover:bg-white/10"
+                className="w-20 h-12 flex items-center justify-center rounded-xl bg-background-dark/10 text-background-dark border border-background-dark/10 active:scale-95 transition-all shadow-sm hover:bg-background-dark/20"
                 title="Editar Aluno"
               >
                 <span className="material-symbols-outlined font-bold text-xl">edit</span>
@@ -1558,7 +1568,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               {/* Physical Evaluation progress */}
               <button
                 onClick={() => setAddingEvaluationStudent(student)}
-                className="h-12 flex items-center justify-center rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20 active:scale-95 transition-all shadow-sm hover:bg-orange-500/20"
+                className="w-20 h-12 flex items-center justify-center rounded-xl bg-background-dark/10 text-background-dark border border-background-dark/10 active:scale-95 transition-all shadow-sm hover:bg-background-dark/20"
                 title="Avaliação"
               >
                 <span className="material-symbols-outlined font-bold text-xl">monitor_weight</span>
@@ -1566,7 +1576,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </div>
 
             {/* Edge-to-Edge Carousel of Workouts & Add Workout integration */}
-            <div className="flex flex-col gap-3 mt-10 pr-0 mr-0">
+            <div className="flex flex-col gap-3 mt-14 pr-0 mr-0">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-bold text-sm uppercase tracking-widest flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary text-[18px]">fitness_center</span>
@@ -3374,7 +3384,21 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       case "plans":
         return <TrainerPlans user={user} />;
       case "chat":
-        return <TrainerChat user={user} onChatStateChange={setIsChatOpenOnMobile} />;
+        return (
+          <TrainerChat 
+            user={user} 
+            onChatStateChange={setIsChatOpenOnMobile} 
+            initialStudentId={chatInitialStudentId}
+            onBackToStudentProfile={() => {
+              if (chatBackToStudent) {
+                setMobileSelectedStudent(chatBackToStudent);
+                setActiveTab('students');
+                setChatBackToStudent(null);
+                setChatInitialStudentId(null);
+              }
+            }}
+          />
+        );
       case "landing-page":
         return <TrainerLandingPage user={user} />;
       case "settings-menu":
@@ -3407,12 +3431,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       />
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden">
         {/* Mobile Header / Top Navbar */}
-        <header className={`md:hidden flex items-center justify-between px-4 h-16 bg-card-dark border-b border-border-dark shrink-0 z-40 fixed top-0 w-full left-0 right-0 transition-transform duration-300 ease-in-out ${hideNavs ? '-translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
+        <header className={`md:hidden flex items-center justify-between px-4 h-16 bg-primary border-b border-primary shrink-0 z-40 fixed top-0 w-full left-0 right-0 transition-transform duration-300 ease-in-out ${hideNavs ? '-translate-y-[100%] pointer-events-none' : 'translate-y-0'}`}>
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary fill text-2xl">
+            <span className="material-symbols-outlined text-background-dark fill text-2xl">
               fitness_center
             </span>
-            <span className="font-black text-xl tracking-tighter text-white">
+            <span className="font-black text-xl tracking-tighter text-background-dark">
               StarFit
             </span>
           </div>
@@ -3421,13 +3445,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                <>
                  <button
                     onClick={() => setShowQRCode(true)}
-                    className="flex items-center justify-center size-10 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-all"
+                    className="flex items-center justify-center size-10 rounded-lg text-background-dark hover:bg-background-dark/10 transition-all font-bold"
                  >
                     <span className="material-symbols-outlined">qr_code</span>
                  </button>
                  <button
                     onClick={() => setActiveTab('chat')}
-                    className="flex items-center justify-center size-10 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 transition-all"
+                    className="flex items-center justify-center size-10 rounded-lg text-background-dark hover:bg-background-dark/10 transition-all font-bold"
                  >
                     <span className="material-symbols-outlined">chat</span>
                  </button>
@@ -3436,15 +3460,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <motion.button 
               onClick={markAnnouncementsRead}
               animate={unreadAnnouncements > 0 ? {
-                borderColor: ["rgba(34, 197, 94, 0)", "#22c55e", "rgba(34, 197, 94, 0)"],
-                backgroundColor: ["rgba(34, 197, 94, 0)", "rgba(34, 197, 94, 0.1)", "rgba(34, 197, 94, 0)"],
+                borderColor: ["rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0.4)", "rgba(0, 0, 0, 0)"],
+                backgroundColor: ["rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0.1)", "rgba(0, 0, 0, 0)"],
               } : {}}
               transition={unreadAnnouncements > 0 ? { repeat: Infinity, duration: 2 } : {}}
-              className="relative flex items-center justify-center size-10 text-text-secondary hover:text-white border border-transparent rounded-lg transition-all"
+              className="relative flex items-center justify-center size-10 text-background-dark hover:bg-background-dark/10 border border-transparent rounded-lg transition-all font-bold"
             >
               <span className="material-symbols-outlined">notifications</span>
               {unreadAnnouncements > 0 && (
-                <span className="absolute top-1 right-1 bg-primary text-background-dark text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-background-dark">
+                <span className="absolute top-1 right-1 bg-background-dark text-primary text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-primary">
                   {unreadAnnouncements}
                 </span>
               )}
@@ -3468,7 +3492,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             />
             <path
               d="M0 0 H120 C135 0 140 3 145 10 C 158 52 217 52 230 10 C 235 3 240 0 255 0 H375"
-              className="stroke-border-dark"
+              className="stroke-primary"
               strokeWidth="1"
               fill="none"
             />
