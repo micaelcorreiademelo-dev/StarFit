@@ -9,11 +9,12 @@ interface TrainerChatProps {
   onChatStateChange?: (isOpen: boolean) => void;
   initialStudentId?: string | null;
   onBackToStudentProfile?: () => void;
+  onExitChat?: () => void;
 }
 
 export type ChatFilter = 'all' | 'online' | 'offline' | 'unanswered' | 'favorites';
 
-const TrainerChat: React.FC<TrainerChatProps> = ({ user, onChatStateChange, initialStudentId, onBackToStudentProfile }) => {
+const TrainerChat: React.FC<TrainerChatProps> = ({ user, onChatStateChange, initialStudentId, onBackToStudentProfile, onExitChat }) => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -23,6 +24,7 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user, onChatStateChange, init
   const scrollRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ChatFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(initialStudentId || null);
@@ -179,21 +181,57 @@ const TrainerChat: React.FC<TrainerChatProps> = ({ user, onChatStateChange, init
        case 'unanswered': list = list.filter(s => s.isUnanswered); break;
        case 'favorites': list = list.filter(s => s.chat?.isFavorite); break;
      }
+     if (searchQuery.trim()) {
+       const query = searchQuery.toLowerCase().trim();
+       list = list.filter(s => s.name?.toLowerCase().includes(query));
+     }
      return list.sort((a, b) => {
        const timeA = a.chat?.lastMessageTime?.toMillis?.() || 0;
        const timeB = b.chat?.lastMessageTime?.toMillis?.() || 0;
        return timeB - timeA;
      });
-  }, [combinedStudentsList, filter]);
+  }, [combinedStudentsList, filter, searchQuery]);
 
   return (
     <div className="flex h-full w-full bg-background-dark overflow-hidden relative">
       {/* Conversation List Panel */}
       <aside className={`flex flex-col w-full md:w-[380px] bg-card-dark border-r border-border-dark shrink-0 h-full ${activeStudent ? 'hidden md:flex' : 'flex'}`}>
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-border-dark space-y-4 shrink-0 bg-card-dark z-10 w-full">
+        <div className="p-4 border-b border-border-dark space-y-4 shrink-0 bg-card-dark z-10 w-full animate-in fade-in duration-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black text-white tracking-tight">Conversas</h2>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => {
+                  if (onExitChat) onExitChat();
+                }}
+                className="md:hidden flex items-center justify-center size-10 rounded-full hover:bg-white/5 text-text-secondary hover:text-white transition-colors shrink-0 -ml-2"
+              >
+                <span className="material-symbols-outlined">arrow_back</span>
+              </button>
+              <h2 className="text-2xl font-black text-white tracking-tight">Conversas</h2>
+            </div>
+          </div>
+          
+          {/* Mobile Search Input - Keeps Desktop 100% Intact */}
+          <div className="block md:hidden relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-lg">
+              search
+            </span>
+            <input
+              type="text"
+              placeholder="Buscar aluno..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-background-dark/50 border border-border-dark rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder:text-text-secondary/70 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all font-medium"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white"
+              >
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            )}
           </div>
           
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">

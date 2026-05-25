@@ -3397,6 +3397,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 setChatInitialStudentId(null);
               }
             }}
+            onExitChat={() => {
+              setActiveTab('students');
+            }}
           />
         );
       case "landing-page":
@@ -3416,7 +3419,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     }
   };
 
-  const hideNavs = (activeTab === "chat" && isChatOpenOnMobile) || 
+  const hideNavs = activeTab === "chat" || 
     (activeTab === "students" && (mobileSelectedStudent !== null || editingStudentProfile !== null));
 
   return (
@@ -3479,7 +3482,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         {/* Padding for mobile top nav */}
         <div className={`md:hidden shrink-0 transition-[height] duration-300 ease-in-out ${hideNavs ? 'h-0' : 'h-16'}`}></div>
 
-        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? (isChatOpenOnMobile ? 'p-0 pb-0' : 'p-0 pb-[84px] md:pb-0') : hideNavs ? 'overflow-y-auto p-4 md:p-8 pb-10' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
+        <div className={`flex-1 overflow-hidden flex flex-col ${activeTab === 'chat' ? 'p-0 pb-0 md:pb-0' : hideNavs ? 'overflow-y-auto p-4 md:p-8 pb-10' : 'overflow-y-auto p-4 md:p-8 pb-[calc(10rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
           <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto w-full'}`}>{renderContent()}</div>
         </div>
 
