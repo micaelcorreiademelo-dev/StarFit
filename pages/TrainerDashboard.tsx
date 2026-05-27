@@ -1906,22 +1906,22 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
       return (
         <>
-          <div className="flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative">
-          
-          {/* Green Hero Section under the card and buttons */}
-          <div className="absolute top-0 left-0 right-0 h-[280px] bg-primary -mx-4 -mt-4 rounded-b-[2.5rem] z-0 overflow-hidden border-b border-primary">
-          </div>
-          
-          {/* Header row containing page title and back button outside card - Centered on Mobile */}
-          <div className="relative z-10 flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
-            <button 
-              onClick={() => setMobileSelectedStudent(null)}
-              className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-background-dark/10 text-background-dark hover:bg-background-dark/20 transition-all active:scale-95 border border-background-dark/10 shadow-sm shrink-0 font-bold"
-            >
-              <span className="material-symbols-outlined text-xl font-bold">arrow_back_ios_new</span>
-            </button>
-            <h1 className="text-background-dark font-black text-xl tracking-tight text-center">Perfil do Aluno</h1>
-          </div>
+          <div className={`flex flex-col gap-6 w-full mx-auto max-w-7xl px-0 animate-in slide-in-from-right-8 duration-300 pb-20 relative ${isCreatingWorkoutForStudentFlow && isBottomSheetOpen ? "blur-sm pointer-events-none" : ""}`}>
+            
+            {/* Green Hero Section under the card and buttons */}
+            <div className="absolute top-0 left-0 right-0 h-[280px] bg-primary -mx-4 -mt-4 rounded-b-[2.5rem] z-0 overflow-hidden border-b border-primary">
+            </div>
+            
+            {/* Header row containing page title and back button outside card - Centered on Mobile */}
+            <div className="relative z-10 flex items-center justify-center w-full min-h-[44px] px-12 mb-2">
+              <button 
+                onClick={() => setMobileSelectedStudent(null)}
+                className="absolute left-0 size-10 flex items-center justify-center rounded-xl bg-background-dark/10 text-background-dark hover:bg-background-dark/20 transition-all active:scale-95 border border-background-dark/10 shadow-sm shrink-0 font-bold"
+              >
+                <span className="material-symbols-outlined text-xl font-bold">arrow_back_ios_new</span>
+              </button>
+              <h1 className="text-background-dark font-black text-xl tracking-tight text-center">Perfil do Aluno</h1>
+            </div>
 
           {/* Main Card with status, name, avatar */}
           <div className="relative z-10 flex items-center justify-between gap-4 bg-card-dark px-2.5 py-4 md:px-6 md:py-6 rounded-xl border border-border-dark shadow-md">
@@ -2184,6 +2184,86 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
              </button>
           </div>
         </div>
+        {isCreatingWorkoutForStudentFlow && isBottomSheetOpen && (
+          <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/40 backdrop-blur-none animate-in fade-in duration-300">
+             {/* Click outdoor of Bottom Sheet dismisses it and returns to students list */}
+             <div className="absolute inset-0" onClick={() => {
+               setIsBottomSheetOpen(false);
+               setIsCreatingWorkoutForStudentFlow(false);
+               setMobileSelectedStudent(null);
+             }} />
+
+             {/* Bottom sheet content */}
+             <div className="relative w-full max-w-sm bg-card-dark border-t border-border-dark rounded-t-[2.5rem] p-6 pb-20 flex flex-col gap-6 z-10 animate-in slide-in-from-bottom duration-300 shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
+                {/* Handle bar indicator to reinforce aesthetic */}
+                <div className="mx-auto w-12 h-1.5 bg-white/10 rounded-full mb-1" />
+
+                {/* Centered highlighted title requested by user */}
+                <div className="text-center border-b border-border-dark pb-4 flex flex-col items-center gap-1">
+                  <h3 className="text-white uppercase italic font-black text-lg tracking-tight">Selecione o tipo</h3>
+                  <div className="h-1 w-12 bg-primary rounded-full mt-1 animate-pulse" />
+                  <p className="text-xs text-text-secondary mt-1 font-semibold">para o aluno: <span className="text-white uppercase font-bold">{student.name}</span></p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {/* Action 1: Ficha em branco */}
+                  <button
+                    onClick={() => {
+                      setIsBottomSheetOpen(false);
+                      setBlankWorkoutName("");
+                      setBlankWorkoutDays(3);
+                      setIsSettingUpBlankWorkout(true);
+                    }}
+                    className="w-full bg-white/5 border border-white/5 hover:border-primary/50 text-white rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98] text-left shadow-lg"
+                  >
+                    <div className="size-11 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                      <span className="material-symbols-outlined font-black text-xl">add_circle</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-white leading-tight">Ficha em branco</span>
+                      <span className="text-[10px] text-text-secondary/70 mt-0.5">Crie uma ficha do zero</span>
+                    </div>
+                  </button>
+
+                  {/* Action 2: Baseada em um modelo */}
+                  <button
+                    onClick={() => {
+                      setIsBottomSheetOpen(false);
+                      setModelSearchQuery("");
+                      setMobileWorkoutFlowState("select_model");
+                    }}
+                    className="w-full bg-white/5 border border-white/5 hover:border-primary/50 text-white rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98] text-left shadow-lg"
+                  >
+                    <div className="size-11 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                      <span className="material-symbols-outlined font-black text-xl">layers</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-white leading-tight">Baseada em um modelo</span>
+                      <span className="text-[10px] text-text-secondary/70 mt-0.5">Escolha uma da biblioteca de treinos e copie para o aluno</span>
+                    </div>
+                  </button>
+
+                  {/* Action 3: Copiar ficha de outro aluno */}
+                  <button
+                    onClick={() => {
+                      setIsBottomSheetOpen(false);
+                      setCopySearchQuery("");
+                      setMobileWorkoutFlowState("select_copy_student");
+                    }}
+                    className="w-full bg-white/5 border border-white/5 hover:border-primary/50 text-white rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98] text-left shadow-lg"
+                  >
+                    <div className="size-11 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                      <span className="material-symbols-outlined font-black text-xl">content_copy</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-white leading-tight">Copiar ficha de outro aluno</span>
+                      <span className="text-[10px] text-text-secondary/70 mt-0.5">Copie a ficha de um aluno que já tenha uma ficha pronta</span>
+                    </div>
+                  </button>
+                </div>
+             </div>
+          </div>
+        )}
         {linkWorkoutModal}
       </>
       );
@@ -4650,14 +4730,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <div className={`relative w-[80px] h-[80px] -mt-[110px] flex items-center justify-center transition-transform duration-300 ease-in-out ${hideBottomNav ? 'translate-y-[100%] pointer-events-none' : 'translate-y-0'} z-50`}>
               {/* Floating Menu options */}
               {isMobileActionMenuOpen && (
-                <div className="absolute bottom-[95px] left-1/2 -translate-x-1/2 flex flex-col gap-3 min-w-[220px] items-center z-[1000] drop-shadow-2xl">
-                  {/* Option 1: Para um aluno */}
+                <div className="absolute bottom-[95px] left-1/2 -translate-x-1/2 flex flex-col gap-3 min-w-[245px] items-center z-[1000] drop-shadow-2xl">
+                  {/* Option 1: Criar ficha para aluno */}
                   <div className="w-full transition-all animate-in slide-in-from-bottom-4 duration-300 ease-out fill-mode-both">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setIsMobileActionMenuOpen(false);
-                        setIsSelectingStudentForWorkout(true);
+                        setIsCreatingWorkoutForStudentFlow(true);
+                        setActiveTab("students");
                       }}
                       className="w-full bg-card-dark/95 backdrop-blur-md border border-border-dark active:border-primary/50 text-white rounded-2xl p-3 flex items-center gap-3.5 shadow-[0_12px_30px_rgba(0,0,0,0.7)] hover:brightness-110 active:scale-95 transition-all text-left"
                     >
@@ -4665,13 +4746,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         <span className="material-symbols-outlined font-bold text-xl">person_add</span>
                       </div>
                       <div className="flex flex-col select-none">
-                        <span className="text-sm font-black text-white leading-tight">Criar ficha</span>
-                        <span className="text-[11px] text-text-secondary">Para um aluno</span>
+                        <span className="text-sm font-black text-white leading-tight">Criar ficha para aluno</span>
+                        <span className="text-[9px] text-text-secondary leading-normal">Selecionar aluno da lista</span>
                       </div>
                     </button>
                   </div>
 
-                  {/* Option 2: Modelo */}
+                  {/* Option 2: Criar ficha modelo */}
                   <div className="w-full transition-all animate-in slide-in-from-bottom-4 duration-300 ease-out delay-75 fill-mode-both">
                     <button
                       onClick={(e) => {
@@ -4679,7 +4760,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         setEditingWorkoutId("new");
                         setPreAssignedStudentId(null);
                         setWorkoutName("Ficha Modelo");
-                        setExercises([]);
+                        setSubWorkouts([]);
                         setActiveTab("workouts");
                         setIsMobileActionMenuOpen(false);
                       }}
@@ -4689,8 +4770,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         <span className="material-symbols-outlined font-bold text-xl">layers</span>
                       </div>
                       <div className="flex flex-col select-none">
-                        <span className="text-sm font-black text-white leading-tight">Criar ficha</span>
-                        <span className="text-[11px] text-text-secondary">Modelo</span>
+                        <span className="text-sm font-black text-white leading-tight">Criar ficha modelo</span>
+                        <span className="text-[9px] text-text-secondary leading-normal">Sem vincular a aluno</span>
                       </div>
                     </button>
                   </div>
