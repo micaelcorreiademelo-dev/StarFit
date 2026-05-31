@@ -257,6 +257,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   }, [activeTab]);
 
   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileScreen(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
     if (editingStudentProfile) {
       setEditedStudent({
         id: editingStudentProfile.id,
@@ -510,12 +519,20 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [editingWorkoutNameIndex, setEditingWorkoutNameIndex] = useState<number | null>(null);
   const [isEditingInlineName, setIsEditingInlineName] = useState(false);
   const [tempWorkoutName, setTempWorkoutName] = useState("");
+  const [isConfirmingDeleteSubWorkout, setIsConfirmingDeleteSubWorkout] = useState(false);
+  const [isConfirmingDeleteFicha, setIsConfirmingDeleteFicha] = useState(false);
+  const [deletingModelWorkoutId, setDeletingModelWorkoutId] = useState<string | null>(null);
+  const [deletingLibExerciseId, setDeletingLibExerciseId] = useState<string | null>(null);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [isMobileScreen, setIsMobileScreen] = useState(false);
+  const [isMobileBottomSheetExpanded, setIsMobileBottomSheetExpanded] = useState(false);
 
   // Estados para gerenciar a Ficha de Treino (Nome, Ativo, Periodizaçao e Remoção) na versão mobile
   const [isFichaMenuOpen, setIsFichaMenuOpen] = useState(false);
   const [fichaIsActive, setFichaIsActive] = useState(true);
   const [fichaPeriodizationType, setFichaPeriodizationType] = useState<"treinos" | "data" | null>(null);
   const [fichaPeriodizationValue, setFichaPeriodizationValue] = useState<string>("");
+  const [fichaObservation, setFichaObservation] = useState("");
 
   const handleSubWorkoutDragStart = (e: React.DragEvent, index: number) => {
     setDraggedSubWorkoutIndex(index);
@@ -1203,28 +1220,54 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                               {evt.time}
                             </span>
                             <div className="flex items-center gap-1">
-                              <span
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setNewEvent({ title: evt.title, type: evt.type, date: format(evt.date, 'yyyy-MM-dd'), time: evt.time });
-                                  setEditingEventId(evt.id);
-                                  setIsCreatingEvent(true);
-                                }}
-                                className="material-symbols-outlined text-[14px] cursor-pointer hover:text-white"
-                              >
-                                edit
-                              </span>
-                              <span
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  if (confirm('Tem certeza que deseja excluir este agendamento?')) {
-                                    await dataService.deleteAgendaEvent(evt.id);
-                                  }
-                                }}
-                                className="material-symbols-outlined text-[14px] cursor-pointer hover:text-red-500"
-                              >
-                                delete
-                              </span>
+                              {deletingEventId === evt.id ? (
+                                <>
+                                  <span
+                                    title="Confirmar exclusão"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      await dataService.deleteAgendaEvent(evt.id);
+                                      setDeletingEventId(null);
+                                    }}
+                                    className="material-symbols-outlined text-[14px] cursor-pointer text-red-500 hover:text-red-400 font-bold"
+                                  >
+                                    check
+                                  </span>
+                                  <span
+                                    title="Cancelar"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeletingEventId(null);
+                                    }}
+                                    className="material-symbols-outlined text-[14px] cursor-pointer text-text-secondary hover:text-white"
+                                  >
+                                    close
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <span
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setNewEvent({ title: evt.title, type: evt.type, date: format(evt.date, 'yyyy-MM-dd'), time: evt.time });
+                                      setEditingEventId(evt.id);
+                                      setIsCreatingEvent(true);
+                                    }}
+                                    className="material-symbols-outlined text-[14px] cursor-pointer hover:text-white"
+                                  >
+                                    edit
+                                  </span>
+                                  <span
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeletingEventId(evt.id);
+                                    }}
+                                    className="material-symbols-outlined text-[14px] cursor-pointer hover:text-red-500"
+                                  >
+                                    delete
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                           <p className="text-xs font-bold leading-tight">
@@ -1464,29 +1507,30 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </div>
 
             {/* Seção 2: Quantas vezes por semana */}
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-3">
               <label className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
                 <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
                 Quantas vezes por semana o aluno fará essa ficha de treino?
               </label>
-              <div className="grid grid-cols-5 gap-1.5 mt-1">
-                {[1, 2, 3, 4, 5].map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setBlankWorkoutDays(d)}
-                    className={`h-12 rounded-xl flex flex-col items-center justify-center font-black transition-all border ${
-                      blankWorkoutDays === d
-                        ? "bg-primary text-background-dark border-primary shadow-lg shadow-primary/20"
-                        : "bg-background-dark text-text-secondary border-border-dark hover:text-white"
-                    }`}
-                  >
-                    <span className="text-sm">{d}</span>
-                    <span className="text-[8px] uppercase font-bold tracking-tighter mt-0.5">
-                      {d === 1 ? "vez" : "vezes"}
-                    </span>
-                  </button>
-                ))}
+              <div className="flex flex-row flex-nowrap items-center justify-center gap-2.5 overflow-x-auto scrollbar-none pb-2 pt-1 max-w-full px-1">
+                {[1, 2, 3, 4, 5, 6, 7].map((d) => {
+                  const isSelected = blankWorkoutDays === d;
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setBlankWorkoutDays(d)}
+                      className={`size-12 rounded-full flex items-center justify-center font-black text-base transition-all duration-150 border shrink-0 cursor-pointer active:scale-90 select-none ${
+                        isSelected
+                          ? "bg-primary text-background-dark border-primary shadow-lg shadow-primary/30 font-black scale-105"
+                          : "bg-background-dark text-text-secondary border-border-dark hover:border-text-secondary/30 hover:text-white"
+                      }`}
+                      title={`${d} ${d === 1 ? 'dia' : 'dias'} por semana`}
+                    >
+                      {d}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1496,7 +1540,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <div className="w-full max-w-md">
               <button
                 onClick={() => {
-                  const letters = ["A", "B", "C", "D", "E"];
+                  const letters = ["A", "B", "C", "D", "E", "F", "G"];
                   const subs = Array.from({ length: blankWorkoutDays }).map((_, idx) => ({
                     id: letters[idx],
                     name: `Treino ${letters[idx]}`,
@@ -2207,7 +2251,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
              }} />
 
              {/* Bottom sheet content */}
-             <div className="relative w-full max-w-sm bg-card-dark border-t border-border-dark rounded-t-[2.5rem] p-6 pb-20 flex flex-col gap-6 z-10 animate-in slide-in-from-bottom duration-300 shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
+             <div className="relative w-full sm:max-w-md bg-card-dark border-t border-border-dark rounded-t-[2.5rem] p-6 pb-20 flex flex-col gap-6 z-10 animate-in slide-in-from-bottom duration-300 shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
                 {/* Handle bar indicator to reinforce aesthetic */}
                 <div className="mx-auto w-12 h-1.5 bg-white/10 rounded-full mb-1" />
 
@@ -3087,6 +3131,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       setFichaIsActive(true);
       setFichaPeriodizationType(null);
       setFichaPeriodizationValue("");
+      setFichaObservation("");
     } else {
       setEditingWorkoutId(w.id);
       setWorkoutName(w.name || w.title || "Treino sem nome");
@@ -3106,6 +3151,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       setFichaIsActive(w.isActive !== false);
       setFichaPeriodizationType(w.periodization?.type || null);
       setFichaPeriodizationValue(w.periodization?.value || "");
+      setFichaObservation(w.observation || "");
     }
   };
 
@@ -3168,54 +3214,72 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     edit
                   </span>
                 </button>
-                <div className="flex border-t border-border-dark divide-x divide-border-dark opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                  <button
-                    title="Vincular a Aluno"
-                    onClick={() => {
-                      // Navigate to students tab to select student
-                      setActiveTab("students");
-                      setSelectedWorkoutToLink(w.id);
-                    }}
-                    className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">
-                      person_add
-                    </span>
-                  </button>
-                  <button
-                    title="Duplicar"
-                    onClick={async () => {
-                      await dataService.createWorkout({
-                        name: `${w.name || w.title || "Treino sem nome"} (Cópia)`,
-                        exercises: w.exercises || [],
-                        trainerId: user.id
-                      });
-                    }}
-                    className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/5 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">
-                      content_copy
-                    </span>
-                  </button>
-                  <button
-                    title="Excluir"
-                    onClick={async () => {
-                      if (window.confirm("Deseja realmente excluir esta ficha?")) {
+                {deletingModelWorkoutId === w.id ? (
+                  <div className="flex border-t border-border-dark divide-x divide-border-dark bg-red-500/10 animate-in fade-in duration-200">
+                    <button
+                      onClick={() => setDeletingModelWorkoutId(null)}
+                      className="flex-1 py-2 text-[10px] font-black text-text-secondary hover:text-white transition-colors uppercase tracking-wider"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={async () => {
                         await dataService.deleteWorkout(w.id);
                         if (editingWorkoutId === w.id) {
                           setEditingWorkoutId(null);
                           setWorkoutName("");
                           setExercises([]);
                         }
-                      }
-                    }}
-                    className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">
-                      delete
-                    </span>
-                  </button>
-                </div>
+                        setDeletingModelWorkoutId(null);
+                      }}
+                      className="flex-1 py-2 text-[10px] font-black text-red-500 hover:bg-red-500/20 transition-colors uppercase tracking-wider"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex border-t border-border-dark divide-x divide-border-dark opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                    <button
+                      title="Vincular a Aluno"
+                      onClick={() => {
+                        // Navigate to students tab to select student
+                        setActiveTab("students");
+                        setSelectedWorkoutToLink(w.id);
+                      }}
+                      className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        person_add
+                      </span>
+                    </button>
+                    <button
+                      title="Duplicar"
+                      onClick={async () => {
+                        await dataService.createWorkout({
+                          name: `${w.name || w.title || "Treino sem nome"} (Cópia)`,
+                          exercises: w.exercises || [],
+                          trainerId: user.id
+                        });
+                      }}
+                      className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        content_copy
+                      </span>
+                    </button>
+                    <button
+                      title="Excluir"
+                      onClick={() => {
+                        setDeletingModelWorkoutId(w.id);
+                      }}
+                      className="flex-1 py-2 flex items-center justify-center text-text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        delete
+                      </span>
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
             <button 
@@ -3381,6 +3445,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 title: workoutName,
                 isActive: fichaIsActive,
                 periodization: fichaPeriodizationType ? { type: fichaPeriodizationType, value: fichaPeriodizationValue } : null,
+                observation: fichaObservation,
                 subWorkouts: subWorkouts,
                 exercises: flatExercisesList,
                 trainerId: user.id
@@ -3431,6 +3496,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             type="button"
                             onClick={() => {
                               setIsFichaMenuOpen(true);
+                              setIsConfirmingDeleteFicha(false);
                             }}
                             className="lg:hidden flex items-center justify-center size-11 rounded-full bg-white/5 border border-white/5 text-text-secondary hover:text-white transition-all active:scale-95 shrink-0"
                             title="Opções da Ficha"
@@ -3450,7 +3516,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         </div>
                       </div>
 
-                      <div className="p-6 pb-24 lg:pb-6 flex flex-col gap-6">
+                       <div className="p-6 pb-36 lg:pb-6 flex flex-col gap-6">
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="hidden lg:flex text-white font-bold text-lg items-center gap-2">
@@ -3571,6 +3637,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                     setTempWorkoutName(sw.name || "");
                                     setEditingWorkoutNameIndex(null);
                                     setIsEditingInlineName(false);
+                                    setIsConfirmingDeleteSubWorkout(false);
                                   }}
                                   className="size-9 rounded-lg bg-white/5 hover:bg-white/10 border border-border-dark text-text-secondary hover:text-white flex items-center justify-center transition-all"
                                   title="Opções do treino"
@@ -3620,17 +3687,31 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             </div>
                           )}
                         </div>
-                      </div>
 
-                      {/* Mobile Fixed Save Button (no Cancel) */}
-                      <div className="fixed bottom-0 left-0 right-0 p-4 border-t border-border-dark bg-background-dark/95 backdrop-blur-md z-40 flex items-center justify-center lg:hidden">
-                        <button
-                          onClick={saveEntireFicha}
-                          className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-background-dark hover:brightness-110 active:scale-[0.98] transition-all rounded-xl font-black shadow-lg shadow-primary/20 text-sm"
-                        >
-                          <span className="material-symbols-outlined text-base">save</span>
-                          Salvar Ficha
-                        </button>
+                        {/* Observações de Execução (Desktop & Mobile) */}
+                        <div className="flex flex-col gap-2.5 mt-8 pt-8 border-t border-border-dark/30">
+                          <label className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary text-sm">notes</span>
+                            Observações de Execução
+                          </label>
+                          <textarea
+                            ref={(el) => {
+                              if (el) {
+                                el.style.height = "auto";
+                                el.style.height = el.scrollHeight + "px";
+                              }
+                            }}
+                            value={fichaObservation}
+                            onChange={(e) => {
+                              setFichaObservation(e.target.value);
+                              e.target.style.height = "auto";
+                              e.target.style.height = e.target.scrollHeight + "px";
+                            }}
+                            className="w-full bg-background-dark/50 border border-border-dark focus:border-primary/60 rounded-xl px-4 py-3 text-white text-sm placeholder-text-secondary/50 focus:outline-none transition-all resize-none min-h-[100px] overflow-hidden leading-relaxed"
+                            placeholder="Adicione orientações gerais para a execução desta ficha de treino..."
+                            rows={4}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -3642,7 +3723,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         <div className="flex items-center gap-3">
                           <button
                             onClick={() => setWorkoutEditorStep("ficha")}
-                            className="size-10 rounded-xl bg-white/5 border border-white/5 text-text-secondary hover:text-white hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center shrink-0"
+                            className="hidden lg:flex size-10 rounded-xl bg-white/5 border border-white/5 text-text-secondary hover:text-white hover:bg-white/10 active:scale-95 transition-all items-center justify-center shrink-0"
                           >
                             <span className="material-symbols-outlined text-lg">arrow_back</span>
                           </button>
@@ -3653,21 +3734,46 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         </div>
                       </div>
 
-                      <div className="p-6 flex flex-col gap-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-6 flex flex-col gap-6 pb-28 lg:pb-6">
+                        {/* Versão Desktop (Inalterada) */}
+                        <div className="hidden lg:grid grid-cols-2 gap-4">
                           <button
                             onClick={openExerciseDetailForManual}
                             className="flex items-center justify-center gap-2.5 h-14 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold border border-white/5 hover:border-white/10 transition-all active:scale-[0.98]"
                           >
                             <span className="material-symbols-outlined text-primary">add_box</span>
-                            Criar exercício manualmente
+                            <span className="hidden lg:inline">Criar exercício manualmente</span>
+                            <span className="lg:hidden">Criar Exercício</span>
                           </button>
                           <button
                             onClick={openExerciseDetailForSpecial}
                             className="flex items-center justify-center gap-2.5 h-14 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-bold border border-primary/10 hover:border-primary/20 transition-all active:scale-[0.98]"
                           >
-                            <span className="material-symbols-outlined text-primary">stars</span>
-                            Criar séries especiais
+                            <span className="material-symbols-outlined text-primary hidden lg:inline">stars</span>
+                            <span className="material-symbols-outlined text-primary lg:hidden">add_circle</span>
+                            <span className="hidden lg:inline">Criar séries especiais</span>
+                            <span className="lg:hidden">Série Especial</span>
+                          </button>
+                        </div>
+
+                        {/* Versão Mobile (Recauchutada/Refatorada) */}
+                        <div className="lg:hidden flex items-center justify-between gap-4 px-1">
+                          <button
+                            onClick={openExerciseDetailForManual}
+                            className="flex-1 flex items-center justify-center gap-2 h-12 text-primary hover:text-primary-focus font-bold transition-all active:scale-95 text-sm"
+                          >
+                            <span className="material-symbols-outlined text-[24px]">add</span>
+                            <span>Criar Exercício</span>
+                          </button>
+                          
+                          <div className="w-px h-6 bg-border-dark/30 self-center" />
+                          
+                          <button
+                            onClick={openExerciseDetailForSpecial}
+                            className="flex-1 flex items-center justify-center gap-2 h-12 text-primary hover:text-primary-focus font-bold transition-all active:scale-95 text-sm"
+                          >
+                            <span className="material-symbols-outlined text-[24px]">add</span>
+                            <span>Série Especial</span>
                           </button>
                         </div>
 
@@ -3677,7 +3783,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             type="text"
                             value={subWorkoutSearchQuery}
                             onChange={(e) => setSubWorkoutSearchQuery(e.target.value)}
-                            placeholder="Buscar por nome do exercício (ex: Supino reto, Rosca...)"
+                            placeholder={isMobileScreen ? "Buscar exercício" : "Buscar por nome do exercício (ex: Supino reto, Rosca...)"}
                             className="w-full h-14 rounded-xl bg-background-dark/70 border border-border-dark text-white text-base focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 pl-12 pr-4 transition-all placeholder-text-secondary/50"
                           />
                           {subWorkoutSearchQuery && (
@@ -3690,7 +3796,74 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           )}
                         </div>
 
-                        <div className="flex flex-col gap-2.5">
+                        {/* Filtros de Grupos Musculares - Mobile */}
+                        <div className="lg:hidden flex flex-col gap-2">
+                          <p className="text-text-primary text-xs font-black tracking-widest uppercase mb-1">Filtrar por Grupo Muscular</p>
+                          <div className="flex flex-col gap-1.5">
+                            {/* Linha 1: 5 botões */}
+                            <div className="flex justify-center gap-1.5 w-full">
+                              {["TODOS", "ABDOMINAL", "AERÓBICO", "ANTEBRAÇO", "BÍCEPS"].map((filter) => {
+                                const isSelected = filter === "TODOS" ? selectedMuscleGroupFilter === null : selectedMuscleGroupFilter === filter;
+                                return (
+                                  <button
+                                    key={`mobile-filter-row1-${filter}`}
+                                    onClick={() => setSelectedMuscleGroupFilter(filter === "TODOS" ? null : filter)}
+                                    className={`w-[calc((100%-24px)/5)] h-9 rounded-lg text-[9px] font-black transition-all border flex items-center justify-center text-center px-0.5 tracking-tighter uppercase leading-none ${
+                                      isSelected
+                                        ? "bg-primary text-background-dark border-primary font-black shadow-lg shadow-primary/20"
+                                        : "bg-white/5 text-text-secondary border-border-dark/60"
+                                    }`}
+                                  >
+                                    {filter}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Linha 2: 4 botões */}
+                            <div className="flex justify-center gap-1.5 w-full">
+                              {["COSTAS", "GLÚTEO", "OMBRO", "PANTURRILHA"].map((filter) => {
+                                const isSelected = selectedMuscleGroupFilter === filter;
+                                return (
+                                  <button
+                                    key={`mobile-filter-row2-${filter}`}
+                                    onClick={() => setSelectedMuscleGroupFilter(selectedMuscleGroupFilter === filter ? null : filter)}
+                                    className={`w-[calc((100%-24px)/5)] h-9 rounded-lg text-[9px] font-black transition-all border flex items-center justify-center text-center px-0.5 tracking-tighter uppercase leading-none ${
+                                      isSelected
+                                        ? "bg-primary text-background-dark border-primary font-black shadow-lg shadow-primary/20"
+                                        : "bg-white/5 text-text-secondary border-border-dark/60"
+                                    }`}
+                                  >
+                                    {filter}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Linha 3: 4 botões */}
+                            <div className="flex justify-center gap-1.5 w-full">
+                              {["PEITORAL", "PERNAS", "TRAPÉZIO", "TRÍCEPS"].map((filter) => {
+                                const isSelected = selectedMuscleGroupFilter === filter;
+                                return (
+                                  <button
+                                    key={`mobile-filter-row3-${filter}`}
+                                    onClick={() => setSelectedMuscleGroupFilter(selectedMuscleGroupFilter === filter ? null : filter)}
+                                    className={`w-[calc((100%-24px)/5)] h-9 rounded-lg text-[9px] font-black transition-all border flex items-center justify-center text-center px-0.5 tracking-tighter uppercase leading-none ${
+                                      isSelected
+                                        ? "bg-primary text-background-dark border-primary font-black shadow-lg shadow-primary/20"
+                                        : "bg-white/5 text-text-secondary border-border-dark/60"
+                                    }`}
+                                  >
+                                    {filter}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Filtros de Grupos Musculares - Desktop */}
+                        <div className="hidden lg:flex flex-col gap-2.5">
                           <p className="text-text-primary text-xs font-black tracking-widest uppercase">Filtrar por Grupo Muscular</p>
                           <div className="flex flex-wrap gap-1.5 py-1 max-h-[140px] overflow-y-auto custom-scrollbar">
                             <button
@@ -3718,7 +3891,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                               "TRÍCEPS"
                             ].map((filter) => (
                               <button
-                                key={filter}
+                                key={`desktop-filter-${filter}`}
                                 onClick={() => setSelectedMuscleGroupFilter(selectedMuscleGroupFilter === filter ? null : filter)}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                                   selectedMuscleGroupFilter === filter
@@ -3776,7 +3949,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           </div>
                         </div>
 
-                        <div className="border border-border-dark rounded-xl bg-background-dark/30 mt-4 overflow-hidden">
+                        {/* Accordion para desktop apenas */}
+                        <div className="hidden lg:block border border-border-dark rounded-xl bg-background-dark/30 mt-4 overflow-hidden">
                           <button
                             onClick={() => setAccordionExpanded(!accordionExpanded)}
                             className="w-full p-4 flex items-center justify-between font-black text-sm text-white hover:bg-white/5 transition-all focus:outline-none"
@@ -3795,7 +3969,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             <div className="p-4 border-t border-border-dark flex flex-col gap-2.5 bg-background-dark/10 max-h-[280px] overflow-y-auto custom-scrollbar">
                               {(subWorkouts[activeSubWorkoutIndex]?.exercises || []).map((ex: any, idx: number) => (
                                 <div 
-                                  key={ex.id || idx}
+                                  key={`desktop-ex-${ex.id || idx}`}
                                   className="bg-card-dark border border-border-dark p-3 rounded-lg flex items-center justify-between gap-4 transition-all hover:bg-card-dark/80"
                                 >
                                   <div 
@@ -3835,15 +4009,21 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           )}
                         </div>
 
-                        <div className="pt-4 flex justify-end">
+                        {/* Espaçador inferior no mobile para compensar a barra de botões */}
+                        <div className="h-12 lg:hidden" />
+
+                        {/* Botão conclusão (Centralizado no mobile, alinhado à direita no desktop) */}
+                        <div className="pt-6 flex justify-center lg:justify-end lg:pt-4">
                           <button 
                             onClick={() => setWorkoutEditorStep("ficha")}
-                            className="px-6 py-2.5 bg-background-dark border border-border-dark rounded-lg text-white font-bold text-sm hover:brightness-110 active:scale-95 transition-all"
+                            className="w-full max-w-[280px] lg:w-auto px-6 py-3 lg:py-2.5 bg-background-dark border border-border-dark rounded-xl lg:rounded-lg text-white font-bold text-sm hover:brightness-110 active:scale-95 transition-all text-center"
                           >
                             Pronto, Voltar para Ficha
                           </button>
                         </div>
                       </div>
+
+                      {/* Bottom Sheet de Exercícios Configurados removido daqui e reposicionado independente */}
                     </div>
                   )}
 
@@ -4063,6 +4243,19 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
                 </div>
 
+                {/* Botão Salvar Ficha Fixo Mobile (Viewport screen fixed) */}
+                {workoutEditorStep === "ficha" && (
+                  <div className="fixed bottom-0 left-0 right-0 p-4 border-t border-border-dark bg-background-dark/95 backdrop-blur-md z-[1000] flex items-center justify-center lg:hidden pb-[calc(1rem+env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-300">
+                    <button
+                      onClick={saveEntireFicha}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-background-dark hover:brightness-110 active:scale-[0.98] transition-all rounded-xl font-black shadow-lg shadow-primary/20 text-sm cursor-pointer select-none"
+                    >
+                      <span className="material-symbols-outlined text-base font-black">save</span>
+                      Salvar Ficha
+                    </button>
+                  </div>
+                )}
+
                 {/* BOTTOM SHEET PARA GESTÃO DO SUB-TREINO (MOBILE) - MOVIDO PARA FORA DO CARD */}
                 {mobileWorkoutActionIndex !== null && (
                   <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -4132,20 +4325,45 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => {
-                            const targetName = subWorkouts[mobileWorkoutActionIndex]?.name || "treino";
-                            if (window.confirm(`Excluir o ${targetName}? Todos os exercícios acoplados serão apagados.`)) {
-                              const updated = subWorkouts.filter((_, i) => i !== mobileWorkoutActionIndex);
-                              setSubWorkouts(updated);
-                              setMobileWorkoutActionIndex(null);
-                            }
-                          }}
-                          className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-xl text-sm font-bold transition-all"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">delete</span>
-                          Excluir Treino
-                        </button>
+                        {isConfirmingDeleteSubWorkout ? (
+                          <div className="flex flex-col gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl animate-in fade-in zoom-in-95 duration-200">
+                            <p className="text-white text-xs font-semibold leading-relaxed">
+                              Deseja excluir o <span className="text-red-400 font-bold">{subWorkouts[mobileWorkoutActionIndex]?.name || "treino"}</span>? Todos os exercícios acoplados serão apagados permanentemente.
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setIsConfirmingDeleteSubWorkout(false)}
+                                className="flex-1 py-2 px-3 rounded-lg border border-border-dark text-white font-bold hover:bg-white/5 transition-all text-xs cursor-pointer select-none"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = subWorkouts.filter((_, i) => i !== mobileWorkoutActionIndex);
+                                  setSubWorkouts(updated);
+                                  setMobileWorkoutActionIndex(null);
+                                  setIsConfirmingDeleteSubWorkout(false);
+                                }}
+                                className="flex-1 py-2 px-3 rounded-lg bg-red-500 text-white font-bold hover:brightness-110 transition-all text-xs cursor-pointer select-none"
+                              >
+                                Confirmar Exclusão
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsConfirmingDeleteSubWorkout(true);
+                            }}
+                            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-xl text-sm font-bold transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                            Excluir Treino
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -4290,28 +4508,51 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
                         {/* 4. Remover / Excluir Ficha */}
                         <div className="border-t border-border-dark/60 pt-4 mt-2">
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (window.confirm("Deseja realmente excluir esta ficha? Todos os treinos serão apagados permanentemente.")) {
-                                try {
-                                  if (editingWorkoutId && editingWorkoutId !== "new") {
-                                    await dataService.deleteWorkout(editingWorkoutId);
-                                  }
-                                  setEditingWorkoutId(null);
-                                  setIsFichaMenuOpen(false);
-                                  alert("Ficha de treino excluída com sucesso!");
-                                } catch (e) {
-                                  console.error(e);
-                                  alert("Erro ao excluir ficha.");
-                                }
-                              }
-                            }}
-                            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-xl text-sm font-bold transition-all"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">delete_forever</span>
-                            Excluir Ficha de Treino
-                          </button>
+                          {isConfirmingDeleteFicha ? (
+                            <div className="flex flex-col gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl animate-in fade-in zoom-in-95 duration-200">
+                              <p className="text-white text-xs font-semibold leading-relaxed">
+                                Deseja realmente excluir esta ficha? Todos os treinos serão apagados permanentemente do sistema.
+                              </p>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setIsConfirmingDeleteFicha(false)}
+                                  className="flex-1 py-2 px-3 rounded-lg border border-border-dark text-white font-bold hover:bg-white/5 transition-all text-xs cursor-pointer select-none"
+                                >
+                                  Cancelar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      if (editingWorkoutId && editingWorkoutId !== "new") {
+                                        await dataService.deleteWorkout(editingWorkoutId);
+                                      }
+                                      setEditingWorkoutId(null);
+                                      setIsFichaMenuOpen(false);
+                                      setIsConfirmingDeleteFicha(false);
+                                    } catch (e) {
+                                      console.error(e);
+                                    }
+                                  }}
+                                  className="flex-1 py-2 px-3 rounded-lg bg-red-500 text-white font-bold hover:brightness-110 transition-all text-xs cursor-pointer select-none"
+                                >
+                                  Confirmar Exclusão
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsConfirmingDeleteFicha(true);
+                              }}
+                              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-xl text-sm font-bold transition-all"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                              Excluir Ficha de Treino
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -4351,6 +4592,99 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           })()}
         </div>
       </div>
+
+      {/* Bottom Sheet de Exercícios Configurados para Mobile (Reposicionado e Independente) */}
+      {isMobileScreen && editingWorkoutId !== null && workoutEditorStep === "prescrever" && activeSubWorkoutIndex !== null && (
+        <AnimatePresence>
+          {isMobileBottomSheetExpanded && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileBottomSheetExpanded(false)}
+              className="fixed inset-0 bg-[#000]/60 z-40"
+            />
+          )}
+
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: isMobileBottomSheetExpanded ? 0 : "calc(100% - 64px)" }}
+            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            className="fixed bottom-0 left-0 right-0 bg-[#102216] border-t border-border-dark shadow-[0_-10px_30px_rgba(0,0,0,0.6)] z-50 rounded-t-3xl flex flex-col pointer-events-auto"
+            style={{ height: isMobileBottomSheetExpanded ? "70vh" : "64px" }}
+          >
+            {/* Barra de Toque e Resumo (recolhido/expandido) */}
+            <div 
+              onClick={() => setIsMobileBottomSheetExpanded(!isMobileBottomSheetExpanded)}
+              className="flex flex-col items-center justify-center h-16 w-full cursor-pointer select-none px-6 shrink-0 border-b border-border-dark/30"
+            >
+              <div className="w-12 h-1 bg-white/20 rounded-full mb-1" />
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-xl">fact_check</span>
+                  <span className="text-white text-sm font-bold">
+                    {subWorkouts[activeSubWorkoutIndex]?.exercises?.length || 0} Exercícios Configurados
+                  </span>
+                </div>
+                <span className="material-symbols-outlined text-text-secondary select-none">
+                  {isMobileBottomSheetExpanded ? "keyboard_arrow_down" : "keyboard_arrow_up"}
+                </span>
+              </div>
+            </div>
+
+            {/* Conteúdo Expandido */}
+            {isMobileBottomSheetExpanded && (
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-[#102216] min-h-0 pb-[calc(4rem+env(safe-area-inset-bottom))] animate-in fade-in duration-200">
+                {(subWorkouts[activeSubWorkoutIndex]?.exercises || []).map((ex: any, idx: number) => (
+                  <div 
+                    key={`mobile-bottomsheet-ex-${ex.id || idx}`}
+                    className="bg-card-dark border border-border-dark/60 p-3.5 rounded-xl flex items-center justify-between gap-4 transition-all"
+                    onClick={() => {
+                      openExerciseDetailForEdit(ex);
+                      setIsMobileBottomSheetExpanded(false);
+                    }}
+                  >
+                    <div className="flex-1 min-w-0 cursor-pointer">
+                      <h5 className="text-white font-bold text-sm leading-tight">{ex.name}</h5>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-text-secondary mt-1.5 uppercase tracking-wider">
+                        <span>{ex.series?.length || 0} Séries ({ex.seriesForm})</span>
+                        <span>•</span>
+                        <span>Pausa: {ex.rest}s</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => {
+                          openExerciseDetailForEdit(ex);
+                          setIsMobileBottomSheetExpanded(false);
+                        }}
+                        className="size-8 rounded bg-white/5 border border-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-all"
+                        title="Editar"
+                      >
+                        <span className="material-symbols-outlined text-base">edit</span>
+                      </button>
+                      <button
+                        onClick={() => deleteConfiguredExercise(ex.id)}
+                        className="size-8 rounded bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center transition-all"
+                        title="Remover"
+                      >
+                        <span className="material-symbols-outlined text-base">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {(subWorkouts[activeSubWorkoutIndex]?.exercises || []).length === 0 && (
+                  <div className="py-12 text-center text-text-secondary flex flex-col items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-4xl opacity-30">checklist</span>
+                    <p className="text-xs">Nenhum exercício configurado ainda neste treino.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      )}
     </div>
   );
 
@@ -4458,31 +4792,51 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 mt-auto pt-4 border-t border-border-dark">
-                  <button
-                    onClick={() => {
-                      setEditingEx(libEx);
-                      setShowAddExerciseModal(true);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-background-dark border border-border-dark text-text-primary hover:text-white hover:border-primary/50 hover:bg-primary/10 rounded-lg text-xs font-bold transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      edit
-                    </span>
-                    Editar
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (window.confirm("Deseja excluir este exercício da biblioteca?")) {
-                        await dataService.deleteExercise(libEx.id);
-                      }
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-xs font-bold transition-colors border border-transparent hover:border-red-600"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      delete
-                    </span>
-                    Excluir
-                  </button>
+                  {deletingLibExerciseId === libEx.id ? (
+                    <div className="flex-1 flex gap-2 animate-in fade-in duration-200">
+                      <button
+                        onClick={() => setDeletingLibExerciseId(null)}
+                        className="flex-1 py-2 rounded-lg bg-background-dark border border-border-dark text-text-secondary hover:text-white transition-all text-xs font-bold"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await dataService.deleteExercise(libEx.id);
+                          setDeletingLibExerciseId(null);
+                        }}
+                        className="flex-1 py-2 rounded-lg bg-red-500 text-white transition-all text-xs font-bold"
+                      >
+                        Confirmar
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          setEditingEx(libEx);
+                          setShowAddExerciseModal(true);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-background-dark border border-border-dark text-text-primary hover:text-white hover:border-primary/50 hover:bg-primary/10 rounded-lg text-xs font-bold transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          edit
+                        </span>
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDeletingLibExerciseId(libEx.id);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-xs font-bold transition-colors border border-transparent hover:border-red-600"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          delete
+                        </span>
+                        Excluir
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
