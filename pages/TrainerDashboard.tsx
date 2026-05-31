@@ -3977,11 +3977,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           )}
                         </div>
 
-                        {/* Espaçador inferior no mobile para compensar a barra de botões */}
-                        <div className="h-2 lg:hidden" />
-
                         {/* Botão conclusão (Centralizado no mobile, alinhado à direita no desktop) */}
-                        <div className="pt-2 flex justify-center lg:justify-end lg:pt-4">
+                        <div className="-mt-3 lg:mt-0 pt-0 flex justify-center lg:justify-end lg:pt-4">
                           <button 
                             onClick={() => setWorkoutEditorStep("ficha")}
                             className="w-full max-w-[280px] lg:w-auto px-6 py-3 lg:py-2.5 bg-background-dark border border-border-dark rounded-xl lg:rounded-lg text-white font-bold text-sm hover:brightness-110 active:scale-95 transition-all text-center"
