@@ -3545,7 +3545,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         <div className="flex flex-col gap-3">
                           {subWorkouts.map((sw, index) => (
                             <div
-                              key={sw.id || index}
+                              key={`sub-workout-${sw.id || index}-${index}`}
                               draggable
                               onDragStart={(e) => handleSubWorkoutDragStart(e, index)}
                               onDragOver={(e) => e.preventDefault()}
@@ -3720,21 +3720,21 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   {workoutEditorStep === "prescrever" && activeSubWorkoutIndex !== null && (
                     <div className="flex flex-col animate-in fade-in duration-200">
                       <div className="p-6 border-b border-border-dark flex items-center justify-between gap-4 bg-background-dark/30">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center lg:justify-start gap-3 w-full lg:w-auto">
                           <button
                             onClick={() => setWorkoutEditorStep("ficha")}
                             className="hidden lg:flex size-10 rounded-xl bg-white/5 border border-white/5 text-text-secondary hover:text-white hover:bg-white/10 active:scale-95 transition-all items-center justify-center shrink-0"
                           >
                             <span className="material-symbols-outlined text-lg">arrow_back</span>
                           </button>
-                          <div>
+                          <div className="text-center lg:text-left">
                             <p className="hidden lg:block text-xs text-primary font-black uppercase tracking-widest leading-none mb-1">Passo 2: Biblioteca de Exercícios</p>
                             <h2 className="text-white font-black text-xl tracking-tight leading-tight">Prescrição do {subWorkouts[activeSubWorkoutIndex]?.name}</h2>
                           </div>
                         </div>
                       </div>
 
-                      <div className="p-6 flex flex-col gap-6 pb-28 lg:pb-6">
+                      <div className="p-6 flex flex-col gap-6 pb-4 lg:pb-6">
                         {/* Versão Desktop (Inalterada) */}
                         <div className="hidden lg:grid grid-cols-2 gap-4">
                           <button
@@ -3757,22 +3757,20 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         </div>
 
                         {/* Versão Mobile (Recauchutada/Refatorada) */}
-                        <div className="lg:hidden flex items-center justify-between gap-4 px-1">
+                        <div className="lg:hidden flex items-center justify-between gap-3 px-1">
                           <button
                             onClick={openExerciseDetailForManual}
-                            className="flex-1 flex items-center justify-center gap-2 h-12 text-primary hover:text-primary-focus font-bold transition-all active:scale-95 text-sm"
+                            className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl bg-white/5 border border-white/10 text-white font-bold transition-all active:scale-[0.97] text-xs text-center shadow-lg shadow-black/10"
                           >
-                            <span className="material-symbols-outlined text-[24px]">add</span>
+                            <span className="material-symbols-outlined text-lg text-primary">add</span>
                             <span>Criar Exercício</span>
                           </button>
                           
-                          <div className="w-px h-6 bg-border-dark/30 self-center" />
-                          
                           <button
                             onClick={openExerciseDetailForSpecial}
-                            className="flex-1 flex items-center justify-center gap-2 h-12 text-primary hover:text-primary-focus font-bold transition-all active:scale-95 text-sm"
+                            className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl bg-primary/10 border border-primary/20 text-primary font-bold transition-all active:scale-[0.97] text-xs text-center shadow-lg shadow-primary/5"
                           >
-                            <span className="material-symbols-outlined text-[24px]">add</span>
+                            <span className="material-symbols-outlined text-lg">add</span>
                             <span>Série Especial</span>
                           </button>
                         </div>
@@ -3799,66 +3797,36 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         {/* Filtros de Grupos Musculares - Mobile */}
                         <div className="lg:hidden flex flex-col gap-2">
                           <p className="text-text-primary text-xs font-black tracking-widest uppercase mb-1">Filtrar por Grupo Muscular</p>
-                          <div className="flex flex-col gap-1.5">
-                            {/* Linha 1: 5 botões */}
-                            <div className="flex justify-center gap-1.5 w-full">
-                              {["TODOS", "ABDOMINAL", "AERÓBICO", "ANTEBRAÇO", "BÍCEPS"].map((filter) => {
-                                const isSelected = filter === "TODOS" ? selectedMuscleGroupFilter === null : selectedMuscleGroupFilter === filter;
-                                return (
-                                  <button
-                                    key={`mobile-filter-row1-${filter}`}
-                                    onClick={() => setSelectedMuscleGroupFilter(filter === "TODOS" ? null : filter)}
-                                    className={`w-[calc((100%-24px)/5)] h-9 rounded-lg text-[9px] font-black transition-all border flex items-center justify-center text-center px-0.5 tracking-tighter uppercase leading-none ${
-                                      isSelected
-                                        ? "bg-primary text-background-dark border-primary font-black shadow-lg shadow-primary/20"
-                                        : "bg-white/5 text-text-secondary border-border-dark/60"
-                                    }`}
-                                  >
-                                    {filter}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {/* Linha 2: 4 botões */}
-                            <div className="flex justify-center gap-1.5 w-full">
-                              {["COSTAS", "GLÚTEO", "OMBRO", "PANTURRILHA"].map((filter) => {
-                                const isSelected = selectedMuscleGroupFilter === filter;
-                                return (
-                                  <button
-                                    key={`mobile-filter-row2-${filter}`}
-                                    onClick={() => setSelectedMuscleGroupFilter(selectedMuscleGroupFilter === filter ? null : filter)}
-                                    className={`w-[calc((100%-24px)/5)] h-9 rounded-lg text-[9px] font-black transition-all border flex items-center justify-center text-center px-0.5 tracking-tighter uppercase leading-none ${
-                                      isSelected
-                                        ? "bg-primary text-background-dark border-primary font-black shadow-lg shadow-primary/20"
-                                        : "bg-white/5 text-text-secondary border-border-dark/60"
-                                    }`}
-                                  >
-                                    {filter}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {/* Linha 3: 4 botões */}
-                            <div className="flex justify-center gap-1.5 w-full">
-                              {["PEITORAL", "PERNAS", "TRAPÉZIO", "TRÍCEPS"].map((filter) => {
-                                const isSelected = selectedMuscleGroupFilter === filter;
-                                return (
-                                  <button
-                                    key={`mobile-filter-row3-${filter}`}
-                                    onClick={() => setSelectedMuscleGroupFilter(selectedMuscleGroupFilter === filter ? null : filter)}
-                                    className={`w-[calc((100%-24px)/5)] h-9 rounded-lg text-[9px] font-black transition-all border flex items-center justify-center text-center px-0.5 tracking-tighter uppercase leading-none ${
-                                      isSelected
-                                        ? "bg-primary text-background-dark border-primary font-black shadow-lg shadow-primary/20"
-                                        : "bg-white/5 text-text-secondary border-border-dark/60"
-                                    }`}
-                                  >
-                                    {filter}
-                                  </button>
-                                );
-                              })}
-                            </div>
+                          <div className="grid grid-cols-4 gap-1.5 w-full">
+                            {[
+                              "ABDOMINAL",
+                              "AERÓBICO",
+                              "ANTEBRAÇO",
+                              "BÍCEPS",
+                              "COSTAS",
+                              "GLÚTEO",
+                              "OMBRO",
+                              "PANTURRILHA",
+                              "PEITORAL",
+                              "PERNAS",
+                              "TRAPÉZIO",
+                              "TRÍCEPS"
+                            ].map((filter) => {
+                              const isSelected = selectedMuscleGroupFilter === filter;
+                              return (
+                                <button
+                                  key={`mobile-filter-grid-${filter}`}
+                                  onClick={() => setSelectedMuscleGroupFilter(selectedMuscleGroupFilter === filter ? null : filter)}
+                                  className={`h-9 rounded-lg text-[9px] font-black transition-all border flex items-center justify-center text-center px-0.5 tracking-tighter uppercase leading-none ${
+                                    isSelected
+                                      ? "bg-primary text-background-dark border-primary font-black shadow-lg shadow-primary/20"
+                                      : "bg-white/5 text-text-secondary border-border-dark/60"
+                                  }`}
+                                >
+                                  {filter}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -3908,7 +3876,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         <div className="flex flex-col gap-2">
                           <p className="text-text-primary text-xs font-black tracking-widest uppercase">Escolher Exercício da Biblioteca</p>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[550px] lg:max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
                             {LIBRARY_EXERCISES.filter((ex) => {
                               const matchesSearch = ex.name.toLowerCase().includes(subWorkoutSearchQuery.toLowerCase());
                               const matchesMuscle = selectedMuscleGroupFilter 
@@ -3969,7 +3937,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             <div className="p-4 border-t border-border-dark flex flex-col gap-2.5 bg-background-dark/10 max-h-[280px] overflow-y-auto custom-scrollbar">
                               {(subWorkouts[activeSubWorkoutIndex]?.exercises || []).map((ex: any, idx: number) => (
                                 <div 
-                                  key={`desktop-ex-${ex.id || idx}`}
+                                  key={`desktop-ex-${ex.id || idx}-${idx}`}
                                   className="bg-card-dark border border-border-dark p-3 rounded-lg flex items-center justify-between gap-4 transition-all hover:bg-card-dark/80"
                                 >
                                   <div 
@@ -4010,10 +3978,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         </div>
 
                         {/* Espaçador inferior no mobile para compensar a barra de botões */}
-                        <div className="h-12 lg:hidden" />
+                        <div className="h-2 lg:hidden" />
 
                         {/* Botão conclusão (Centralizado no mobile, alinhado à direita no desktop) */}
-                        <div className="pt-6 flex justify-center lg:justify-end lg:pt-4">
+                        <div className="pt-2 flex justify-center lg:justify-end lg:pt-4">
                           <button 
                             onClick={() => setWorkoutEditorStep("ficha")}
                             className="w-full max-w-[280px] lg:w-auto px-6 py-3 lg:py-2.5 bg-background-dark border border-border-dark rounded-xl lg:rounded-lg text-white font-bold text-sm hover:brightness-110 active:scale-95 transition-all text-center"
@@ -4147,7 +4115,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           <div className="flex flex-col gap-2.5">
                             {detailSeries.map((set, sIdx) => (
                               <div 
-                                key={set.id || sIdx}
+                                key={`detail-set-${set.id || sIdx}-${sIdx}`}
                                 className="bg-background-dark/40 border border-border-dark p-3 rounded-lg flex items-center justify-between gap-4 animate-in fade-in zoom-in-95"
                               >
                                 <span className="text-white text-xs font-black uppercase tracking-wider shrink-0 min-w-[50px]">Série {sIdx + 1}</span>
@@ -4637,7 +4605,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-[#102216] min-h-0 pb-[calc(4rem+env(safe-area-inset-bottom))] animate-in fade-in duration-200">
                 {(subWorkouts[activeSubWorkoutIndex]?.exercises || []).map((ex: any, idx: number) => (
                   <div 
-                    key={`mobile-bottomsheet-ex-${ex.id || idx}`}
+                    key={`mobile-bottomsheet-ex-${ex.id || idx}-${idx}`}
                     className="bg-card-dark border border-border-dark/60 p-3.5 rounded-xl flex items-center justify-between gap-4 transition-all"
                     onClick={() => {
                       openExerciseDetailForEdit(ex);
