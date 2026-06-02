@@ -423,15 +423,18 @@ export const dataService = {
       const workoutSnap = await getDoc(workoutRef);
       if (workoutSnap.exists()) {
         const data = workoutSnap.data();
-        const currentIds = data.studentIds || [];
-        if (!currentIds.includes(studentId)) {
-          await updateDoc(workoutRef, {
-            studentIds: [...currentIds, studentId]
-          });
-        }
+        // Clone the workout specifically for this student so they have a separate copy
+        const { id, createdAt, studentIds, studentStatuses, ...cleanData } = data;
+        await addDoc(collection(db, 'workouts'), {
+          ...cleanData,
+          studentIds: [studentId],
+          studentStatuses: { [studentId]: "Ativo" },
+          isModelLinked: true, // Marker showing it was cloned from a template
+          createdAt: serverTimestamp()
+        });
       }
     } catch (error) {
-       handleFirestoreError(error, OperationType.UPDATE, `workouts/${workoutId}`);
+       handleFirestoreError(error, OperationType.CREATE, 'workouts');
     }
   }
 };

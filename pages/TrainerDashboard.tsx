@@ -502,6 +502,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [isManualExercise, setIsManualExercise] = useState(false);
   const [isSpecialSeries, setIsSpecialSeries] = useState(false);
   const [editingConfiguredExerciseId, setEditingConfiguredExerciseId] = useState<string | null>(null);
+  const [editingConfiguredExerciseIndex, setEditingConfiguredExerciseIndex] = useState<number | null>(null);
 
   const [detailSeriesForm, setDetailSeriesForm] = useState<"Repetição" | "Minuto" | "Segundo">("Repetição");
   const [detailLoadConfig, setDetailLoadConfig] = useState<"Kg" | "Libras" | "Pesos" | "%">("Kg");
@@ -525,6 +526,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [deletingLibExerciseId, setDeletingLibExerciseId] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
   const [isMobileScreen, setIsMobileScreen] = useState(false);
+  const [mobileWorkoutSetupHistory, setMobileWorkoutSetupHistory] = useState<{
+    mobileSelectedStudent: any;
+    isSettingUpBlankWorkout: boolean;
+    isCreatingWorkoutForStudentFlow: boolean;
+    blankWorkoutName: string;
+    blankWorkoutDays: number;
+    mobileWorkoutFlowState: "select_model" | "select_copy_student" | null;
+  } | null>(null);
   const [isMobileBottomSheetExpanded, setIsMobileBottomSheetExpanded] = useState(false);
 
   // Estados para gerenciar a Ficha de Treino (Nome, Ativo, Periodizaçao e Remoção) na versão mobile
@@ -533,6 +542,137 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [fichaPeriodizationType, setFichaPeriodizationType] = useState<"treinos" | "data" | null>(null);
   const [fichaPeriodizationValue, setFichaPeriodizationValue] = useState<string>("");
   const [fichaObservation, setFichaObservation] = useState("");
+
+  const openExerciseDetailForNew = (libEx: any) => {
+    setSelectedLibraryExercise(libEx);
+    setIsManualExercise(false);
+    setIsSpecialSeries(false);
+    setEditingConfiguredExerciseId(null);
+    setEditingConfiguredExerciseIndex(null);
+    setDetailSeriesForm("Repetição");
+    setDetailLoadConfig("Kg");
+    setDetailRest(60);
+    setDetailSeries([
+      { id: "s1", reps: "10", weight: "" },
+      { id: "s2", reps: "10", weight: "" },
+      { id: "s3", reps: "10", weight: "" }
+    ]);
+    setDetailVideoUrl("");
+    setDetailNotes("");
+    setWorkoutEditorStep("detalhe");
+  };
+
+  const openExerciseDetailForEdit = (ex: any, idx?: number) => {
+    setSelectedLibraryExercise({ name: ex.name, category: ex.category });
+    setIsManualExercise(ex.isManual || false);
+    setIsSpecialSeries(ex.isSpecial || false);
+    setEditingConfiguredExerciseId(ex.id || null);
+    setEditingConfiguredExerciseIndex(idx !== undefined ? idx : null);
+    setDetailSeriesForm(ex.seriesForm || "Repetição");
+    setDetailLoadConfig(ex.loadConfig || "Kg");
+    setDetailRest(ex.rest || 60);
+    setDetailSeries(ex.series || [{ id: "s1", reps: "10", weight: "" }]);
+    setDetailVideoUrl(ex.videoUrl || "");
+    setDetailNotes(ex.notes || "");
+    setWorkoutEditorStep("detalhe");
+  };
+
+  const openExerciseDetailForManual = () => {
+    setSelectedLibraryExercise({ name: "", category: "Geral" });
+    setIsManualExercise(true);
+    setIsSpecialSeries(false);
+    setEditingConfiguredExerciseId(null);
+    setEditingConfiguredExerciseIndex(null);
+    setDetailSeriesForm("Repetição");
+    setDetailLoadConfig("Kg");
+    setDetailRest(60);
+    setDetailSeries([{ id: "s1", reps: "10", weight: "" }]);
+    setDetailVideoUrl("");
+    setDetailNotes("");
+    setWorkoutEditorStep("detalhe");
+  };
+
+  const openExerciseDetailForSpecial = () => {
+    setSelectedLibraryExercise({ name: "", category: "Especial" });
+    setIsManualExercise(false);
+    setIsSpecialSeries(true);
+    setEditingConfiguredExerciseId(null);
+    setEditingConfiguredExerciseIndex(null);
+    setDetailSeriesForm("Repetição");
+    setDetailLoadConfig("Kg");
+    setDetailRest(90);
+    setDetailSeries([
+      { id: "s1", reps: "10", weight: "" },
+      { id: "s2", reps: "10", weight: "" }
+    ]);
+    setDetailVideoUrl("");
+    setDetailNotes("Descreva os exercícios conjugados/agrupados...");
+    setWorkoutEditorStep("detalhe");
+  };
+
+  const saveExerciseDetail = () => {
+    if (activeSubWorkoutIndex === null) return;
+    
+    const finalName = (selectedLibraryExercise?.name || "").trim();
+    if (!finalName) {
+      alert("Por favor, preencha o nome do exercício.");
+      return;
+    }
+
+    const exData: any = {
+      id: editingConfiguredExerciseId || `ex-${Date.now()}-${Math.random()}`,
+      name: finalName,
+      category: selectedLibraryExercise?.category || "Geral",
+      isManual: isManualExercise,
+      isSpecial: isSpecialSeries,
+      seriesForm: detailSeriesForm,
+      loadConfig: detailLoadConfig,
+      rest: detailRest,
+      series: detailSeries,
+      videoUrl: detailVideoUrl,
+      notes: detailNotes
+    };
+
+    const targetSubWorkout = subWorkouts[activeSubWorkoutIndex];
+    let updatedExercises = [...(targetSubWorkout.exercises || [])];
+
+    if (editingConfiguredExerciseIndex !== null) {
+      updatedExercises = updatedExercises.map((ex, i) => i === editingConfiguredExerciseIndex ? exData : ex);
+    } else if (editingConfiguredExerciseId) {
+      updatedExercises = updatedExercises.map(ex => ex.id === editingConfiguredExerciseId ? exData : ex);
+    } else {
+      updatedExercises.push(exData);
+    }
+
+    const updatedSubWorkouts = [...subWorkouts];
+    updatedSubWorkouts[activeSubWorkoutIndex] = {
+      ...targetSubWorkout,
+      exercises: updatedExercises
+    };
+
+    setSubWorkouts(updatedSubWorkouts);
+    setWorkoutEditorStep("prescrever");
+    setAccordionExpanded(true);
+  };
+
+  const deleteConfiguredExercise = (exId: string, idx?: number) => {
+    if (activeSubWorkoutIndex === null) return;
+    const targetSubWorkout = subWorkouts[activeSubWorkoutIndex];
+    const updatedExercises = (targetSubWorkout.exercises || []).filter((ex: any, i: number) => {
+      if (idx !== undefined && idx !== null) {
+        return i !== idx;
+      }
+      return ex.id !== exId;
+    });
+    
+    const updatedSubWorkouts = [...subWorkouts];
+    updatedSubWorkouts[activeSubWorkoutIndex] = {
+      ...targetSubWorkout,
+      exercises: updatedExercises
+    };
+
+    setSubWorkouts(updatedSubWorkouts);
+  };
 
   const handleSubWorkoutDragStart = (e: React.DragEvent, index: number) => {
     setDraggedSubWorkoutIndex(index);
@@ -713,9 +853,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             color: "text-primary",
           },
           {
-            label: "Aguardando Pagamento",
+            label: "Alunos Pendentes",
             value: linkRequests.length.toString(),
-            detail: "Solicitações pendentes",
+            detail: "Aguardando Pagamento",
             color: "text-orange-400",
           },
           {
@@ -738,7 +878,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           },
         ].map((kpi, idx) => (
           <div
-            key={idx}
+            key={`kpi-card-${idx}`}
             className="flex flex-col gap-1 md:gap-2 rounded-xl p-3 md:p-6 border border-border-dark bg-card-dark shadow-sm transition-all cursor-default select-none"
           >
             <p className="text-text-secondary text-[10px] md:text-sm font-medium leading-tight">
@@ -787,7 +927,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           },
         ].map((shortcut, idx) => (
           <button
-            key={idx}
+            key={`shortcut-${idx}`}
             className={`${shortcut.bg} rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-colors border border-transparent`}
             onClick={shortcut.onClick}
           >
@@ -987,7 +1127,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               },
             ].map((activity, idx) => (
               <li
-                key={idx}
+                key={`activity-${idx}`}
                 className="p-4 flex items-center justify-between gap-4 hover:bg-white/5 transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-4">
@@ -1198,7 +1338,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 
                 return (
                   <div
-                    key={idx}
+                    key={`calendar-day-${idx}`}
                     className={`bg-background-dark p-3 min-h-[160px] flex flex-col gap-3 ${today ? "bg-card-dark/50" : ""} ${agendaView === "Mês" && !isCurrentMonth ? "opacity-30" : ""}`}
                   >
                     <div className="text-center">
@@ -1211,7 +1351,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     <div className="flex flex-col gap-2">
                       {dayEvents.map((evt, i) => (
                         <div
-                          key={i}
+                          key={`calendar-event-${i}`}
                           onClick={() => setSelectedEvent(evt)}
                           className={`p-2 rounded-lg border flex flex-col gap-1.5 shadow-sm hover:brightness-110 transition-all cursor-pointer ${evt.color}`}
                         >
@@ -1353,6 +1493,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   };
 
   const renderStudents = () => {
+    const selectedWorkoutToLinkName = workouts.find(w => w.id === selectedWorkoutToLink)?.name || "esta ficha modelo";
     const linkWorkoutModal = linkingWorkoutStudent && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
         <div className="bg-card-dark border border-border-dark w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
@@ -1558,6 +1699,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   // Navigate to Workouts tab
                   setActiveTab("workouts");
 
+                  // Save mobile wizard history before cleaning up
+                  setMobileWorkoutSetupHistory({
+                    mobileSelectedStudent: student,
+                    isSettingUpBlankWorkout: true,
+                    isCreatingWorkoutForStudentFlow: true,
+                    blankWorkoutName: blankWorkoutName,
+                    blankWorkoutDays: blankWorkoutDays,
+                    mobileWorkoutFlowState: null
+                  });
+
                   // Clean up mobile wizard
                   setIsSettingUpBlankWorkout(false);
                   setIsCreatingWorkoutForStudentFlow(false);
@@ -1630,6 +1781,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   
                   // Redirect
                   setActiveTab("workouts");
+
+                  // Save mobile wizard history before cleaning up
+                  setMobileWorkoutSetupHistory({
+                    mobileSelectedStudent: student,
+                    isSettingUpBlankWorkout: false,
+                    isCreatingWorkoutForStudentFlow: true,
+                    blankWorkoutName: "",
+                    blankWorkoutDays: 3,
+                    mobileWorkoutFlowState: "select_model"
+                  });
 
                   // Clean up mobile wizard
                   setMobileWorkoutFlowState(null);
@@ -1728,6 +1889,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     
                     // Redirect
                     setActiveTab("workouts");
+
+                    // Save mobile wizard history before cleaning up
+                    setMobileWorkoutSetupHistory({
+                      mobileSelectedStudent: student,
+                      isSettingUpBlankWorkout: false,
+                      isCreatingWorkoutForStudentFlow: true,
+                      blankWorkoutName: "",
+                      blankWorkoutDays: 3,
+                      mobileWorkoutFlowState: "select_copy_student"
+                    });
 
                     // Clean up mobile wizard
                     setMobileWorkoutFlowState(null);
@@ -2068,15 +2239,32 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                       <div
                         key={w.id}
                         onClick={() => {
-                          setMobileSelectedStudent(null);
+                          setMobileWorkoutSetupHistory({
+                            mobileSelectedStudent: student,
+                            isSettingUpBlankWorkout: false,
+                            isCreatingWorkoutForStudentFlow: false,
+                            blankWorkoutName: "",
+                            blankWorkoutDays: 3,
+                            mobileWorkoutFlowState: null
+                          });
+                          setPreAssignedStudentId(student.id);
                           startEditingWorkout(w);
                           setActiveTab('workouts');
+                          setMobileSelectedStudent(null);
                         }}
                         className="w-full bg-card-dark px-2.5 py-4 md:px-6 md:py-6 rounded-xl border border-border-dark flex items-center justify-between hover:border-primary/50 transition-colors shadow-lg cursor-pointer animate-none"
                       >
-                        <span className="text-white font-bold text-sm truncate pr-2">{w.name}</span>
+                        <div className="flex flex-col min-w-0 pr-2">
+                          <span className="text-white font-bold text-sm truncate">{w.name}</span>
+                          {w.isModelLinked && (
+                            <span className="text-[9px] text-primary font-black uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                              <span className="size-1.5 rounded-full bg-primary"></span>
+                              Ficha Modelo
+                            </span>
+                          )}
+                        </div>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           {/* Manual status choice/badge */}
                           <button
                             onClick={(e) => toggleWorkoutStatus(w, student.id, e)}
@@ -2330,6 +2518,28 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       <div className="flex flex-col gap-6 w-full max-w-full overflow-hidden animate-in fade-in duration-500 pb-20 relative">
       {linkWorkoutModal}
 
+      {selectedWorkoutToLink && (
+        <div className="mb-2 bg-primary/10 border border-primary/20 p-4 rounded-xl flex items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center size-9 rounded-lg bg-primary/20 text-primary">
+              <span className="material-symbols-outlined text-lg">link</span>
+            </div>
+            <div className="text-left">
+              <p className="text-white font-black text-sm uppercase tracking-wide">Vincular ficha: {selectedWorkoutToLinkName}</p>
+              <p className="text-text-secondary text-xs">Clique/Selecione um aluno abaixo para vincular essa ficha modelo instantaneamente.</p>
+            </div>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setSelectedWorkoutToLink("")}
+            className="flex items-center justify-center size-8 rounded bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white transition-all shrink-0"
+            title="Cancelar vínculo"
+          >
+            <span className="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+      )}
+
       {/* Page Heading matching AdminTrainers */}
       <div className="flex justify-between items-start gap-4 mb-4 md:mb-6">
         <div>
@@ -2366,12 +2576,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             />
           </div>
         </div>
-        <div className="flex gap-2 overflow-x-auto w-full max-w-full pb-1 scrollbar-none shrink-0 md:mx-0 md:px-0">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full md:flex md:w-auto shrink-0">
           {["Todas", "Ativa", "Vencida", "Cancelada"].map((filter) => (
             <button
               key={filter}
               onClick={() => setStatusFilter(filter)}
-              className={`flex h-10 md:h-12 items-center gap-x-1.5 rounded-xl px-4 text-[10px] md:text-xs font-bold uppercase tracking-wider md:tracking-widest shrink-0 transition-all ${
+              className={`flex h-10 md:h-12 items-center justify-center rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider md:tracking-widest transition-all w-full md:w-auto px-1 sm:px-4 ${
                 statusFilter === filter
                   ? "bg-primary text-background-dark"
                   : "bg-card-dark text-text-secondary border border-border-dark hover:text-white"
@@ -2414,11 +2624,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   <React.Fragment key={student.id}>
                     <tr
                       className={`group hover:bg-white/[0.02] transition-colors cursor-pointer ${selectedStudentId === student.id ? "bg-white/[0.02]" : ""}`}
-                      onClick={() =>
-                        setSelectedStudentId(
-                          selectedStudentId === student.id ? null : student.id,
-                        )
-                      }
+                      onClick={async () => {
+                        if (selectedWorkoutToLink) {
+                          await dataService.assignWorkoutToStudent(selectedWorkoutToLink, student.id);
+                          alert(`Ficha vinculada ao aluno ${student.name} com sucesso!`);
+                          setSelectedWorkoutToLink("");
+                          setSelectedStudentId(student.id);
+                        } else {
+                          setSelectedStudentId(
+                            selectedStudentId === student.id ? null : student.id,
+                          );
+                        }
+                      }}
                     >
                       <td className="px-6 py-4 text-center">
                         <div
@@ -2720,17 +2937,63 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                {workouts.filter(w => w.studentIds?.includes(student.id)).length > 0 ? (
                                   workouts.filter(w => w.studentIds?.includes(student.id)).map(w => (
-                                     <button
+                                     <div
                                        key={w.id}
                                        onClick={() => {
                                          startEditingWorkout(w);
                                          setActiveTab('workouts');
                                        }}
-                                       className="flex items-center justify-between bg-background-dark p-3 rounded-xl border border-border-dark hover:border-primary/50 transition-colors"
+                                       className="flex items-center justify-between bg-background-dark p-4 rounded-xl border border-border-dark hover:border-primary/30 transition-all text-left cursor-pointer"
                                      >
-                                        <span className="text-white font-bold text-sm truncate">{w.name}</span>
-                                        <span className="material-symbols-outlined text-text-secondary">chevron_right</span>
-                                     </button>
+                                        <div className="flex flex-col min-w-0 pr-2">
+                                          <span className="text-white font-bold text-sm truncate">{w.name}</span>
+                                          <div className="flex flex-wrap gap-1.5 items-center mt-1">
+                                            {w.periodization?.type && (
+                                              <span className="text-[9px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide flex items-center gap-1 shrink-0">
+                                                <span className="material-symbols-outlined text-[10px]">
+                                                  {w.periodization.type === "data" ? "date_range" : "calendar_today"}
+                                                </span>
+                                                {w.periodization.type === "data" 
+                                                  ? `${new Date(w.periodization.value).toLocaleDateString("pt-BR")}` 
+                                                  : `${w.periodization.value} Treinos`
+                                                }
+                                              </span>
+                                            )}
+                                          </div>
+                                          {w.isModelLinked && (
+                                            <span className="text-[10px] text-primary font-black uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                                              <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
+                                              Ficha Modelo
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                          {/* Manual status choice/badge */}
+                                          <button
+                                            type="button"
+                                            onClick={(e) => toggleWorkoutStatus(w, student.id, e)}
+                                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm shrink-0 ${
+                                              w.studentStatuses?.[student.id] !== "Finalizado" && w.isActive !== false
+                                                ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20" 
+                                                : "bg-white/5 text-text-secondary border-white/10 hover:bg-white/10"
+                                            }`}
+                                          >
+                                            <span className={`size-1.5 rounded-full ${(w.studentStatuses?.[student.id] !== "Finalizado" && w.isActive !== false) ? "bg-primary animate-pulse" : "bg-text-secondary"}`}></span>
+                                            {(w.studentStatuses?.[student.id] !== "Finalizado" && w.isActive !== false) ? "Ativo" : "Finalizado"}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              startEditingWorkout(w);
+                                              setActiveTab('workouts');
+                                            }}
+                                            className="size-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-text-secondary hover:text-white flex items-center justify-center transition-all"
+                                            title="Editar Ficha"
+                                          >
+                                            <span className="material-symbols-outlined text-sm">edit</span>
+                                          </button>
+                                        </div>
+                                     </div>
                                   ))
                                ) : (
                                   <p className="text-text-secondary text-sm italic py-2 md:col-span-3">Nenhum treino vinculado.</p>
@@ -2808,10 +3071,17 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             return (
               <button
                 key={student.id}
-                onClick={() => {
-                  setMobileSelectedStudent(student);
-                  if (isCreatingWorkoutForStudentFlow) {
-                    setIsBottomSheetOpen(true);
+                onClick={async () => {
+                  if (selectedWorkoutToLink) {
+                    await dataService.assignWorkoutToStudent(selectedWorkoutToLink, student.id);
+                    alert(`Ficha vinculada ao aluno ${student.name} com sucesso!`);
+                    setSelectedWorkoutToLink("");
+                    setMobileSelectedStudent(student);
+                  } else {
+                    setMobileSelectedStudent(student);
+                    if (isCreatingWorkoutForStudentFlow) {
+                      setIsBottomSheetOpen(true);
+                    }
                   }
                 }}
                 className="w-full max-w-full overflow-hidden flex items-center gap-4 bg-card-dark p-4 rounded-xl border border-border-dark active:scale-[0.98] transition-transform text-left"
@@ -3162,7 +3432,29 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         <button 
           onClick={() => {
             if (editingWorkoutId) {
-              setEditingWorkoutId(null);
+              if (workoutEditorStep === "detalhe") {
+                setWorkoutEditorStep("prescrever");
+              } else if (workoutEditorStep === "prescrever") {
+                setWorkoutEditorStep("ficha");
+              } else {
+                if (mobileWorkoutSetupHistory) {
+                  setActiveTab("students");
+                  setMobileSelectedStudent(mobileWorkoutSetupHistory.mobileSelectedStudent);
+                  setIsSettingUpBlankWorkout(mobileWorkoutSetupHistory.isSettingUpBlankWorkout);
+                  setIsCreatingWorkoutForStudentFlow(mobileWorkoutSetupHistory.isCreatingWorkoutForStudentFlow);
+                  setMobileWorkoutFlowState(mobileWorkoutSetupHistory.mobileWorkoutFlowState);
+                  if (mobileWorkoutSetupHistory.blankWorkoutName !== undefined) {
+                    setBlankWorkoutName(mobileWorkoutSetupHistory.blankWorkoutName);
+                  }
+                  if (mobileWorkoutSetupHistory.blankWorkoutDays !== undefined) {
+                    setBlankWorkoutDays(mobileWorkoutSetupHistory.blankWorkoutDays);
+                  }
+                  setEditingWorkoutId(null);
+                  setMobileWorkoutSetupHistory(null);
+                } else {
+                  setEditingWorkoutId(null);
+                }
+              }
             } else {
               setActiveTab('dashboard');
             }
@@ -3238,7 +3530,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     </button>
                   </div>
                 ) : (
-                  <div className="flex border-t border-border-dark divide-x divide-border-dark opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                  <div className="flex border-t border-border-dark divide-x divide-border-dark bg-black/20">
                     <button
                       title="Vincular a Aluno"
                       onClick={() => {
@@ -3298,126 +3590,6 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         {/* Editor de Treino Reformulado e Profissional */}
         <div className={`lg:col-span-3 flex flex-col gap-6 ${!editingWorkoutId ? 'hidden lg:flex' : 'flex'}`}>
           {(() => {
-            const openExerciseDetailForNew = (libEx: any) => {
-              setSelectedLibraryExercise(libEx);
-              setIsManualExercise(false);
-              setIsSpecialSeries(false);
-              setEditingConfiguredExerciseId(null);
-              setDetailSeriesForm("Repetição");
-              setDetailLoadConfig("Kg");
-              setDetailRest(60);
-              setDetailSeries([
-                { id: "s1", reps: "10", weight: "" },
-                { id: "s2", reps: "10", weight: "" },
-                { id: "s3", reps: "10", weight: "" }
-              ]);
-              setDetailVideoUrl("");
-              setDetailNotes("");
-              setWorkoutEditorStep("detalhe");
-            };
-
-            const openExerciseDetailForEdit = (ex: any) => {
-              setSelectedLibraryExercise({ name: ex.name, category: ex.category });
-              setIsManualExercise(ex.isManual || false);
-              setIsSpecialSeries(ex.isSpecial || false);
-              setEditingConfiguredExerciseId(ex.id);
-              setDetailSeriesForm(ex.seriesForm || "Repetição");
-              setDetailLoadConfig(ex.loadConfig || "Kg");
-              setDetailRest(ex.rest || 60);
-              setDetailSeries(ex.series || [{ id: "s1", reps: "10", weight: "" }]);
-              setDetailVideoUrl(ex.videoUrl || "");
-              setDetailNotes(ex.notes || "");
-              setWorkoutEditorStep("detalhe");
-            };
-
-            const openExerciseDetailForManual = () => {
-              setSelectedLibraryExercise({ name: "", category: "Geral" });
-              setIsManualExercise(true);
-              setIsSpecialSeries(false);
-              setEditingConfiguredExerciseId(null);
-              setDetailSeriesForm("Repetição");
-              setDetailLoadConfig("Kg");
-              setDetailRest(60);
-              setDetailSeries([{ id: "s1", reps: "10", weight: "" }]);
-              setDetailVideoUrl("");
-              setDetailNotes("");
-              setWorkoutEditorStep("detalhe");
-            };
-
-            const openExerciseDetailForSpecial = () => {
-              setSelectedLibraryExercise({ name: "", category: "Especial" });
-              setIsManualExercise(false);
-              setIsSpecialSeries(true);
-              setEditingConfiguredExerciseId(null);
-              setDetailSeriesForm("Repetição");
-              setDetailLoadConfig("Kg");
-              setDetailRest(90);
-              setDetailSeries([
-                { id: "s1", reps: "10", weight: "" },
-                { id: "s2", reps: "10", weight: "" }
-              ]);
-              setDetailVideoUrl("");
-              setDetailNotes("Descreva os exercícios conjugados/agrupados...");
-              setWorkoutEditorStep("detalhe");
-            };
-
-            const saveExerciseDetail = () => {
-              if (activeSubWorkoutIndex === null) return;
-              
-              const finalName = (selectedLibraryExercise?.name || "").trim();
-              if (!finalName) {
-                alert("Por favor, preencha o nome do exercício.");
-                return;
-              }
-
-              const exData: any = {
-                id: editingConfiguredExerciseId || `ex-${Date.now()}-${Math.random()}`,
-                name: finalName,
-                category: selectedLibraryExercise?.category || "Geral",
-                isManual: isManualExercise,
-                isSpecial: isSpecialSeries,
-                seriesForm: detailSeriesForm,
-                loadConfig: detailLoadConfig,
-                rest: detailRest,
-                series: detailSeries,
-                videoUrl: detailVideoUrl,
-                notes: detailNotes
-              };
-
-              const targetSubWorkout = subWorkouts[activeSubWorkoutIndex];
-              let updatedExercises = [...(targetSubWorkout.exercises || [])];
-
-              if (editingConfiguredExerciseId) {
-                updatedExercises = updatedExercises.map(ex => ex.id === editingConfiguredExerciseId ? exData : ex);
-              } else {
-                updatedExercises.push(exData);
-              }
-
-              const updatedSubWorkouts = [...subWorkouts];
-              updatedSubWorkouts[activeSubWorkoutIndex] = {
-                ...targetSubWorkout,
-                exercises: updatedExercises
-              };
-
-              setSubWorkouts(updatedSubWorkouts);
-              setWorkoutEditorStep("prescrever");
-              setAccordionExpanded(true);
-            };
-
-            const deleteConfiguredExercise = (exId: string) => {
-              if (activeSubWorkoutIndex === null) return;
-              const targetSubWorkout = subWorkouts[activeSubWorkoutIndex];
-              const updatedExercises = (targetSubWorkout.exercises || []).filter((ex: any) => ex.id !== exId);
-              
-              const updatedSubWorkouts = [...subWorkouts];
-              updatedSubWorkouts[activeSubWorkoutIndex] = {
-                ...targetSubWorkout,
-                exercises: updatedExercises
-              };
-
-              setSubWorkouts(updatedSubWorkouts);
-            };
-
             const saveEntireFicha = async () => {
               if (!workoutName.trim()) {
                 alert("A ficha precisa de um nome.");
@@ -3452,16 +3624,40 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               };
 
               try {
+                const targetStudentId = preAssignedStudentId;
+
                 if (editingWorkoutId === 'new') {
                   await dataService.createWorkout({
                     ...payload,
-                    studentIds: preAssignedStudentId ? [preAssignedStudentId] : [],
-                    studentStatuses: preAssignedStudentId ? { [preAssignedStudentId]: "Ativo" } : {}
+                    studentIds: targetStudentId ? [targetStudentId] : [],
+                    studentStatuses: targetStudentId ? { [targetStudentId]: "Ativo" } : {}
                   });
-                  setPreAssignedStudentId(null);
                 } else {
                   await dataService.updateWorkout(editingWorkoutId!, payload);
                 }
+
+                if (mobileWorkoutSetupHistory && mobileWorkoutSetupHistory.mobileSelectedStudent) {
+                  setActiveTab("students");
+                  setMobileSelectedStudent(mobileWorkoutSetupHistory.mobileSelectedStudent);
+                  setIsSettingUpBlankWorkout(mobileWorkoutSetupHistory.isSettingUpBlankWorkout);
+                  setIsCreatingWorkoutForStudentFlow(mobileWorkoutSetupHistory.isCreatingWorkoutForStudentFlow);
+                  setMobileWorkoutFlowState(mobileWorkoutSetupHistory.mobileWorkoutFlowState);
+                  if (mobileWorkoutSetupHistory.blankWorkoutName !== undefined) {
+                    setBlankWorkoutName(mobileWorkoutSetupHistory.blankWorkoutName);
+                  }
+                  if (mobileWorkoutSetupHistory.blankWorkoutDays !== undefined) {
+                    setBlankWorkoutDays(mobileWorkoutSetupHistory.blankWorkoutDays);
+                  }
+                  setMobileWorkoutSetupHistory(null);
+                } else if (targetStudentId) {
+                  const studentToReturn = studentsData.find(s => s.id === targetStudentId);
+                  if (studentToReturn) {
+                    setActiveTab("students");
+                    setMobileSelectedStudent(studentToReturn);
+                  }
+                }
+
+                setPreAssignedStudentId(null);
                 setEditingWorkoutId(null);
                 setWorkoutEditorStep("ficha");
                 alert("Ficha de treino salva com sucesso!");
@@ -3517,14 +3713,17 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                       </div>
 
                        <div className="p-6 pb-36 lg:pb-6 flex flex-col gap-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="hidden lg:flex text-white font-bold text-lg items-center gap-2">
-                              <span className="material-symbols-outlined text-primary">layers</span>
-                              Divisão de Treinos ({subWorkouts.length})
-                            </h3>
-                            <p className="hidden lg:block text-text-secondary text-xs mt-1">Arraste os cards para reordenar a ficha ou adicione novos treinos.</p>
-                          </div>
+                        <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
+                          {/* Coluna da Esquerda (Divisão de Treinos) */}
+                          <div className="lg:col-span-2 flex flex-col gap-6">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h3 className="hidden lg:flex text-white font-bold text-lg items-center gap-2">
+                                  <span className="material-symbols-outlined text-primary">layers</span>
+                                  Divisão de Treinos ({subWorkouts.length})
+                                </h3>
+                                <p className="hidden lg:block text-text-secondary text-xs mt-1">Arraste os cards para reordenar a ficha ou adicione novos treinos.</p>
+                              </div>
                           {/* Add workout button shown only on desktop header */}
                           <button
                             onClick={() => {
@@ -3688,31 +3887,154 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           )}
                         </div>
 
-                        {/* Observações de Execução (Desktop & Mobile) */}
-                        <div className="flex flex-col gap-2.5 mt-8 pt-8 border-t border-border-dark/30">
-                          <label className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
-                            <span className="material-symbols-outlined text-primary text-sm">notes</span>
-                            Observações de Execução
-                          </label>
-                          <textarea
-                            ref={(el) => {
-                              if (el) {
-                                el.style.height = "auto";
-                                el.style.height = el.scrollHeight + "px";
-                              }
-                            }}
-                            value={fichaObservation}
-                            onChange={(e) => {
-                              setFichaObservation(e.target.value);
-                              e.target.style.height = "auto";
-                              e.target.style.height = e.target.scrollHeight + "px";
-                            }}
-                            className="w-full bg-background-dark/50 border border-border-dark focus:border-primary/60 rounded-xl px-4 py-3 text-white text-sm placeholder-text-secondary/50 focus:outline-none transition-all resize-none min-h-[100px] overflow-hidden leading-relaxed"
-                            placeholder="Adicione orientações gerais para a execução desta ficha de treino..."
-                            rows={4}
-                          />
+                        {/* Coluna da Direita (Painel de Configurações Gerais - DESKTOP ONLY) */}
+                        <div className="hidden lg:flex flex-col gap-5 bg-background-dark/30 border border-border-dark p-5 rounded-2xl">
+                           <h4 className="text-white font-black text-xs uppercase tracking-widest flex items-center gap-2 border-b border-border-dark pb-3 mb-1 font-mono">
+                             <span className="material-symbols-outlined text-primary text-base">settings</span>
+                             Definições da Ficha
+                           </h4>
+
+                           {/* Status */}
+                           <div className="flex flex-col gap-2">
+                             <label className="text-[10px] text-text-secondary font-black uppercase tracking-wider font-mono">Status de Ativação</label>
+                             <button
+                               type="button"
+                               onClick={() => setFichaIsActive(!fichaIsActive)}
+                               className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-white/5 hover:bg-white/10 border border-border-dark text-white rounded-xl text-sm font-bold transition-all"
+                             >
+                               <div className="flex items-center gap-3">
+                                 <span className={`material-symbols-outlined text-[20px] ${fichaIsActive ? 'text-primary' : 'text-text-secondary'}`}>
+                                   {fichaIsActive ? 'toggle_on' : 'toggle_off'}
+                                 </span>
+                                 <span>{fichaIsActive ? 'Ficha Ativa' : 'Ficha Inativa'}</span>
+                               </div>
+                               <span className={`text-[10px] px-2 py-0.5 rounded font-black ${fichaIsActive ? 'bg-primary/20 text-primary' : 'bg-white/10 text-text-secondary'}`}>
+                                 {fichaIsActive ? 'ATIVO' : 'INATIVO'}
+                               </span>
+                             </button>
+                           </div>
+
+                           {/* Periodização */}
+                           <div className="flex flex-col gap-2">
+                             <label className="text-[10px] text-text-secondary font-black uppercase tracking-wider font-mono">Configuração de Periodização</label>
+                             <div className="grid grid-cols-3 gap-1.5 bg-black/20 p-1 rounded-xl border border-border-dark/30">
+                               <button
+                                 type="button"
+                                 onClick={() => {
+                                   setFichaPeriodizationType(null);
+                                   setFichaPeriodizationValue("");
+                                 }}
+                                 className={`py-2 px-1 text-center rounded-lg text-[10px] font-black uppercase tracking-wide transition-all border ${
+                                   fichaPeriodizationType === null
+                                     ? 'bg-primary/25 border-primary text-primary font-black'
+                                     : 'bg-white/5 border-border-dark/30 text-text-secondary hover:text-white'
+                                 }`}
+                               >
+                                 Nenhum
+                               </button>
+                               <button
+                                 type="button"
+                                 onClick={() => {
+                                   setFichaPeriodizationType("treinos");
+                                   setFichaPeriodizationValue("15");
+                                 }}
+                                 className={`py-2 px-1 text-center rounded-lg text-[10px] font-black uppercase tracking-wide transition-all border ${
+                                   fichaPeriodizationType === "treinos"
+                                     ? 'bg-primary/25 border-primary text-primary font-black'
+                                     : 'bg-white/5 border-border-dark/30 text-text-secondary hover:text-white'
+                                 }`}
+                               >
+                                 Treinos
+                               </button>
+                               <button
+                                 type="button"
+                                 onClick={() => {
+                                   const defaultDate = new Date();
+                                   defaultDate.setDate(defaultDate.getDate() + 30);
+                                   const dateStr = defaultDate.toISOString().split('T')[0];
+                                   setFichaPeriodizationType("data");
+                                   setFichaPeriodizationValue(dateStr);
+                                 }}
+                                 className={`py-2 px-1 text-center rounded-lg text-[10px] font-black uppercase tracking-wide transition-all border ${
+                                   fichaPeriodizationType === "data"
+                                     ? 'bg-primary/25 border-primary text-primary font-black'
+                                     : 'bg-white/5 border-border-dark/30 text-text-secondary hover:text-white'
+                                 }`}
+                               >
+                                 Venc.
+                               </button>
+                             </div>
+
+                             {fichaPeriodizationType === "treinos" && (
+                               <div className="flex items-center gap-3 bg-background-dark/50 border border-border-dark rounded-xl px-3 py-1 mt-1 animate-in fade-in zoom-in-95 duration-100">
+                                 <span className="material-symbols-outlined text-text-secondary text-lg">calendar_today</span>
+                                 <input
+                                   type="number"
+                                   min="1"
+                                   value={fichaPeriodizationValue}
+                                   onChange={(e) => setFichaPeriodizationValue(e.target.value)}
+                                   className="flex-1 bg-transparent border-none text-white text-sm font-bold focus:outline-none focus:ring-0 outline-none py-2"
+                                   placeholder="Ex: 20 treinos"
+                                 />
+                                 <span className="text-xs text-text-secondary font-bold pr-2">Sessões</span>
+                               </div>
+                             )}
+
+                             {fichaPeriodizationType === "data" && (
+                               <div className="flex items-center gap-3 bg-background-dark/50 border border-border-dark rounded-xl px-3 py-1 mt-1 animate-in fade-in zoom-in-95 duration-100">
+                                 <span className="material-symbols-outlined text-text-secondary text-base">date_range</span>
+                                 <input
+                                   type="date"
+                                   value={fichaPeriodizationValue}
+                                   onChange={(e) => setFichaPeriodizationValue(e.target.value)}
+                                   className="flex-1 bg-transparent border-none text-white text-xs font-bold focus:outline-none focus:ring-0 outline-none py-2 filter invert brightness-90"
+                                 />
+                               </div>
+                             )}
+                           </div>
+
+                           {/* Observações */}
+                           <div className="flex flex-col gap-2">
+                             <label className="text-[10px] text-text-secondary font-black uppercase tracking-wider flex items-center gap-1.5">
+                               <span className="material-symbols-outlined text-primary text-sm">notes</span>
+                               Observações de Execução
+                             </label>
+                             <textarea
+                               value={fichaObservation}
+                               onChange={(e) => setFichaObservation(e.target.value)}
+                               className="w-full bg-background-dark/50 border border-border-dark focus:border-primary/60 rounded-xl px-3 py-2.5 text-white text-xs placeholder-text-secondary/50 focus:outline-none transition-all resize-none min-h-[100px] leading-relaxed"
+                               placeholder="Observações gerais da ficha..."
+                               rows={4}
+                             />
+                           </div>
                         </div>
                       </div>
+
+                      {/* Observações de Execução (Mobile Only) */}
+                      <div className="flex lg:hidden flex-col gap-2.5 mt-8 pt-8 border-t border-border-dark/30 col-span-1">
+                        <label className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary text-sm">notes</span>
+                          Observações de Execução
+                        </label>
+                        <textarea
+                          ref={(el) => {
+                            if (el) {
+                              el.style.height = "auto";
+                              el.style.height = el.scrollHeight + "px";
+                            }
+                          }}
+                          value={fichaObservation}
+                          onChange={(e) => {
+                            setFichaObservation(e.target.value);
+                            e.target.style.height = "auto";
+                            e.target.style.height = e.target.scrollHeight + "px";
+                          }}
+                          className="w-full bg-background-dark/50 border border-border-dark focus:border-primary/60 rounded-xl px-4 py-3 text-white text-sm placeholder-text-secondary/50 focus:outline-none transition-all resize-none min-h-[100px] overflow-hidden leading-relaxed"
+                          placeholder="Adicione orientações gerais para a execução desta ficha de treino..."
+                          rows={4}
+                        />
+                      </div>
+                    </div>
                     </div>
                   )}
 
@@ -3941,7 +4263,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                   className="bg-card-dark border border-border-dark p-3 rounded-lg flex items-center justify-between gap-4 transition-all hover:bg-card-dark/80"
                                 >
                                   <div 
-                                    onClick={() => openExerciseDetailForEdit(ex)}
+                                    onClick={() => openExerciseDetailForEdit(ex, idx)}
                                     className="flex-1 min-w-0 cursor-pointer group"
                                   >
                                     <h5 className="text-white font-bold text-sm leading-tight group-hover:text-primary transition-colors">{ex.name}</h5>
@@ -3953,14 +4275,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0 font-bold">
                                     <button
-                                      onClick={() => openExerciseDetailForEdit(ex)}
+                                      onClick={() => openExerciseDetailForEdit(ex, idx)}
                                       className="size-8 rounded bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white flex items-center justify-center transition-all"
                                       title="Editar"
                                     >
                                       <span className="material-symbols-outlined text-base">edit</span>
                                     </button>
                                     <button
-                                      onClick={() => deleteConfiguredExercise(ex.id)}
+                                      onClick={() => deleteConfiguredExercise(ex.id, idx)}
                                       className="size-8 rounded bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition-all"
                                       title="Remover"
                                     >
@@ -3999,13 +4321,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         <div className="flex items-center gap-3">
                           <button
                             onClick={() => setWorkoutEditorStep("prescrever")}
-                            className="size-10 rounded-xl bg-white/5 border border-white/5 text-text-secondary hover:text-white hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center shrink-0"
+                            className="hidden lg:flex size-10 rounded-xl bg-white/5 border border-white/5 text-text-secondary hover:text-white hover:bg-white/10 active:scale-95 transition-all items-center justify-center shrink-0"
                           >
                             <span className="material-symbols-outlined text-lg">arrow_back</span>
                           </button>
                           <div>
                             <p className="hidden lg:block text-xs text-primary font-black uppercase tracking-widest leading-none mb-1">Passo 3: Parâmetros do Exercício</p>
-                            <h2 className="text-white font-black text-xl tracking-tight leading-tight">Configurar: {selectedLibraryExercise.name || "Exercício"}</h2>
+                            <h2 className="text-white font-black text-xl tracking-tight leading-tight">Configurar Exercício{selectedLibraryExercise.name ? `: ${selectedLibraryExercise.name}` : ""}</h2>
                           </div>
                         </div>
                       </div>
@@ -4113,13 +4435,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             {detailSeries.map((set, sIdx) => (
                               <div 
                                 key={`detail-set-${set.id || sIdx}-${sIdx}`}
-                                className="bg-background-dark/40 border border-border-dark p-3 rounded-lg flex items-center justify-between gap-4 animate-in fade-in zoom-in-95"
+                                className="bg-background-dark/40 border border-border-dark p-3 rounded-lg flex items-end justify-between gap-4 animate-in fade-in zoom-in-95"
                               >
-                                <span className="text-white text-xs font-black uppercase tracking-wider shrink-0 min-w-[50px]">Série {sIdx + 1}</span>
+                                <div className="h-10 flex items-center justify-center text-white text-xs font-black uppercase tracking-wider shrink-0 min-w-[32px]">
+                                  {sIdx + 1}S
+                                </div>
                                 
                                 <div className="flex-1 flex items-center gap-3 min-w-0">
-                                  <div className="flex-1 flex flex-col gap-1 min-w-0">
-                                    <span className="text-[9px] font-bold text-text-secondary uppercase tracking-widest leading-none">Reps / Tempo</span>
+                                  <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-text-secondary uppercase tracking-widest leading-none text-center">Reps / Tempo</span>
                                     <input
                                       type="text"
                                       value={set.reps}
@@ -4133,8 +4457,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                     />
                                   </div>
 
-                                  <div className="flex-1 flex flex-col gap-1 min-w-0">
-                                    <span className="text-[9px] font-bold text-text-secondary uppercase tracking-widest leading-none">Carga ({detailLoadConfig})</span>
+                                  <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-text-secondary uppercase tracking-widest leading-none text-center">Carga ({detailLoadConfig})</span>
                                     <input
                                       type="text"
                                       value={set.weight}
@@ -4155,7 +4479,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                   onClick={() => {
                                     setDetailSeries(detailSeries.filter((_, i) => i !== sIdx));
                                   }}
-                                  className="size-9 rounded bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition-all disabled:opacity-20 shrink-0 font-bold"
+                                  className="size-10 rounded bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition-all disabled:opacity-20 shrink-0 font-bold"
                                   title="Excluir"
                                 >
                                   <span className="material-symbols-outlined text-sm font-bold">close</span>
@@ -4190,7 +4514,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           <button
                             type="button"
                             onClick={() => setWorkoutEditorStep("prescrever")}
-                            className="px-6 py-3 border border-border-dark text-text-primary hover:text-white hover:bg-white/5 rounded-lg text-xs font-bold transition-all shrink-0"
+                            className="hidden lg:block px-6 py-3 border border-border-dark text-text-primary hover:text-white hover:bg-white/5 rounded-lg text-xs font-bold transition-all shrink-0"
                           >
                             Descartar e Voltar
                           </button>
@@ -4199,7 +4523,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             onClick={saveExerciseDetail}
                             className="flex-1 max-w-xs h-12 bg-primary text-background-dark rounded-lg hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center font-black text-sm shadow-lg shadow-primary/10"
                           >
-                            Confirmar e Salvar Exercício
+                            Salvar
                           </button>
                         </div>
                       </div>
@@ -4493,6 +4817,29 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                       if (editingWorkoutId && editingWorkoutId !== "new") {
                                         await dataService.deleteWorkout(editingWorkoutId);
                                       }
+                                      
+                                      if (mobileWorkoutSetupHistory && mobileWorkoutSetupHistory.mobileSelectedStudent) {
+                                        setActiveTab("students");
+                                        setMobileSelectedStudent(mobileWorkoutSetupHistory.mobileSelectedStudent);
+                                        setIsSettingUpBlankWorkout(mobileWorkoutSetupHistory.isSettingUpBlankWorkout);
+                                        setIsCreatingWorkoutForStudentFlow(mobileWorkoutSetupHistory.isCreatingWorkoutForStudentFlow);
+                                        setMobileWorkoutFlowState(mobileWorkoutSetupHistory.mobileWorkoutFlowState);
+                                        if (mobileWorkoutSetupHistory.blankWorkoutName !== undefined) {
+                                          setBlankWorkoutName(mobileWorkoutSetupHistory.blankWorkoutName);
+                                        }
+                                        if (mobileWorkoutSetupHistory.blankWorkoutDays !== undefined) {
+                                          setBlankWorkoutDays(mobileWorkoutSetupHistory.blankWorkoutDays);
+                                        }
+                                        setMobileWorkoutSetupHistory(null);
+                                      } else if (preAssignedStudentId) {
+                                        const studentToReturn = studentsData.find(s => s.id === preAssignedStudentId);
+                                        if (studentToReturn) {
+                                          setActiveTab("students");
+                                          setMobileSelectedStudent(studentToReturn);
+                                        }
+                                      }
+                                      
+                                      setPreAssignedStudentId(null);
                                       setEditingWorkoutId(null);
                                       setIsFichaMenuOpen(false);
                                       setIsConfirmingDeleteFicha(false);
@@ -4605,7 +4952,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     key={`mobile-bottomsheet-ex-${ex.id || idx}-${idx}`}
                     className="bg-card-dark border border-border-dark/60 p-3.5 rounded-xl flex items-center justify-between gap-4 transition-all"
                     onClick={() => {
-                      openExerciseDetailForEdit(ex);
+                      openExerciseDetailForEdit(ex, idx);
                       setIsMobileBottomSheetExpanded(false);
                     }}
                   >
@@ -4620,7 +4967,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => {
-                          openExerciseDetailForEdit(ex);
+                          openExerciseDetailForEdit(ex, idx);
                           setIsMobileBottomSheetExpanded(false);
                         }}
                         className="size-8 rounded bg-white/5 border border-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-all"
@@ -4629,7 +4976,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         <span className="material-symbols-outlined text-base">edit</span>
                       </button>
                       <button
-                        onClick={() => deleteConfiguredExercise(ex.id)}
+                        onClick={() => deleteConfiguredExercise(ex.id, idx)}
                         className="size-8 rounded bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center transition-all"
                         title="Remover"
                       >
@@ -5038,7 +5385,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           const isCurrent = user.plan === plan.name;
           return (
           <div
-            key={idx}
+            key={`platform-plan-${idx}`}
             className={`bg-card-dark rounded-2xl p-8 border-2 flex flex-col gap-6 relative overflow-hidden transition-all hover:scale-[1.02] ${plan.color || 'border-white/10'}`}
           >
             {isCurrent && (
@@ -5066,7 +5413,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             <ul className="flex flex-col gap-3 my-2">
               {(plan.features || []).map((feature: string, fIdx: number) => (
                 <li
-                  key={fIdx}
+                  key={`plan-feature-${fIdx}`}
                   className="flex items-center gap-2 text-text-secondary text-sm"
                 >
                   <span className="material-symbols-outlined text-primary text-lg">

@@ -30,6 +30,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const [activeTab, setActiveTab] = useState('dashboard');
   const [workoutTab, setWorkoutTab] = useState<'upcoming' | 'history'>('upcoming');
   const [isTraining, setIsTraining] = useState(false);
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   const [selectedSubWorkoutIndex, setSelectedSubWorkoutIndex] = useState(0);
   const [newMessage, setNewMessage] = useState('');
