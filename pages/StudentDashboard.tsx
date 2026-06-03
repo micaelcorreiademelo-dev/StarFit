@@ -647,6 +647,26 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       );
     }
 
+    const filteredWorkouts = workouts.filter((workout) => {
+      const isSelfFinalized = workout.studentStatuses?.[user.id] === "Finalizado";
+      
+      let isExpired = false;
+      if (workout.periodization?.type === "data") {
+        const limitDate = new Date(workout.periodization.value);
+        limitDate.setHours(23, 59, 59, 999);
+        isExpired = new Date() > limitDate;
+      } else if (workout.periodization?.type === "sessoes") {
+        const sessionsDone = workout.completedSessionsCount?.[user.id] || 0;
+        const sessionsTotal = parseInt(workout.periodization.value, 10) || 0;
+        isExpired = sessionsTotal > 0 && sessionsDone >= sessionsTotal;
+      }
+
+      const isCompletedGlobally = workout.completed === true;
+      const isHistory = isSelfFinalized || isExpired || isCompletedGlobally;
+
+      return workoutTab === 'upcoming' ? !isHistory : isHistory;
+    });
+
     return (
       <div className="max-w-7xl mx-auto pb-20">
         <div className="flex flex-col gap-2 mb-8">
@@ -670,35 +690,101 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       </div>
 
       <div className="flex flex-col gap-4">
-        {workouts.map((workout, idx) => (
-          <div key={workout.id} className="flex items-center justify-between p-4 bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
-                <span className="material-symbols-outlined text-primary text-2xl">fitness_center</span>
-              </div>
-              <div>
-                <h3 className="text-text-light-primary dark:text-text-dark-primary font-bold text-lg">{workout.title}</h3>
-                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">
-                  Atribuído em {workout.createdAt?.toDate().toLocaleDateString() || 'Recentemente'}
-                </p>
-              </div>
-            </div>
-            <button 
-              onClick={() => {
-                // Set as active workout if needed
-                setIsTraining(true);
-              }}
-              className="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/30 hover:brightness-110 transition-all"
-            >
-              Iniciar Treino
-            </button>
-          </div>
-        ))}
+        {filteredWorkouts.map((workout, idx) => {
+          const isSelfFinalized = workout.studentStatuses?.[user.id] === "Finalizado";
+          let isExpired = false;
+          let isDatePeriodization = workout.periodization?.type === "data";
+          let isSessionsPeriodization = workout.periodization?.type === "sessoes";
+          let sessionsDone = workout.completedSessionsCount?.[user.id] || 0;
+          let sessionsTotal = 0;
 
-        {workouts.length === 0 && (
-          <div className="text-center py-20 opacity-50">
-            <span className="material-symbols-outlined text-6xl mb-4">fitness_center</span>
-            <p className="text-lg">Nenhum treino disponível no momento.</p>
+          if (isDatePeriodization) {
+            const limitDate = new Date(workout.periodization.value);
+            limitDate.setHours(23, 59, 59, 999);
+            isExpired = new Date() > limitDate;
+          } else if (isSessionsPeriodization) {
+            sessionsTotal = parseInt(workout.periodization.value, 10) || 0;
+            isExpired = sessionsTotal > 0 && sessionsDone >= sessionsTotal;
+          }
+
+          const isHistorical = isSelfFinalized || isExpired || workout.completed === true;
+
+          return (
+            <div key={workout.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm gap-4 transition-all hover:bg-white/[0.01]">
+              <div className="flex items-start sm:items-center gap-4 min-w-0 w-full sm:w-auto">
+                <div className={`p-3 rounded-xl hidden sm:flex items-center justify-center shrink-0 ${isHistorical ? 'bg-zinc-500/10 text-zinc-400' : 'bg-primary/10 text-primary'}`}>
+                  <span className="material-symbols-outlined text-2xl">fitness_center</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-text-light-primary dark:text-text-dark-primary font-bold text-lg truncate flex items-center gap-2">
+                    {workout.title || workout.name}
+                    {workout.isModelLinked && (
+                      <span className="inline-flex size-2 rounded-full bg-primary" title="Ficha Modelo"></span>
+                    )}
+                  </h3>
+                  <p className="text-text-light-secondary dark:text-text-dark-secondary text-xs mt-0.5">
+                    Atribuído em {workout.createdAt?.toDate ? workout.createdAt.toDate().toLocaleDateString("pt-BR") : workout.createdAt ? new Date(workout.createdAt).toLocaleDateString("pt-BR") : 'Recentemente'}
+                  </p>
+                  
+                  {/* Periodization Details */}
+                  <div className="flex flex-wrap gap-2 mt-2.5">
+                    {workout.periodization?.type && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-black uppercase tracking-wider flex items-center gap-1 shrink-0 ${
+                        isExpired
+                          ? "bg-red-500/10 text-red-500 border-red-500/20"
+                          : "bg-blue-500/10 text-blue-500 border-blue-500/20 dark:text-blue-400"
+                      }`}>
+                        <span className="material-symbols-outlined text-[12px]">
+                          {workout.periodization.type === "data" ? "date_range" : "calendar_today"}
+                        </span>
+                        {workout.periodization.type === "data" 
+                          ? `Prazo: ${new Date(workout.periodization.value).toLocaleDateString("pt-BR")}`
+                          : `Ciclo: ${sessionsDone} / ${sessionsTotal} Treinos Realizados`
+                        }
+                      </span>
+                    )}
+                    {isSelfFinalized && (
+                      <span className="text-[10px] bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 px-2 py-0.5 rounded-lg font-black uppercase tracking-wider">
+                        Finalizado Manualmente
+                      </span>
+                    )}
+                    {isExpired && !isSelfFinalized && (
+                      <span className="text-[10px] bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded-lg font-black uppercase tracking-wider">
+                        Expirado
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setSelectedWorkoutId(workout.id);
+                  setSelectedSubWorkoutIndex(0);
+                  setIsTraining(true);
+                }}
+                className="w-full sm:w-auto flex min-w-[130px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-11 px-6 bg-primary text-background-dark text-sm font-black uppercase tracking-wider shadow-lg shadow-primary/20 hover:brightness-110 active:scale-[0.98] transition-all"
+              >
+                {isHistorical ? "Ver Ficha" : "Iniciar Treino"}
+              </button>
+            </div>
+          );
+        })}
+
+        {filteredWorkouts.length === 0 && (
+          <div className="text-center py-20 bg-card-light dark:bg-card-dark rounded-xl border border-dashed border-border-light dark:border-border-dark opacity-60">
+            <span className="material-symbols-outlined text-6xl mb-4 text-text-secondary select-none">fitness_center</span>
+            <p className="text-lg font-bold text-text-light-primary dark:text-text-dark-primary">
+              {workoutTab === 'upcoming' 
+                ? "Nenhum treino prescrito ou disponível." 
+                : "Seu histórico de treinos concluídos está vazio."
+              }
+            </p>
+            <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm mt-1">
+              {workoutTab === 'upcoming' 
+                ? "Seu personal trainer disponibilizará seus treinos aqui." 
+                : "Quando você finalizar seus ciclos de treino, eles virão para cá."
+              }
+            </p>
           </div>
         )}
       </div>
@@ -714,7 +800,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   };
 
   const renderWorkoutDetails = () => {
-    const activeWorkout = workouts.find(w => !w.completed) || workouts[0];
+    const activeWorkout = workouts.find(w => w.id === selectedWorkoutId) || workouts.find(w => !w.completed) || workouts[0];
     if (!activeWorkout) return <div className="p-8 text-center text-text-secondary">Nenhum treino disponível.</div>;
 
     const currentSubWorkout = activeWorkout.subWorkouts && activeWorkout.subWorkouts.length > 0
@@ -725,13 +811,43 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       ? (currentSubWorkout.exercises || [])
       : (activeWorkout.exercises || []);
 
+    const isSelfFinalized = activeWorkout.studentStatuses?.[user.id] === 'Finalizado';
+    let isExpired = false;
+    let sessionsDone = activeWorkout.completedSessionsCount?.[user.id] || 0;
+    let sessionsTotal = 0;
+
+    if (activeWorkout.periodization?.type === 'data') {
+      const limitDate = new Date(activeWorkout.periodization.value);
+      limitDate.setHours(23, 59, 59, 999);
+      isExpired = new Date() > limitDate;
+    } else if (activeWorkout.periodization?.type === 'sessoes') {
+      sessionsTotal = parseInt(activeWorkout.periodization.value, 10) || 0;
+      isExpired = sessionsTotal > 0 && sessionsDone >= sessionsTotal;
+    }
+    const isFinished = isSelfFinalized || isExpired || activeWorkout.completed === true;
+
     return (
       <div className="max-w-7xl mx-auto pb-20 animate-in fade-in duration-300">
         {/* Title & Back nav Row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">
-              {activeWorkout.name || activeWorkout.title}
+          <div className="flex flex-col gap-2">
+            <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em] flex flex-wrap items-center gap-2.5">
+              {activeWorkout.title || activeWorkout.name}
+              {activeWorkout.periodization?.type && (
+                <span className={`text-xs px-2.5 py-1 rounded-full border font-black uppercase tracking-wider inline-flex items-center gap-1 shrink-0 ${
+                  isExpired
+                    ? "bg-red-500/10 text-red-500 border-red-500/20"
+                    : "bg-blue-500/10 text-blue-500 border-blue-500/20 dark:text-blue-400"
+                }`}>
+                  <span className="material-symbols-outlined text-sm">
+                    {activeWorkout.periodization.type === "data" ? "date_range" : "calendar_today"}
+                  </span>
+                  {activeWorkout.periodization.type === "data"
+                    ? `Prazo: ${new Date(activeWorkout.periodization.value).toLocaleDateString("pt-BR")}`
+                    : `Sessões: ${sessionsDone} / ${sessionsTotal}`
+                  }
+                </span>
+              )}
             </h1>
             <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-medium">
               Siga os parâmetros prescritos pelo seu personal trainer abaixo.
@@ -924,7 +1040,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         {/* Finish workout button */}
         <div className="mt-12 flex flex-col items-center gap-4">
            <button 
-            disabled={activeWorkout.completed}
+            disabled={isFinished}
             onClick={async () => {
               if (activeWorkout.id) {
                 await dataService.completeWorkout(user.id, activeWorkout.id);
@@ -934,7 +1050,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
             }}
             className="w-full max-w-sm h-14 bg-primary text-background-dark font-black text-lg rounded-2xl shadow-xl shadow-primary/30 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {activeWorkout.completed ? 'Treino já Concluído' : 'Finalizar Sessão de Treino'}
+            {isFinished ? 'Treino / Ciclo Concluído' : 'Finalizar Sessão de Treino'}
           </button>
         </div>
       </div>

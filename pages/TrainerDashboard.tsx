@@ -3886,8 +3886,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             </div>
                           )}
                         </div>
+                      </div>
 
-                        {/* Coluna da Direita (Painel de Configurações Gerais - DESKTOP ONLY) */}
+                      {/* Coluna da Direita (Painel de Configurações Gerais - DESKTOP ONLY) */}
                         <div className="hidden lg:flex flex-col gap-5 bg-background-dark/30 border border-border-dark p-5 rounded-2xl">
                            <h4 className="text-white font-black text-xs uppercase tracking-widest flex items-center gap-2 border-b border-border-dark pb-3 mb-1 font-mono">
                              <span className="material-symbols-outlined text-primary text-base">settings</span>

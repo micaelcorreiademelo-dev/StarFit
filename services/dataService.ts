@@ -386,11 +386,43 @@ export const dataService = {
   completeWorkout: async (userId: string, workoutId: string) => {
     try {
       const workoutRef = doc(db, 'workouts', workoutId);
-      await updateDoc(workoutRef, {
-        completed: true,
-        completedAt: serverTimestamp(),
-        completedBy: userId
-      });
+      const workoutSnap = await getDoc(workoutRef);
+      if (workoutSnap.exists()) {
+        const workoutData = workoutSnap.data();
+        const currentCompletedCount = workoutData.completedSessionsCount?.[userId] || 0;
+        const newCompletedCount = currentCompletedCount + 1;
+        
+        const updatedCompletedCounts = {
+          ...(workoutData.completedSessionsCount || {}),
+          [userId]: newCompletedCount
+        };
+
+        const updates: any = {
+          completedSessionsCount: updatedCompletedCounts,
+          completedAt: serverTimestamp(),
+          completedBy: userId
+        };
+
+        // If sessoes periodization is completed, auto-finalize the student's status for this workout.
+        if (workoutData.periodization?.type === 'sessoes') {
+          const limit = parseInt(workoutData.periodization.value, 10) || 0;
+          if (limit > 0 && newCompletedCount >= limit) {
+            const currentStatuses = workoutData.studentStatuses || {};
+            updates.studentStatuses = {
+              ...currentStatuses,
+              [userId]: 'Finalizado'
+            };
+          }
+        }
+        
+        await updateDoc(workoutRef, updates);
+      } else {
+        await updateDoc(workoutRef, {
+          completed: true,
+          completedAt: serverTimestamp(),
+          completedBy: userId
+        });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `workouts/${workoutId}`);
     }
