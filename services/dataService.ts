@@ -58,6 +58,36 @@ export const dataService = {
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'workouts'));
   },
 
+  checkAndAutoActivateWorkouts: async (studentId: string, currentWorkouts: any[]) => {
+    let needsActivation = false;
+    for (const w of currentWorkouts) {
+      // Check expiration date
+      if (w.status === 'ativa' && w.periodization?.type === 'data') {
+        const limitDate = new Date(w.periodization.value);
+        if (new Date() >= limitDate) {
+          await updateDoc(doc(db, 'workouts', w.id), { status: 'encerrada', completed: true });
+          needsActivation = true;
+        }
+      }
+    }
+    if (needsActivation) {
+      await dataService.autoActivateFutureWorkout(studentId);
+    }
+  },
+
+  autoActivateFutureWorkout: async (studentId: string) => {
+    const q = query(collection(db, 'workouts'), where('studentIds', 'array-contains', studentId), where('status', '==', 'futura'));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const nextW = snap.docs[0]; // just picking the first future one
+      const isSemPeriodizacao = !nextW.data().periodization?.type;
+      await updateDoc(doc(db, 'workouts', nextW.id), { 
+        status: isSemPeriodizacao ? 'sem_periodizacao' : 'ativa',
+        isActive: true
+      });
+    }
+  },
+
   createWorkout: async (workoutData: any) => {
     try {
       const docRef = await addDoc(collection(db, 'workouts'), {
@@ -206,6 +236,10 @@ export const dataService = {
     const q = query(collection(db, 'workouts'), where('studentIds', 'array-contains', studentId));
     return onSnapshot(q, (snapshot) => {
       const workouts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Auto-check and update status if periodization limits imply it
+      dataService.checkAndAutoActivateWorkouts(studentId, workouts).catch(console.error);
+
       callback(workouts);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'workouts'));
   },
@@ -386,42 +420,40 @@ export const dataService = {
   completeWorkout: async (userId: string, workoutId: string) => {
     try {
       const workoutRef = doc(db, 'workouts', workoutId);
-      const workoutSnap = await getDoc(workoutRef);
-      if (workoutSnap.exists()) {
-        const workoutData = workoutSnap.data();
-        const currentCompletedCount = workoutData.completedSessionsCount?.[userId] || 0;
-        const newCompletedCount = currentCompletedCount + 1;
-        
-        const updatedCompletedCounts = {
-          ...(workoutData.completedSessionsCount || {}),
-          [userId]: newCompletedCount
-        };
+      const docSnap = await getDoc(workoutRef);
+      if (!docSnap.exists()) return;
+      const data = docSnap.data();
 
-        const updates: any = {
-          completedSessionsCount: updatedCompletedCounts,
-          completedAt: serverTimestamp(),
-          completedBy: userId
-        };
+      const currentSessions = (data.completedSessionsCount || 0) + 1;
+      let isEnded = false;
 
-        // If sessoes periodization is completed, auto-finalize the student's status for this workout.
-        if (workoutData.periodization?.type === 'sessoes') {
-          const limit = parseInt(workoutData.periodization.value, 10) || 0;
-          if (limit > 0 && newCompletedCount >= limit) {
-            const currentStatuses = workoutData.studentStatuses || {};
-            updates.studentStatuses = {
-              ...currentStatuses,
-              [userId]: 'Finalizado'
-            };
-          }
+      // Handle 'Nº de Treinos' periodization
+      if ((data.status === 'ativa' || data.status === 'sem_periodizacao') && data.periodization?.type === 'treinos') {
+        const limit = parseInt(data.periodization.value) || 0;
+        if (limit > 0 && currentSessions >= limit) {
+          isEnded = true;
         }
-        
-        await updateDoc(workoutRef, updates);
-      } else {
-        await updateDoc(workoutRef, {
-          completed: true,
-          completedAt: serverTimestamp(),
-          completedBy: userId
-        });
+      }
+
+      await updateDoc(workoutRef, {
+        completedSessionsCount: currentSessions,
+        lastCompletedAt: serverTimestamp(),
+        ...(isEnded ? {
+          status: 'encerrada',
+          completed: true, 
+          completedAt: serverTimestamp() 
+        } : {})
+      });
+
+      // Write session log
+      await addDoc(collection(db, 'workoutSessions'), {
+         workoutId,
+         studentId: userId,
+         completedAt: serverTimestamp()
+      });
+
+      if (isEnded) {
+         await dataService.autoActivateFutureWorkout(userId);
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `workouts/${workoutId}`);

@@ -538,10 +538,33 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
   // Estados para gerenciar a Ficha de Treino (Nome, Ativo, Periodizaçao e Remoção) na versão mobile
   const [isFichaMenuOpen, setIsFichaMenuOpen] = useState(false);
-  const [fichaIsActive, setFichaIsActive] = useState(true);
+  const [fichaStatus, setFichaStatus] = useState<"ativa" | "futura" | "encerrada" | "sem_periodizacao">("ativa");
   const [fichaPeriodizationType, setFichaPeriodizationType] = useState<"treinos" | "data" | null>(null);
   const [fichaPeriodizationValue, setFichaPeriodizationValue] = useState<string>("");
   const [fichaObservation, setFichaObservation] = useState("");
+
+  const editWorkout = (w: any) => {
+    if (!w) return;
+    setEditingWorkoutId(w.id);
+    setWorkoutName(w.name || w.title || "Treino");
+    if (w.subWorkouts && w.subWorkouts.length > 0) {
+      setSubWorkouts(w.subWorkouts);
+    } else {
+      setSubWorkouts([
+        { id: "A", name: "Treino A", exercises: [] },
+        { id: "B", name: "Treino B", exercises: [] },
+        { id: "C", name: "Treino C", exercises: [] },
+        { id: "D", name: "Treino D", exercises: [] },
+        { id: "E", name: "Treino E", exercises: [] }
+      ]);
+    }
+    setWorkoutEditorStep("ficha");
+    setActiveSubWorkoutIndex(null);
+    setFichaStatus(w.status || (w.isActive === false ? "encerrada" : "ativa"));
+    setFichaPeriodizationType(w.periodization?.type || null);
+    setFichaPeriodizationValue(w.periodization?.value || "");
+    setFichaObservation(w.observation || "");
+  };
 
   const openExerciseDetailForNew = (libEx: any) => {
     setSelectedLibraryExercise(libEx);
@@ -2252,32 +2275,62 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           setActiveTab('workouts');
                           setMobileSelectedStudent(null);
                         }}
-                        className="w-full bg-card-dark px-2.5 py-4 md:px-6 md:py-6 rounded-xl border border-border-dark flex items-center justify-between hover:border-primary/50 transition-colors shadow-lg cursor-pointer animate-none"
+                        className="w-full bg-card-dark px-2.5 py-4 md:px-6 md:py-6 rounded-xl border border-border-dark flex flex-col gap-2 hover:border-primary/50 transition-colors shadow-lg cursor-pointer animate-none"
                       >
-                        <div className="flex flex-col min-w-0 pr-2">
-                          <span className="text-white font-bold text-sm truncate">{w.name}</span>
-                          {w.isModelLinked && (
-                            <span className="text-[9px] text-primary font-black uppercase tracking-widest mt-0.5 flex items-center gap-1">
-                              <span className="size-1.5 rounded-full bg-primary"></span>
-                              Ficha Modelo
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2 shrink-0">
-                          {/* Manual status choice/badge */}
-                          <button
-                            onClick={(e) => toggleWorkoutStatus(w, student.id, e)}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-colors border shadow-sm shrink-0 ${
-                              isAtivo 
-                                ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20" 
-                                : "bg-white/5 text-text-secondary border-white/10 hover:bg-white/10"
-                            }`}
-                          >
-                            <span className={`size-1.5 rounded-full ${isAtivo ? "bg-primary animate-pulse" : "bg-text-secondary"}`}></span>
-                            {isAtivo ? "Ativo" : "Finalizado"}
-                          </button>
-                          <span className="material-symbols-outlined text-text-secondary shrink-0 select-none">chevron_right</span>
+                        <div className="flex items-start justify-between w-full">
+                          <div className="flex flex-col min-w-0 pr-2">
+                            <span className="text-white font-bold text-sm truncate">{w.name}</span>
+                            {w.isModelLinked && (
+                              <span className="text-[9px] text-primary font-black uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                                <span className="size-1.5 rounded-full bg-primary"></span>
+                                Ficha Modelo
+                              </span>
+                            )}
+                            
+                            {/* Renderizar Infos de Periodização se aplicável e não encerrada */}
+                            {w.status !== 'encerrada' && w.periodization && (
+                              <div className="mt-1.5 text-xs font-medium text-text-secondary">
+                                {w.periodization.type === 'treinos' && (
+                                  <span className="flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                                    Progresso: {w.completedSessionsCount || 0} / {w.periodization.value} treinos
+                                  </span>
+                                )}
+                                {w.periodization.type === 'data' && (
+                                  <span className="flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[14px]">event</span>
+                                    Vence em: {new Date(w.periodization.value).toLocaleDateString('pt-BR')}
+                                    {(() => {
+                                      const diffTime = Math.abs(new Date(w.periodization.value).getTime() - new Date().getTime());
+                                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                      return ` (${diffDays} dias restantes)`;
+                                    })()}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Badge de Status da Ficha */}
+                            <div
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm shrink-0 ${
+                                w.status === 'futura' 
+                                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
+                                  : w.status === 'encerrada'
+                                  ? "bg-white/5 text-text-secondary border-white/10"
+                                  : "bg-primary/10 text-primary border-primary/20"
+                              }`}
+                            >
+                              <span className={`size-1.5 rounded-full ${
+                                w.status === 'futura' ? "bg-blue-400" 
+                                : w.status === 'encerrada' ? "bg-text-secondary" 
+                                : "bg-primary animate-pulse"
+                              }`}></span>
+                              {w.status === 'futura' ? 'Próxima' : w.status === 'encerrada' ? 'Encerrada' : 'Ativa'}
+                            </div>
+                            <span className="material-symbols-outlined text-text-secondary shrink-0 select-none">chevron_right</span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -2937,29 +2990,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                {workouts.filter(w => w.studentIds?.includes(student.id)).length > 0 ? (
                                   workouts.filter(w => w.studentIds?.includes(student.id)).map(w => (
-                                     <div
+                                     <button
                                        key={w.id}
                                        onClick={() => {
                                          startEditingWorkout(w);
                                          setActiveTab('workouts');
                                        }}
-                                       className="flex items-center justify-between bg-background-dark p-4 rounded-xl border border-border-dark hover:border-primary/30 transition-all text-left cursor-pointer"
+                                       className="flex items-center justify-between bg-background-dark p-3 rounded-xl border border-border-dark hover:border-primary/50 transition-colors text-left"
                                      >
                                         <div className="flex flex-col min-w-0 pr-2">
                                           <span className="text-white font-bold text-sm truncate">{w.name}</span>
-                                          <div className="flex flex-wrap gap-1.5 items-center mt-1">
-                                            {w.periodization?.type && (
-                                              <span className="text-[9px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide flex items-center gap-1 shrink-0">
-                                                <span className="material-symbols-outlined text-[10px]">
-                                                  {w.periodization.type === "data" ? "date_range" : "calendar_today"}
-                                                </span>
-                                                {w.periodization.type === "data" 
-                                                  ? `${new Date(w.periodization.value).toLocaleDateString("pt-BR")}` 
-                                                  : `${w.periodization.value} Treinos`
-                                                }
-                                              </span>
-                                            )}
-                                          </div>
                                           {w.isModelLinked && (
                                             <span className="text-[10px] text-primary font-black uppercase tracking-widest mt-0.5 flex items-center gap-1">
                                               <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
@@ -2967,33 +3007,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                             </span>
                                           )}
                                         </div>
-                                        <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                          {/* Manual status choice/badge */}
-                                          <button
-                                            type="button"
-                                            onClick={(e) => toggleWorkoutStatus(w, student.id, e)}
-                                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm shrink-0 ${
-                                              w.studentStatuses?.[student.id] !== "Finalizado" && w.isActive !== false
-                                                ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20" 
-                                                : "bg-white/5 text-text-secondary border-white/10 hover:bg-white/10"
-                                            }`}
-                                          >
-                                            <span className={`size-1.5 rounded-full ${(w.studentStatuses?.[student.id] !== "Finalizado" && w.isActive !== false) ? "bg-primary animate-pulse" : "bg-text-secondary"}`}></span>
-                                            {(w.studentStatuses?.[student.id] !== "Finalizado" && w.isActive !== false) ? "Ativo" : "Finalizado"}
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              startEditingWorkout(w);
-                                              setActiveTab('workouts');
-                                            }}
-                                            className="size-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-text-secondary hover:text-white flex items-center justify-center transition-all"
-                                            title="Editar Ficha"
-                                          >
-                                            <span className="material-symbols-outlined text-sm">edit</span>
-                                          </button>
-                                        </div>
-                                     </div>
+                                        <span className="material-symbols-outlined text-text-secondary shrink-0">chevron_right</span>
+                                     </button>
                                   ))
                                ) : (
                                   <p className="text-text-secondary text-sm italic py-2 md:col-span-3">Nenhum treino vinculado.</p>
@@ -3398,7 +3413,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       ]);
       setWorkoutEditorStep("ficha");
       setActiveSubWorkoutIndex(null);
-      setFichaIsActive(true);
+      setFichaStatus("ativa");
       setFichaPeriodizationType(null);
       setFichaPeriodizationValue("");
       setFichaObservation("");
@@ -3418,7 +3433,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       }
       setWorkoutEditorStep("ficha");
       setActiveSubWorkoutIndex(null);
-      setFichaIsActive(w.isActive !== false);
+      setFichaStatus(w.status || (w.isActive === false ? "encerrada" : "ativa"));
       setFichaPeriodizationType(w.periodization?.type || null);
       setFichaPeriodizationValue(w.periodization?.value || "");
       setFichaObservation(w.observation || "");
@@ -3612,10 +3627,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 }
               });
 
+              const finalStatus = fichaPeriodizationType ? fichaStatus : (fichaStatus === 'futura' ? 'futura' : 'sem_periodizacao');
               const payload = {
                 name: workoutName,
                 title: workoutName,
-                isActive: fichaIsActive,
+                status: finalStatus,
                 periodization: fichaPeriodizationType ? { type: fichaPeriodizationType, value: fichaPeriodizationValue } : null,
                 observation: fichaObservation,
                 subWorkouts: subWorkouts,
@@ -3713,17 +3729,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                       </div>
 
                        <div className="p-6 pb-36 lg:pb-6 flex flex-col gap-6">
-                        <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
-                          {/* Coluna da Esquerda (Divisão de Treinos) */}
-                          <div className="lg:col-span-2 flex flex-col gap-6">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h3 className="hidden lg:flex text-white font-bold text-lg items-center gap-2">
-                                  <span className="material-symbols-outlined text-primary">layers</span>
-                                  Divisão de Treinos ({subWorkouts.length})
-                                </h3>
-                                <p className="hidden lg:block text-text-secondary text-xs mt-1">Arraste os cards para reordenar a ficha ou adicione novos treinos.</p>
-                              </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="hidden lg:flex text-white font-bold text-lg items-center gap-2">
+                              <span className="material-symbols-outlined text-primary">layers</span>
+                              Divisão de Treinos ({subWorkouts.length})
+                            </h3>
+                            <p className="hidden lg:block text-text-secondary text-xs mt-1">Arraste os cards para reordenar a ficha ou adicione novos treinos.</p>
+                          </div>
                           {/* Add workout button shown only on desktop header */}
                           <button
                             onClick={() => {
@@ -3886,156 +3899,32 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             </div>
                           )}
                         </div>
-                      </div>
 
-                      {/* Coluna da Direita (Painel de Configurações Gerais - DESKTOP ONLY) */}
-                        <div className="hidden lg:flex flex-col gap-5 bg-background-dark/30 border border-border-dark p-5 rounded-2xl">
-                           <h4 className="text-white font-black text-xs uppercase tracking-widest flex items-center gap-2 border-b border-border-dark pb-3 mb-1 font-mono">
-                             <span className="material-symbols-outlined text-primary text-base">settings</span>
-                             Definições da Ficha
-                           </h4>
-
-                           {/* Status */}
-                           <div className="flex flex-col gap-2">
-                             <label className="text-[10px] text-text-secondary font-black uppercase tracking-wider font-mono">Status de Ativação</label>
-                             <button
-                               type="button"
-                               onClick={() => setFichaIsActive(!fichaIsActive)}
-                               className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-white/5 hover:bg-white/10 border border-border-dark text-white rounded-xl text-sm font-bold transition-all"
-                             >
-                               <div className="flex items-center gap-3">
-                                 <span className={`material-symbols-outlined text-[20px] ${fichaIsActive ? 'text-primary' : 'text-text-secondary'}`}>
-                                   {fichaIsActive ? 'toggle_on' : 'toggle_off'}
-                                 </span>
-                                 <span>{fichaIsActive ? 'Ficha Ativa' : 'Ficha Inativa'}</span>
-                               </div>
-                               <span className={`text-[10px] px-2 py-0.5 rounded font-black ${fichaIsActive ? 'bg-primary/20 text-primary' : 'bg-white/10 text-text-secondary'}`}>
-                                 {fichaIsActive ? 'ATIVO' : 'INATIVO'}
-                               </span>
-                             </button>
-                           </div>
-
-                           {/* Periodização */}
-                           <div className="flex flex-col gap-2">
-                             <label className="text-[10px] text-text-secondary font-black uppercase tracking-wider font-mono">Configuração de Periodização</label>
-                             <div className="grid grid-cols-3 gap-1.5 bg-black/20 p-1 rounded-xl border border-border-dark/30">
-                               <button
-                                 type="button"
-                                 onClick={() => {
-                                   setFichaPeriodizationType(null);
-                                   setFichaPeriodizationValue("");
-                                 }}
-                                 className={`py-2 px-1 text-center rounded-lg text-[10px] font-black uppercase tracking-wide transition-all border ${
-                                   fichaPeriodizationType === null
-                                     ? 'bg-primary/25 border-primary text-primary font-black'
-                                     : 'bg-white/5 border-border-dark/30 text-text-secondary hover:text-white'
-                                 }`}
-                               >
-                                 Nenhum
-                               </button>
-                               <button
-                                 type="button"
-                                 onClick={() => {
-                                   setFichaPeriodizationType("treinos");
-                                   setFichaPeriodizationValue("15");
-                                 }}
-                                 className={`py-2 px-1 text-center rounded-lg text-[10px] font-black uppercase tracking-wide transition-all border ${
-                                   fichaPeriodizationType === "treinos"
-                                     ? 'bg-primary/25 border-primary text-primary font-black'
-                                     : 'bg-white/5 border-border-dark/30 text-text-secondary hover:text-white'
-                                 }`}
-                               >
-                                 Treinos
-                               </button>
-                               <button
-                                 type="button"
-                                 onClick={() => {
-                                   const defaultDate = new Date();
-                                   defaultDate.setDate(defaultDate.getDate() + 30);
-                                   const dateStr = defaultDate.toISOString().split('T')[0];
-                                   setFichaPeriodizationType("data");
-                                   setFichaPeriodizationValue(dateStr);
-                                 }}
-                                 className={`py-2 px-1 text-center rounded-lg text-[10px] font-black uppercase tracking-wide transition-all border ${
-                                   fichaPeriodizationType === "data"
-                                     ? 'bg-primary/25 border-primary text-primary font-black'
-                                     : 'bg-white/5 border-border-dark/30 text-text-secondary hover:text-white'
-                                 }`}
-                               >
-                                 Venc.
-                               </button>
-                             </div>
-
-                             {fichaPeriodizationType === "treinos" && (
-                               <div className="flex items-center gap-3 bg-background-dark/50 border border-border-dark rounded-xl px-3 py-1 mt-1 animate-in fade-in zoom-in-95 duration-100">
-                                 <span className="material-symbols-outlined text-text-secondary text-lg">calendar_today</span>
-                                 <input
-                                   type="number"
-                                   min="1"
-                                   value={fichaPeriodizationValue}
-                                   onChange={(e) => setFichaPeriodizationValue(e.target.value)}
-                                   className="flex-1 bg-transparent border-none text-white text-sm font-bold focus:outline-none focus:ring-0 outline-none py-2"
-                                   placeholder="Ex: 20 treinos"
-                                 />
-                                 <span className="text-xs text-text-secondary font-bold pr-2">Sessões</span>
-                               </div>
-                             )}
-
-                             {fichaPeriodizationType === "data" && (
-                               <div className="flex items-center gap-3 bg-background-dark/50 border border-border-dark rounded-xl px-3 py-1 mt-1 animate-in fade-in zoom-in-95 duration-100">
-                                 <span className="material-symbols-outlined text-text-secondary text-base">date_range</span>
-                                 <input
-                                   type="date"
-                                   value={fichaPeriodizationValue}
-                                   onChange={(e) => setFichaPeriodizationValue(e.target.value)}
-                                   className="flex-1 bg-transparent border-none text-white text-xs font-bold focus:outline-none focus:ring-0 outline-none py-2 filter invert brightness-90"
-                                 />
-                               </div>
-                             )}
-                           </div>
-
-                           {/* Observações */}
-                           <div className="flex flex-col gap-2">
-                             <label className="text-[10px] text-text-secondary font-black uppercase tracking-wider flex items-center gap-1.5">
-                               <span className="material-symbols-outlined text-primary text-sm">notes</span>
-                               Observações de Execução
-                             </label>
-                             <textarea
-                               value={fichaObservation}
-                               onChange={(e) => setFichaObservation(e.target.value)}
-                               className="w-full bg-background-dark/50 border border-border-dark focus:border-primary/60 rounded-xl px-3 py-2.5 text-white text-xs placeholder-text-secondary/50 focus:outline-none transition-all resize-none min-h-[100px] leading-relaxed"
-                               placeholder="Observações gerais da ficha..."
-                               rows={4}
-                             />
-                           </div>
+                        {/* Observações de Execução (Desktop & Mobile) */}
+                        <div className="flex flex-col gap-2.5 mt-8 pt-8 border-t border-border-dark/30">
+                          <label className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary text-sm">notes</span>
+                            Observações de Execução
+                          </label>
+                          <textarea
+                            ref={(el) => {
+                              if (el) {
+                                el.style.height = "auto";
+                                el.style.height = el.scrollHeight + "px";
+                              }
+                            }}
+                            value={fichaObservation}
+                            onChange={(e) => {
+                              setFichaObservation(e.target.value);
+                              e.target.style.height = "auto";
+                              e.target.style.height = e.target.scrollHeight + "px";
+                            }}
+                            className="w-full bg-background-dark/50 border border-border-dark focus:border-primary/60 rounded-xl px-4 py-3 text-white text-sm placeholder-text-secondary/50 focus:outline-none transition-all resize-none min-h-[100px] overflow-hidden leading-relaxed"
+                            placeholder="Adicione orientações gerais para a execução desta ficha de treino..."
+                            rows={4}
+                          />
                         </div>
                       </div>
-
-                      {/* Observações de Execução (Mobile Only) */}
-                      <div className="flex lg:hidden flex-col gap-2.5 mt-8 pt-8 border-t border-border-dark/30 col-span-1">
-                        <label className="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
-                          <span className="material-symbols-outlined text-primary text-sm">notes</span>
-                          Observações de Execução
-                        </label>
-                        <textarea
-                          ref={(el) => {
-                            if (el) {
-                              el.style.height = "auto";
-                              el.style.height = el.scrollHeight + "px";
-                            }
-                          }}
-                          value={fichaObservation}
-                          onChange={(e) => {
-                            setFichaObservation(e.target.value);
-                            e.target.style.height = "auto";
-                            e.target.style.height = e.target.scrollHeight + "px";
-                          }}
-                          className="w-full bg-background-dark/50 border border-border-dark focus:border-primary/60 rounded-xl px-4 py-3 text-white text-sm placeholder-text-secondary/50 focus:outline-none transition-all resize-none min-h-[100px] overflow-hidden leading-relaxed"
-                          placeholder="Adicione orientações gerais para a execução desta ficha de treino..."
-                          rows={4}
-                        />
-                      </div>
-                    </div>
                     </div>
                   )}
 
@@ -4700,21 +4589,41 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                         {/* 2. Ativar Ficha */}
                         <div className="flex flex-col gap-2">
                           <label className="text-xs text-text-secondary font-bold uppercase tracking-wider">Status da Ficha</label>
-                          <button
-                            type="button"
-                            onClick={() => setFichaIsActive(!fichaIsActive)}
-                            className="w-full flex items-center justify-between gap-3 px-4 py-3.5 bg-white/5 hover:bg-white/10 border border-border-dark text-white rounded-xl text-sm font-bold transition-all"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className={`material-symbols-outlined text-[20px] ${fichaIsActive ? 'text-primary' : 'text-text-secondary'}`}>
-                                {fichaIsActive ? 'toggle_on' : 'toggle_off'}
-                              </span>
-                              <span>{fichaIsActive ? 'Ficha Ativa' : 'Ficha Inativa'}</span>
-                            </div>
-                            <span className={`text-xs px-2 py-0.5 rounded font-black ${fichaIsActive ? 'bg-primary/20 text-primary' : 'bg-white/10 text-text-secondary'}`}>
-                              {fichaIsActive ? 'ATIVO' : 'INATIVO'}
-                            </span>
-                          </button>
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setFichaStatus('ativa')}
+                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border ${
+                                fichaStatus === 'ativa' || fichaStatus === 'sem_periodizacao'
+                                  ? 'bg-primary/25 border-primary text-primary font-black'
+                                  : 'bg-white/5 border-border-dark text-text-secondary hover:text-white'
+                              }`}
+                            >
+                              Ativa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFichaStatus('futura')}
+                              className={`py-2 px-1 flex items-center justify-center gap-1 rounded-lg text-xs font-bold transition-all border ${
+                                fichaStatus === 'futura'
+                                  ? 'bg-blue-500/25 border-blue-500 text-blue-400 font-black'
+                                  : 'bg-white/5 border-border-dark text-text-secondary hover:text-white'
+                              }`}
+                            >
+                              Futura
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFichaStatus('encerrada')}
+                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border ${
+                                fichaStatus === 'encerrada'
+                                  ? 'bg-red-500/25 border-red-500 text-red-500 font-black'
+                                  : 'bg-white/5 border-border-dark text-text-secondary hover:text-white'
+                              }`}
+                            >
+                              Encerrada
+                            </button>
+                          </div>
                         </div>
 
                         {/* 3. Periodização */}
