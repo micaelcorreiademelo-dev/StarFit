@@ -58,14 +58,43 @@ export const dataService = {
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'workouts'));
   },
 
+  deactivateOtherWorkouts: async (studentId: string, activeWorkoutId: string) => {
+    try {
+      const q = query(
+        collection(db, 'workouts'),
+        where('studentIds', 'array-contains', studentId)
+      );
+      const snap = await getDocs(q);
+      for (const d of snap.docs) {
+        if (d.id !== activeWorkoutId) {
+          const data = d.data();
+          if (data.status === 'ativa' || data.status === 'sem_periodizacao' || data.isActive !== false) {
+            await updateDoc(doc(db, 'workouts', d.id), {
+              status: 'encerrada',
+              isActive: false
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao desativar outras fichas:", error);
+    }
+  },
+
   checkAndAutoActivateWorkouts: async (studentId: string, currentWorkouts: any[]) => {
     let needsActivation = false;
     for (const w of currentWorkouts) {
-      // Check expiration date
-      if (w.status === 'ativa' && w.periodization?.type === 'data') {
-        const limitDate = new Date(w.periodization.value);
+      // Check expiration date (supporting both old and new schema fields)
+      const isDatePeriodization = w.tipoPeriodizacao === 'dataVencimento' || w.periodization?.type === 'data';
+      const limitDateValue = w.dataVencimento || w.periodization?.value;
+      if (w.status === 'ativa' && isDatePeriodization && limitDateValue) {
+        const limitDate = new Date(limitDateValue);
         if (new Date() >= limitDate) {
-          await updateDoc(doc(db, 'workouts', w.id), { status: 'encerrada', completed: true });
+          await updateDoc(doc(db, 'workouts', w.id), { 
+            status: 'encerrada', 
+            completed: true,
+            isActive: false
+          });
           needsActivation = true;
         }
       }
@@ -80,10 +109,14 @@ export const dataService = {
     const snap = await getDocs(q);
     if (!snap.empty) {
       const nextW = snap.docs[0]; // just picking the first future one
-      const isSemPeriodizacao = !nextW.data().periodization?.type;
+      const data = nextW.data();
+      const isSemPeriodizacao = !(data.periodization?.type || data.tipoPeriodizacao || data.tipoPeriodizacao === 'nenhuma');
+      const newStatus = isSemPeriodizacao ? 'sem_periodizacao' : 'ativa';
+
       await updateDoc(doc(db, 'workouts', nextW.id), { 
-        status: isSemPeriodizacao ? 'sem_periodizacao' : 'ativa',
-        isActive: true
+        status: newStatus,
+        isActive: true,
+        tipoPeriodizacao: isSemPeriodizacao ? 'nenhuma' : (data.tipoPeriodizacao || 'numTreinos')
       });
     }
   },
@@ -94,6 +127,12 @@ export const dataService = {
         ...workoutData,
         createdAt: serverTimestamp()
       });
+      // If the workout is saved as active, deactivate other workouts for the student
+      if ((workoutData.status === 'ativa' || workoutData.status === 'sem_periodizacao') && workoutData.studentIds && workoutData.studentIds.length > 0) {
+        for (const studentId of workoutData.studentIds) {
+          await dataService.deactivateOtherWorkouts(studentId, docRef.id);
+        }
+      }
       return docRef.id;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'workouts');
@@ -104,6 +143,23 @@ export const dataService = {
     try {
       const docRef = doc(db, 'workouts', workoutId);
       await updateDoc(docRef, workoutData);
+      
+      // If the updated workout is saved as active, deactivate other workouts for the student
+      const studentIdToDeactivate = workoutData.studentIds?.[0];
+      if ((workoutData.status === 'ativa' || workoutData.status === 'sem_periodizacao') && studentIdToDeactivate) {
+        await dataService.deactivateOtherWorkouts(studentIdToDeactivate, workoutId);
+      } else if (workoutData.status === 'ativa' || workoutData.status === 'sem_periodizacao') {
+        // Fallback: fetch current doc to check if user has studentIds
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const currentData = snap.data();
+          if (currentData.studentIds && currentData.studentIds.length > 0) {
+            for (const sId of currentData.studentIds) {
+              await dataService.deactivateOtherWorkouts(sId, workoutId);
+            }
+          }
+        }
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `workouts/${workoutId}`);
     }
@@ -424,20 +480,24 @@ export const dataService = {
       if (!docSnap.exists()) return;
       const data = docSnap.data();
 
-      const currentSessions = (data.completedSessionsCount || 0) + 1;
+      const currentSessions = (data.treinosRealizados !== undefined ? Number(data.treinosRealizados) : (data.completedSessionsCount || 0)) + 1;
       let isEnded = false;
 
       // Handle 'Nº de Treinos' periodization
-      if ((data.status === 'ativa' || data.status === 'sem_periodizacao') && data.periodization?.type === 'treinos') {
-        const limit = parseInt(data.periodization.value) || 0;
-        if (limit > 0 && currentSessions >= limit) {
+      const isTreinosPeriodization = data.tipoPeriodizacao === 'numTreinos' || data.periodization?.type === 'treinos';
+      const maxSessionsLimit = data.numTreinos !== undefined ? Number(data.numTreinos) : (data.periodization?.value ? parseInt(data.periodization.value) : 0);
+
+      if ((data.status === 'ativa' || data.status === 'sem_periodizacao') && isTreinosPeriodization) {
+        if (maxSessionsLimit > 0 && currentSessions >= maxSessionsLimit) {
           isEnded = true;
         }
       }
 
       await updateDoc(workoutRef, {
         completedSessionsCount: currentSessions,
+        treinosRealizados: currentSessions,
         lastCompletedAt: serverTimestamp(),
+        isActive: !isEnded,
         ...(isEnded ? {
           status: 'encerrada',
           completed: true, 
@@ -489,13 +549,21 @@ export const dataService = {
         const data = workoutSnap.data();
         // Clone the workout specifically for this student so they have a separate copy
         const { id, createdAt, studentIds, studentStatuses, ...cleanData } = data;
-        await addDoc(collection(db, 'workouts'), {
+        const initialStatus = cleanData.status || (cleanData.tipoPeriodizacao === 'nenhuma' ? 'sem_periodizacao' : 'ativa');
+        
+        const docRef = await addDoc(collection(db, 'workouts'), {
           ...cleanData,
+          status: initialStatus,
+          isActive: initialStatus === 'ativa' || initialStatus === 'sem_periodizacao',
           studentIds: [studentId],
           studentStatuses: { [studentId]: "Ativo" },
           isModelLinked: true, // Marker showing it was cloned from a template
           createdAt: serverTimestamp()
         });
+
+        if (initialStatus === 'ativa' || initialStatus === 'sem_periodizacao') {
+          await dataService.deactivateOtherWorkouts(studentId, docRef.id);
+        }
       }
     } catch (error) {
        handleFirestoreError(error, OperationType.CREATE, 'workouts');

@@ -536,11 +536,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   } | null>(null);
   const [isMobileBottomSheetExpanded, setIsMobileBottomSheetExpanded] = useState(false);
 
-  // Estados para gerenciar a Ficha de Treino (Nome, Ativo, Periodizaçao e Remoção) na versão mobile
+  // Estados para gerenciar a Ficha de Treino (Nome, Ativo, Periodizaçao e Remoção) na versão mobile/desktop
   const [isFichaMenuOpen, setIsFichaMenuOpen] = useState(false);
   const [fichaStatus, setFichaStatus] = useState<"ativa" | "futura" | "encerrada" | "sem_periodizacao">("ativa");
-  const [fichaPeriodizationType, setFichaPeriodizationType] = useState<"treinos" | "data" | null>(null);
-  const [fichaPeriodizationValue, setFichaPeriodizationValue] = useState<string>("");
+  const [fichaTipoPeriodizacao, setFichaTipoPeriodizacao] = useState<"nenhuma" | "numTreinos" | "dataVencimento">("nenhuma");
+  const [fichaNumTreinos, setFichaNumTreinos] = useState<number>(15);
+  const [fichaDataVencimento, setFichaDataVencimento] = useState<string>("");
+  const [fichaTreinosRealizados, setFichaTreinosRealizados] = useState<number>(0);
   const [fichaObservation, setFichaObservation] = useState("");
 
   const editWorkout = (w: any) => {
@@ -560,9 +562,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     }
     setWorkoutEditorStep("ficha");
     setActiveSubWorkoutIndex(null);
-    setFichaStatus(w.status || (w.isActive === false ? "encerrada" : "ativa"));
-    setFichaPeriodizationType(w.periodization?.type || null);
-    setFichaPeriodizationValue(w.periodization?.value || "");
+
+    const parsedStatus = w.status || (w.isActive === false ? "encerrada" : (w.periodization?.type || w.tipoPeriodizacao) ? "ativa" : "sem_periodizacao");
+    const parsedTipo = w.tipoPeriodizacao || (w.periodization?.type === 'treinos' ? 'numTreinos' : w.periodization?.type === 'data' ? 'dataVencimento' : 'nenhuma');
+    const parsedNumTreinos = w.numTreinos !== undefined ? Number(w.numTreinos) : (w.periodization?.type === 'treinos' ? Number(w.periodization.value) : 15);
+    const parsedDataVenc = w.dataVencimento || (w.periodization?.type === 'data' ? w.periodization.value : "");
+    const parsedTreinosRealizados = w.treinosRealizados !== undefined ? Number(w.treinosRealizados) : (w.completedSessionsCount || 0);
+
+    setFichaStatus(parsedStatus as any);
+    setFichaTipoPeriodizacao(parsedTipo as any);
+    setFichaNumTreinos(parsedNumTreinos);
+    setFichaDataVencimento(parsedDataVenc);
+    setFichaTreinosRealizados(parsedTreinosRealizados);
     setFichaObservation(w.observation || "");
   };
 
@@ -2288,25 +2299,41 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             )}
                             
                             {/* Renderizar Infos de Periodização se aplicável e não encerrada */}
-                            {w.status !== 'encerrada' && w.periodization && (
+                            {w.status !== 'encerrada' && (
                               <div className="mt-1.5 text-xs font-medium text-text-secondary">
-                                {w.periodization.type === 'treinos' && (
-                                  <span className="flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                                    Progresso: {w.completedSessionsCount || 0} / {w.periodization.value} treinos
-                                  </span>
-                                )}
-                                {w.periodization.type === 'data' && (
-                                  <span className="flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px]">event</span>
-                                    Vence em: {new Date(w.periodization.value).toLocaleDateString('pt-BR')}
-                                    {(() => {
-                                      const diffTime = Math.abs(new Date(w.periodization.value).getTime() - new Date().getTime());
+                                {(() => {
+                                  const tipo = w.tipoPeriodizacao || (w.periodization?.type === 'treinos' ? 'numTreinos' : w.periodization?.type === 'data' ? 'dataVencimento' : 'nenhuma');
+                                  const realizados = w.treinosRealizados !== undefined ? w.treinosRealizados : (w.completedSessionsCount || 0);
+
+                                  if (tipo === 'numTreinos') {
+                                    const limite = w.numTreinos !== undefined ? w.numTreinos : (w.periodization?.value ? Number(w.periodization.value) : 15);
+                                    return (
+                                      <span className="flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                                        Progresso: {realizados} / {limite} treinos
+                                      </span>
+                                    );
+                                  } else if (tipo === 'dataVencimento') {
+                                    const venc = w.dataVencimento || w.periodization?.value;
+                                    if (venc) {
+                                      const limitDate = new Date(venc);
+                                      const diffTime = Math.max(0, limitDate.getTime() - new Date().getTime());
                                       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                      return ` (${diffDays} dias restantes)`;
-                                    })()}
-                                  </span>
-                                )}
+                                      return (
+                                        <span className="flex items-center gap-1">
+                                          <span className="material-symbols-outlined text-[14px]">event</span>
+                                          Vence em: {limitDate.toLocaleDateString('pt-BR')} ({diffDays} dias restantes)
+                                        </span>
+                                      );
+                                    }
+                                  }
+                                  return (
+                                    <span className="flex items-center gap-1 opacity-50 italic">
+                                      <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                                      Sem prazo (Livre)
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             )}
                           </div>
@@ -3414,8 +3441,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       setWorkoutEditorStep("ficha");
       setActiveSubWorkoutIndex(null);
       setFichaStatus("ativa");
-      setFichaPeriodizationType(null);
-      setFichaPeriodizationValue("");
+      setFichaTipoPeriodizacao("nenhuma");
+      setFichaNumTreinos(15);
+      setFichaDataVencimento("");
+      setFichaTreinosRealizados(0);
       setFichaObservation("");
     } else {
       setEditingWorkoutId(w.id);
@@ -3433,9 +3462,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       }
       setWorkoutEditorStep("ficha");
       setActiveSubWorkoutIndex(null);
-      setFichaStatus(w.status || (w.isActive === false ? "encerrada" : "ativa"));
-      setFichaPeriodizationType(w.periodization?.type || null);
-      setFichaPeriodizationValue(w.periodization?.value || "");
+
+      const parsedStatus = w.status || (w.isActive === false ? "encerrada" : (w.periodization?.type || w.tipoPeriodizacao) ? "ativa" : "sem_periodizacao");
+      const parsedTipo = w.tipoPeriodizacao || (w.periodization?.type === 'treinos' ? 'numTreinos' : w.periodization?.type === 'data' ? 'dataVencimento' : 'nenhuma');
+      const parsedNumTreinos = w.numTreinos !== undefined ? Number(w.numTreinos) : (w.periodization?.type === 'treinos' ? Number(w.periodization.value) : 15);
+      const parsedDataVenc = w.dataVencimento || (w.periodization?.type === 'data' ? w.periodization.value : "");
+      const parsedTreinosRealizados = w.treinosRealizados !== undefined ? Number(w.treinosRealizados) : (w.completedSessionsCount || 0);
+
+      setFichaStatus(parsedStatus as any);
+      setFichaTipoPeriodizacao(parsedTipo as any);
+      setFichaNumTreinos(parsedNumTreinos);
+      setFichaDataVencimento(parsedDataVenc);
+      setFichaTreinosRealizados(parsedTreinosRealizados);
       setFichaObservation(w.observation || "");
     }
   };
@@ -3627,12 +3665,29 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 }
               });
 
-              const finalStatus = fichaPeriodizationType ? fichaStatus : (fichaStatus === 'futura' ? 'futura' : 'sem_periodizacao');
+              const finalStatus = fichaTipoPeriodizacao === 'nenhuma'
+                ? (fichaStatus === 'futura' ? 'futura' : (fichaStatus === 'encerrada' ? 'encerrada' : 'sem_periodizacao'))
+                : (fichaStatus === 'futura' ? 'futura' : (fichaStatus === 'encerrada' ? 'encerrada' : 'ativa'));
+
               const payload = {
                 name: workoutName,
                 title: workoutName,
                 status: finalStatus,
-                periodization: fichaPeriodizationType ? { type: fichaPeriodizationType, value: fichaPeriodizationValue } : null,
+                isActive: finalStatus === 'ativa' || finalStatus === 'sem_periodizacao',
+                
+                // Old schema compatibility
+                periodization: fichaTipoPeriodizacao === 'nenhuma' ? null : {
+                  type: fichaTipoPeriodizacao === 'numTreinos' ? 'treinos' : 'data',
+                  value: fichaTipoPeriodizacao === 'numTreinos' ? String(fichaNumTreinos) : fichaDataVencimento
+                },
+                completedSessionsCount: fichaTreinosRealizados,
+
+                // New schema
+                tipoPeriodizacao: fichaTipoPeriodizacao,
+                numTreinos: fichaTipoPeriodizacao === 'numTreinos' ? Number(fichaNumTreinos) : null,
+                treinosRealizados: Number(fichaTreinosRealizados),
+                dataVencimento: fichaTipoPeriodizacao === 'dataVencimento' ? fichaDataVencimento : null,
+
                 observation: fichaObservation,
                 subWorkouts: subWorkouts,
                 exercises: flatExercisesList,
@@ -3703,17 +3758,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                               placeholder="Nome da Ficha (ex: Hipertrofia Masculina)"
                             />
                           </div>
-                          {/* Botão de três pontos para mobile */}
+                          {/* Botão de Opções / Periodização visível em todas as resoluções */}
                           <button
                             type="button"
                             onClick={() => {
                               setIsFichaMenuOpen(true);
                               setIsConfirmingDeleteFicha(false);
                             }}
-                            className="lg:hidden flex items-center justify-center size-11 rounded-full bg-white/5 border border-white/5 text-text-secondary hover:text-white transition-all active:scale-95 shrink-0"
-                            title="Opções da Ficha"
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all active:scale-95 shrink-0 rounded-lg text-xs font-bold"
+                            title="Opções & Periodização da Ficha"
                           >
-                            <span className="material-symbols-outlined text-xl">more_vert</span>
+                            <span className="material-symbols-outlined text-lg">tune</span>
+                            <span className="hidden sm:inline">Configurações</span>
                           </button>
                         </div>
                         {/* Desktop Save Button ONLY (no Cancel) */}
@@ -4550,24 +4606,33 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
                 {/* BOTTOM SHEET PARA GESTÃO DA FICHA DE TREINO (MOBILE) - NO PAINEL DE EDICAO */}
                 {isFichaMenuOpen && (
-                  <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                  <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     {/* Clique fora do bottom sheet para fechar */}
                     <div 
                       className="absolute inset-0 cursor-pointer" 
                       onClick={() => setIsFichaMenuOpen(false)} 
                     />
 
-                    <div className="relative w-full sm:max-w-md bg-card-dark border-t border-border-dark rounded-t-[2rem] p-6 pb-12 flex flex-col gap-6 z-10 animate-in slide-in-from-bottom duration-300 shadow-[0_-8px_30px_rgba(0,0,0,0.8)] text-left">
-                      <div className="mx-auto w-12 h-1.5 bg-white/15 rounded-full" />
+                    <div className="relative w-full sm:max-w-md bg-card-dark border-t sm:border border-border-dark rounded-t-[2rem] sm:rounded-2xl p-6 pb-12 sm:pb-6 flex flex-col gap-6 z-10 animate-in slide-in-from-bottom sm:slide-in-from-center duration-300 shadow-[0_-8px_30px_rgba(0,0,0,0.8)] text-left">
+                      <div className="mx-auto w-12 h-1.5 bg-white/15 rounded-full sm:hidden" />
 
                       {/* Header do Bottom Sheet */}
-                      <div className="text-center pb-2">
-                        <h3 className="text-white font-bold text-lg">
-                          Opções da Ficha
-                        </h3>
-                        <p className="text-xs text-text-secondary mt-1">
-                          Gerencie as definições gerais desta ficha de treino.
-                        </p>
+                      <div className="text-center sm:text-left pb-2 border-b border-border-dark/50 flex justify-between items-center">
+                        <div>
+                          <h3 className="text-white font-bold text-lg">
+                            Opções da Ficha
+                          </h3>
+                          <p className="text-xs text-text-secondary mt-1">
+                            Gerencie as definições gerais desta ficha de treino.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsFichaMenuOpen(false)}
+                          className="hidden sm:flex items-center justify-center size-8 rounded-full hover:bg-white/5 text-text-secondary hover:text-white transition-all cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-lg">close</span>
+                        </button>
                       </div>
 
                       {/* Conteúdo */}
@@ -4593,7 +4658,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             <button
                               type="button"
                               onClick={() => setFichaStatus('ativa')}
-                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border ${
+                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border cursor-pointer select-none ${
                                 fichaStatus === 'ativa' || fichaStatus === 'sem_periodizacao'
                                   ? 'bg-primary/25 border-primary text-primary font-black'
                                   : 'bg-white/5 border-border-dark text-text-secondary hover:text-white'
@@ -4604,7 +4669,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             <button
                               type="button"
                               onClick={() => setFichaStatus('futura')}
-                              className={`py-2 px-1 flex items-center justify-center gap-1 rounded-lg text-xs font-bold transition-all border ${
+                              className={`py-2 px-1 flex items-center justify-center gap-1 rounded-lg text-xs font-bold transition-all border cursor-pointer select-none ${
                                 fichaStatus === 'futura'
                                   ? 'bg-blue-500/25 border-blue-500 text-blue-400 font-black'
                                   : 'bg-white/5 border-border-dark text-text-secondary hover:text-white'
@@ -4615,7 +4680,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             <button
                               type="button"
                               onClick={() => setFichaStatus('encerrada')}
-                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border ${
+                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border cursor-pointer select-none ${
                                 fichaStatus === 'encerrada'
                                   ? 'bg-red-500/25 border-red-500 text-red-500 font-black'
                                   : 'bg-white/5 border-border-dark text-text-secondary hover:text-white'
@@ -4633,11 +4698,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             <button
                               type="button"
                               onClick={() => {
-                                setFichaPeriodizationType(null);
-                                setFichaPeriodizationValue("");
+                                setFichaTipoPeriodizacao("nenhuma");
                               }}
-                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border ${
-                                fichaPeriodizationType === null
+                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border cursor-pointer select-none ${
+                                fichaTipoPeriodizacao === "nenhuma"
                                   ? 'bg-primary/25 border-primary text-primary font-black'
                                   : 'bg-white/5 border-border-dark text-text-secondary hover:text-white'
                               }`}
@@ -4647,11 +4711,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             <button
                               type="button"
                               onClick={() => {
-                                setFichaPeriodizationType("treinos");
-                                setFichaPeriodizationValue("15");
+                                setFichaTipoPeriodizacao("numTreinos");
                               }}
-                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border ${
-                                fichaPeriodizationType === "treinos"
+                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border cursor-pointer select-none ${
+                                fichaTipoPeriodizacao === "numTreinos"
                                   ? 'bg-primary/25 border-primary text-primary font-black'
                                   : 'bg-white/5 border-border-dark text-text-secondary hover:text-white'
                               }`}
@@ -4661,14 +4724,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             <button
                               type="button"
                               onClick={() => {
-                                const defaultDate = new Date();
-                                defaultDate.setDate(defaultDate.getDate() + 30);
-                                const dateStr = defaultDate.toISOString().split('T')[0];
-                                setFichaPeriodizationType("data");
-                                setFichaPeriodizationValue(dateStr);
+                                setFichaTipoPeriodizacao("dataVencimento");
+                                if (!fichaDataVencimento) {
+                                  const defaultDate = new Date();
+                                  defaultDate.setDate(defaultDate.getDate() + 30);
+                                  const dateStr = defaultDate.toISOString().split('T')[0];
+                                  setFichaDataVencimento(dateStr);
+                                }
                               }}
-                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border ${
-                                fichaPeriodizationType === "data"
+                              className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border cursor-pointer select-none ${
+                                fichaTipoPeriodizacao === "dataVencimento"
                                   ? 'bg-primary/25 border-primary text-primary font-black'
                                   : 'bg-white/5 border-border-dark text-text-secondary hover:text-white'
                               }`}
@@ -4677,14 +4742,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             </button>
                           </div>
 
-                          {fichaPeriodizationType === "treinos" && (
+                          {fichaTipoPeriodizacao === "numTreinos" && (
                             <div className="flex items-center gap-3 bg-background-dark/50 border border-border-dark rounded-xl px-3 py-1 mt-1 animate-in fade-in zoom-in-95 duration-100">
                               <span className="material-symbols-outlined text-text-secondary text-lg">calendar_today</span>
                               <input
                                 type="number"
                                 min="1"
-                                value={fichaPeriodizationValue}
-                                onChange={(e) => setFichaPeriodizationValue(e.target.value)}
+                                value={fichaNumTreinos}
+                                onChange={(e) => setFichaNumTreinos(Number(e.target.value))}
                                 className="flex-1 bg-transparent border-none text-white text-sm font-bold focus:outline-none focus:ring-0 outline-none py-2"
                                 placeholder="Ex: 20 treinos"
                               />
@@ -4692,13 +4757,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                             </div>
                           )}
 
-                          {fichaPeriodizationType === "data" && (
+                          {fichaTipoPeriodizacao === "dataVencimento" && (
                             <div className="flex items-center gap-3 bg-background-dark/50 border border-border-dark rounded-xl px-3 py-1 mt-1 animate-in fade-in zoom-in-95 duration-100">
                               <span className="material-symbols-outlined text-text-secondary text-lg">date_range</span>
                               <input
                                 type="date"
-                                value={fichaPeriodizationValue}
-                                onChange={(e) => setFichaPeriodizationValue(e.target.value)}
+                                value={fichaDataVencimento}
+                                onChange={(e) => setFichaDataVencimento(e.target.value)}
                                 className="flex-1 bg-transparent border-none text-white text-sm font-bold focus:outline-none focus:ring-0 outline-none py-2 filter invert brightness-90"
                               />
                             </div>

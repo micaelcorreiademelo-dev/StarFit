@@ -473,6 +473,46 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                         {todayWorkout?.description || 'Curta seu dia de descanso ou faça uma atividade leve.'}
                       </p>
                       {todayWorkout && <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">{todayWorkout.exercises?.length || 0} exercícios</p>}
+                      {todayWorkout && (
+                        <div className="mt-2 p-3 bg-primary/5 border border-border-light dark:border-border-dark rounded-xl flex flex-col gap-1 text-sm max-w-sm">
+                          {(() => {
+                            const tipo = todayWorkout.tipoPeriodizacao || (todayWorkout.periodization?.type === 'treinos' ? 'numTreinos' : todayWorkout.periodization?.type === 'data' ? 'dataVencimento' : 'nenhuma');
+                            const realizados = todayWorkout.treinosRealizados !== undefined ? todayWorkout.treinosRealizados : (todayWorkout.completedSessionsCount || 0);
+
+                            if (tipo === 'numTreinos') {
+                              const limite = todayWorkout.numTreinos !== undefined ? todayWorkout.numTreinos : (todayWorkout.periodization?.value ? Number(todayWorkout.periodization.value) : 0);
+                              const pct = limite > 0 ? Math.min(100, Math.round((realizados / limite) * 100)) : 0;
+                              return (
+                                <>
+                                  <div className="flex justify-between font-semibold text-text-light-primary dark:text-text-dark-primary">
+                                    <span>Progresso da Ficha:</span>
+                                    <span>{realizados} / {limite} Treinos</span>
+                                  </div>
+                                  <div className="w-full bg-black/15 dark:bg-white/10 h-2 rounded-full overflow-hidden mt-1">
+                                    <div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                                  </div>
+                                </>
+                              );
+                            } else if (tipo === 'dataVencimento') {
+                              const venc = todayWorkout.dataVencimento || todayWorkout.periodization?.value;
+                              const formattedDate = venc ? new Date(venc).toLocaleDateString('pt-BR') : '';
+                              return (
+                                <div className="flex items-center gap-2 font-semibold text-text-light-primary dark:text-text-dark-primary">
+                                  <span className="material-symbols-outlined text-primary text-base">event</span>
+                                  <span>Vencimento da Ficha: {formattedDate || 'Não informada'}</span>
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div className="flex items-center gap-2 text-text-light-secondary dark:text-text-dark-secondary italic text-xs">
+                                  <span className="material-symbols-outlined text-sm">calendar_today</span>
+                                  <span>Ficha sem prazo definido (Livre)</span>
+                                </div>
+                              );
+                            }
+                          })()}
+                        </div>
+                      )}
                     </div>
                     {todayWorkout && (
                       <button 
@@ -691,6 +731,30 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                   )}
                   Atribuído em {workout.createdAt?.toDate().toLocaleDateString() || 'Recentemente'}
                 </p>
+                {(() => {
+                  const tipo = workout.tipoPeriodizacao || (workout.periodization?.type === 'treinos' ? 'numTreinos' : workout.periodization?.type === 'data' ? 'dataVencimento' : 'nenhuma');
+                  const realizados = workout.treinosRealizados !== undefined ? workout.treinosRealizados : (workout.completedSessionsCount || 0);
+
+                  if (tipo === 'numTreinos') {
+                    const limite = workout.numTreinos !== undefined ? workout.numTreinos : (workout.periodization?.value ? Number(workout.periodization.value) : 0);
+                    return (
+                      <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary mt-1 flex items-center gap-1 font-medium">
+                        <span className="material-symbols-outlined text-sm text-primary">fitness_center</span>
+                        <span>Progresso: {realizados} / {limite} treinos realizados</span>
+                      </p>
+                    );
+                  } else if (tipo === 'dataVencimento') {
+                    const venc = workout.dataVencimento || workout.periodization?.value;
+                    const formattedDate = venc ? new Date(venc).toLocaleDateString('pt-BR') : '';
+                    return (
+                      <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary mt-1 flex items-center gap-1 font-medium">
+                        <span className="material-symbols-outlined text-sm text-primary">event</span>
+                        <span>Vencimento: {formattedDate || 'Não informada'}</span>
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
             
