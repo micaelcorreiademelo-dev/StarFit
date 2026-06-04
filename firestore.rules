@@ -111,15 +111,15 @@ service cloud.firestore {
       allow read: if isAdmin() || (isSignedIn() && (
         ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) || 
         ('studentId' in resource.data && resource.data.studentId == request.auth.uid) || 
-        ('studentIds' in resource.data && request.auth.uid in resource.data.studentIds)
+        ('studentIds' in resource.data && (request.auth.uid in resource.data.studentIds || resource.data.studentIds.hasAny([request.auth.uid])))
       ));
-      allow create: if isSignedIn() && (isAdmin() || ('trainerId' in incoming() && incoming().trainerId == request.auth.uid));
+      allow create: if isSignedIn() && (isAdmin() || ('trainerId' in request.resource.data && request.resource.data.trainerId == request.auth.uid));
       allow update: if isSignedIn() && (isAdmin() || 
-        ('trainerId' in existing() && existing().trainerId == request.auth.uid) || 
-        ('studentId' in existing() && existing().studentId == request.auth.uid) || 
-        ('studentIds' in existing() && request.auth.uid in existing().studentIds)
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) || 
+        ('studentId' in resource.data && resource.data.studentId == request.auth.uid) || 
+        ('studentIds' in resource.data && (request.auth.uid in resource.data.studentIds || resource.data.studentIds.hasAny([request.auth.uid])))
       );
-      allow delete: if isSignedIn() && (isAdmin() || ('trainerId' in existing() && existing().trainerId == request.auth.uid));
+      allow delete: if isSignedIn() && (isAdmin() || ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid));
     }
 
     // --- Exercises ---
@@ -128,9 +128,9 @@ service cloud.firestore {
         ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) || 
         ('studentId' in resource.data && resource.data.studentId == request.auth.uid)
       );
-      allow create: if isSignedIn() && (isAdmin() || ('trainerId' in incoming() && incoming().trainerId == request.auth.uid));
-      allow update: if isSignedIn() && (isAdmin() || ('trainerId' in existing() && existing().trainerId == request.auth.uid));
-      allow delete: if isSignedIn() && (isAdmin() || ('trainerId' in existing() && existing().trainerId == request.auth.uid));
+      allow create: if isSignedIn() && (isAdmin() || ('trainerId' in request.resource.data && request.resource.data.trainerId == request.auth.uid));
+      allow update: if isSignedIn() && (isAdmin() || ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid));
+      allow delete: if isSignedIn() && (isAdmin() || ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid));
     }
 
     // --- Agenda Events ---
@@ -196,10 +196,26 @@ service cloud.firestore {
         isTrainer() || 
         ('studentId' in resource.data && resource.data.studentId == request.auth.uid)
       );
-      allow create: if isSignedIn() && (isAdmin() || ('studentId' in incoming() && incoming().studentId == request.auth.uid));
-      allow update: if isSignedIn() && (isAdmin() || ('studentId' in existing() && existing().studentId == request.auth.uid));
-      allow delete: if isSignedIn() && (isAdmin() || ('studentId' in existing() && existing().studentId == request.auth.uid));
+      allow create: if isSignedIn() && (isAdmin() || ('studentId' in request.resource.data && request.resource.data.studentId == request.auth.uid));
+      allow update: if isSignedIn() && (isAdmin() || ('studentId' in resource.data && resource.data.studentId == request.auth.uid));
+      allow delete: if isSignedIn() && (isAdmin() || ('studentId' in resource.data && resource.data.studentId == request.auth.uid));
     }
+
+    // --- Workout Sessions ---
+    match /workoutSessions/{sessionId} {
+      allow read: if isSignedIn() && (isAdmin() || isTrainer() || ('studentId' in resource.data && resource.data.studentId == request.auth.uid));
+      allow create: if isSignedIn() && (isAdmin() || ('studentId' in incoming() && incoming().studentId == request.auth.uid)) && isValidWorkoutSession(incoming());
+      allow update, delete: if isAdmin();
+
+      function isValidWorkoutSession(data) {
+        return data.keys().hasAll(['workoutId', 'studentId', 'completedAt']) &&
+               data.keys().size() == 3 &&
+               isValidId(data.workoutId) &&
+               isValidId(data.studentId) &&
+               data.completedAt is timestamp;
+      }
+    }
+
     // --- Platform Plans ---
     match /platformPlans/{planId} {
       allow read: if isSignedIn();

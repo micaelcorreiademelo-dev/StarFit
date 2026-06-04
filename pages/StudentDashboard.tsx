@@ -113,6 +113,60 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   });
   const [isConfirmingUnlink, setIsConfirmingUnlink] = useState(false);
 
+  const [isTrackingWorkout, setIsTrackingWorkout] = useState(false);
+  const [workoutMode, setWorkoutMode] = useState<'simple' | 'tracked' | null>(null);
+  const [activeTimerSeconds, setActiveTimerSeconds] = useState<number | null>(null);
+  const [timerTargetIndex, setTimerTargetIndex] = useState<number | null>(null);
+  const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null);
+  const [timerTotalDuration, setTimerTotalDuration] = useState<number | null>(null);
+  const [workoutExercisesState, setWorkoutExercisesState] = useState<Record<string, 'pending' | 'running' | 'completed'>>({});
+  const [workoutExerciseSetsCompleted, setWorkoutExerciseSetsCompleted] = useState<Record<string, number>>({});
+  const [workoutExerciseActiveSetRunning, setWorkoutExerciseActiveSetRunning] = useState<Record<string, boolean>>({});
+  const [restAlertActive, setRestAlertActive] = useState(false);
+  const [restAlertMessage, setRestAlertMessage] = useState('');
+  const [expandedWorkouts, setExpandedWorkouts] = useState<Record<string, boolean>>({});
+
+  // Timer Countdown Effect
+  useEffect(() => {
+    if (activeTimerSeconds === null) return;
+    if (activeTimerSeconds <= 0) {
+      setActiveTimerSeconds(null);
+      setTimerStartedAt(null);
+      setTimerTotalDuration(null);
+      
+      // Play Synthesized sound alert (Double Beep chime) of high quality
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const playBeep = (delay: number, duration: number, freq: number) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.value = freq;
+          osc.type = 'sine';
+          gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
+          gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + delay + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+          osc.start(audioCtx.currentTime + delay);
+          osc.stop(audioCtx.currentTime + delay + duration);
+        };
+        playBeep(0, 0.4, 880);
+        playBeep(0.2, 0.4, 1109.73);
+      } catch (err) {
+        console.warn("Audio Context error:", err);
+      }
+
+      // Display native alert/notification on screen
+      setRestAlertMessage("Descanse finalizado! Inicie a próxima série.");
+      setRestAlertActive(true);
+      return;
+    }
+    const interval = setInterval(() => {
+      setActiveTimerSeconds(prev => (prev !== null ? prev - 1 : null));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activeTimerSeconds]);
+
   useEffect(() => {
     if (!user) return;
     
@@ -346,6 +400,98 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const activeWorkoutsForStudent = workouts.filter(w => w.status === 'ativa' || w.status === 'sem_periodizacao' || (!w.status && !w.completed));
   const todayWorkout = activeWorkoutsForStudent.length > 0 ? activeWorkoutsForStudent[0] : null;
 
+  const [isStateLoaded, setIsStateLoaded] = useState(false);
+
+  // Auto-load state from local storage on user and todayWorkout resolution
+  useEffect(() => {
+    if (!user || !todayWorkout) return;
+    
+    const key = `starfit_workout_state_${user.id}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.todayWorkoutId === todayWorkout.id) {
+          setIsTrackingWorkout(parsed.isTrackingWorkout || false);
+          setWorkoutMode(parsed.workoutMode || null);
+          setWorkoutExercisesState(parsed.workoutExercisesState || {});
+          setWorkoutExerciseSetsCompleted(parsed.workoutExerciseSetsCompleted || {});
+          setWorkoutExerciseActiveSetRunning(parsed.workoutExerciseActiveSetRunning || {});
+          setTimerTargetIndex(parsed.timerTargetIndex ?? null);
+          
+          if (parsed.activeTimerSeconds !== null && parsed.timerStartedAt) {
+            const elapsedSeconds = Math.floor((Date.now() - parsed.timerStartedAt) / 1000);
+            const originalDuration = parsed.timerTotalDuration || 60;
+            const remaining = originalDuration - elapsedSeconds;
+            
+            if (remaining > 0) {
+              setTimerStartedAt(parsed.timerStartedAt);
+              setTimerTotalDuration(originalDuration);
+              setActiveTimerSeconds(remaining);
+            } else {
+              setTimerStartedAt(null);
+              setTimerTotalDuration(null);
+              setActiveTimerSeconds(null);
+              setRestAlertMessage("Seu tempo de descanso já terminou enquanto você estava fora. Inicie a próxima série!");
+              setRestAlertActive(true);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error parsing saved workout state:", err);
+      }
+    }
+    setIsStateLoaded(true);
+  }, [user?.id, todayWorkout?.id]);
+
+  // Auto-save state to local storage when state modifications occur
+  useEffect(() => {
+    if (!user || !todayWorkout || !isStateLoaded) return;
+    
+    const key = `starfit_workout_state_${user.id}`;
+    const stateObj = {
+      todayWorkoutId: todayWorkout.id,
+      isTrackingWorkout,
+      workoutMode,
+      workoutExercisesState,
+      workoutExerciseSetsCompleted,
+      workoutExerciseActiveSetRunning,
+      activeTimerSeconds,
+      timerTargetIndex,
+      timerStartedAt,
+      timerTotalDuration
+    };
+    localStorage.setItem(key, JSON.stringify(stateObj));
+  }, [
+    user?.id,
+    todayWorkout?.id,
+    isStateLoaded,
+    isTrackingWorkout,
+    workoutMode,
+    workoutExercisesState,
+    workoutExerciseSetsCompleted,
+    workoutExerciseActiveSetRunning,
+    activeTimerSeconds,
+    timerTargetIndex,
+    timerStartedAt,
+    timerTotalDuration
+  ]);
+
+  const handleClearWorkoutState = () => {
+    setIsTrackingWorkout(false);
+    setWorkoutMode(null);
+    setWorkoutExercisesState({});
+    setWorkoutExerciseSetsCompleted({});
+    setWorkoutExerciseActiveSetRunning({});
+    setActiveTimerSeconds(null);
+    setTimerTargetIndex(null);
+    setTimerStartedAt(null);
+    setTimerTotalDuration(null);
+    if (user) {
+      localStorage.removeItem(`starfit_workout_state_${user.id}`);
+    }
+  };
+
   const workoutExercises: ExerciseDetail[] = todayWorkout?.exercises?.map((ex: any, idx: number) => ({
     id: ex.id || `ex-${idx}`,
     name: ex.name,
@@ -467,7 +613,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                   <p className="text-text-light-primary dark:text-text-dark-primary text-xl font-bold leading-tight tracking-[-0.015em]">
                     {todayWorkout?.title || 'Nenhum treino hoje'}
                   </p>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 justify-between mt-2">
+                  <div className="flex flex-col gap-4 mt-3">
                     <div className="flex flex-col gap-1">
                       <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">
                         {todayWorkout?.description || 'Curta seu dia de descanso ou faça uma atividade leve.'}
@@ -493,37 +639,23 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                                   </div>
                                 </>
                               );
-                            } else if (tipo === 'dataVencimento') {
-                              const venc = todayWorkout.dataVencimento || todayWorkout.periodization?.value;
-                              const formattedDate = venc ? new Date(venc).toLocaleDateString('pt-BR') : '';
-                              return (
-                                <div className="flex items-center gap-2 font-semibold text-text-light-primary dark:text-text-dark-primary">
-                                  <span className="material-symbols-outlined text-primary text-base">event</span>
-                                  <span>Vencimento da Ficha: {formattedDate || 'Não informada'}</span>
-                                </div>
-                              );
-                            } else {
-                              return (
-                                <div className="flex items-center gap-2 text-text-light-secondary dark:text-text-dark-secondary italic text-xs">
-                                  <span className="material-symbols-outlined text-sm">calendar_today</span>
-                                  <span>Ficha sem prazo definido (Livre)</span>
-                                </div>
-                              );
                             }
+                            return null;
                           })()}
                         </div>
                       )}
                     </div>
                     {todayWorkout && (
-                      <button 
-                        onClick={() => {
-                          setActiveTab('my-workouts');
-                          setIsTraining(true);
-                        }}
-                        className="flex min-w-[140px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/30 hover:brightness-110 transition-all"
-                      >
-                        Iniciar Treino
-                      </button>
+                      <div className="flex justify-center mt-3 w-full">
+                        <button 
+                          onClick={() => {
+                            setActiveTab('today-workout');
+                          }}
+                          className="flex min-w-[200px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-11 px-8 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/30 hover:brightness-110 active:scale-95 transition-all text-center"
+                        >
+                          Iniciar Treino
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -692,8 +824,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     return (
       <div className="max-w-7xl mx-auto pb-20">
         <div className="flex flex-col gap-2 mb-8">
-          <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">Meus Treinos</h1>
-          <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">Veja seus treinos atribuídos e seu histórico de atividades.</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleTabChange('dashboard')}
+              className="md:hidden flex items-center justify-center text-text-light-primary dark:text-text-dark-primary hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0"
+            >
+              <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
+            </button>
+            <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">Meus Treinos</h1>
+          </div>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal mt-1">Veja seus treinos atribuídos e seu histórico de atividades.</p>
         </div>
       
       <div className="flex border-b border-border-light dark:border-border-dark mb-6">
@@ -715,64 +855,119 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         {workouts.filter(w => {
           if (workoutTab === 'history') return w.status === 'encerrada' || w.completed;
           return w.status === 'ativa' || w.status === 'futura' || w.status === 'sem_periodizacao' || (!w.status && !w.completed);
-        }).map((workout, idx) => (
-          <div key={workout.id} className="flex items-center justify-between p-4 bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
-                <span className="material-symbols-outlined text-primary text-2xl">fitness_center</span>
-              </div>
-              <div>
-                <h3 className="text-text-light-primary dark:text-text-dark-primary font-bold text-lg">{workout.title}</h3>
-                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm flex gap-2 items-center mt-1">
-                  {workout.status === 'futura' ? (
-                    <span className="bg-blue-500/20 text-blue-500 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Próxima Ficha</span>
-                  ) : workout.status === 'encerrada' || workout.completed ? (
-                    <span className="bg-white/10 text-text-secondary text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Encerrada</span>
-                  ) : (
-                    <span className="bg-primary/20 text-primary text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Ativa</span>
-                  )}
-                  Atribuído em {workout.createdAt?.toDate().toLocaleDateString() || 'Recentemente'}
-                </p>
-                {(() => {
-                  const tipo = workout.tipoPeriodizacao || (workout.periodization?.type === 'treinos' ? 'numTreinos' : workout.periodization?.type === 'data' ? 'dataVencimento' : 'nenhuma');
-                  const realizados = workout.treinosRealizados !== undefined ? workout.treinosRealizados : (workout.completedSessionsCount || 0);
+        }).map((workout, idx) => {
+          const isExpanded = expandedWorkouts[workout.id];
+          return (
+            <div key={workout.id} className="flex flex-col gap-4 p-5 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
+                    <span className="material-symbols-outlined text-primary text-2xl">fitness_center</span>
+                  </div>
+                  <div>
+                    <h3 className="text-text-light-primary dark:text-text-dark-primary font-bold text-lg">{workout.title}</h3>
+                    <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm flex gap-2 items-center mt-1">
+                      {workout.status === 'futura' ? (
+                        <span className="bg-blue-500/20 text-blue-500 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Próxima Ficha</span>
+                      ) : workout.status === 'encerrada' || workout.completed ? (
+                        <span className="bg-white/10 text-text-secondary text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Encerrada</span>
+                      ) : (
+                        <span className="bg-primary/20 text-primary text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Ativa</span>
+                      )}
+                      Atribuído em {workout.createdAt?.toDate().toLocaleDateString() || 'Recentemente'}
+                    </p>
+                    {(() => {
+                      const tipo = workout.tipoPeriodizacao || (workout.periodization?.type === 'treinos' ? 'numTreinos' : workout.periodization?.type === 'data' ? 'dataVencimento' : 'nenhuma');
+                      const realizados = workout.treinosRealizados !== undefined ? workout.treinosRealizados : (workout.completedSessionsCount || 0);
 
-                  if (tipo === 'numTreinos') {
-                    const limite = workout.numTreinos !== undefined ? workout.numTreinos : (workout.periodization?.value ? Number(workout.periodization.value) : 0);
-                    return (
-                      <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary mt-1 flex items-center gap-1 font-medium">
-                        <span className="material-symbols-outlined text-sm text-primary">fitness_center</span>
-                        <span>Progresso: {realizados} / {limite} treinos realizados</span>
-                      </p>
-                    );
-                  } else if (tipo === 'dataVencimento') {
-                    const venc = workout.dataVencimento || workout.periodization?.value;
-                    const formattedDate = venc ? new Date(venc).toLocaleDateString('pt-BR') : '';
-                    return (
-                      <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary mt-1 flex items-center gap-1 font-medium">
-                        <span className="material-symbols-outlined text-sm text-primary">event</span>
-                        <span>Vencimento: {formattedDate || 'Não informada'}</span>
-                      </p>
-                    );
-                  }
-                  return null;
-                })()}
+                      if (tipo === 'numTreinos') {
+                        const limite = workout.numTreinos !== undefined ? workout.numTreinos : (workout.periodization?.value ? Number(workout.periodization.value) : 0);
+                        return (
+                          <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary mt-1 flex items-center gap-1 font-medium">
+                            <span className="material-symbols-outlined text-sm text-primary">fitness_center</span>
+                            <span>Progresso: {realizados} / {limite} treinos realizados</span>
+                          </p>
+                        );
+                      } else if (tipo === 'dataVencimento') {
+                        const venc = workout.dataVencimento || workout.periodization?.value;
+                        const formattedDate = venc ? new Date(venc).toLocaleDateString('pt-BR') : '';
+                        return (
+                          <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary mt-1 flex items-center gap-1 font-medium">
+                            <span className="material-symbols-outlined text-sm text-primary">event</span>
+                            <span>Vencimento: {formattedDate || 'Não informada'}</span>
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setExpandedWorkouts(prev => ({ ...prev, [workout.id]: !isExpanded }))}
+                  className="flex items-center gap-1 px-4 py-2 text-xs font-bold rounded-lg border border-border-light dark:border-border-dark text-text-light-secondary dark:text-text-dark-secondary hover:text-primary hover:border-primary transition-all bg-background-light dark:bg-background-dark cursor-pointer shadow-sm select-none"
+                >
+                  <span>{isExpanded ? 'Ocultar' : 'Visualizar Ficha'}</span>
+                  <span className="material-symbols-outlined text-sm">{isExpanded ? 'expand_less' : 'expand_more'}</span>
+                </button>
               </div>
+
+              {/* Read only expanded exercises */}
+              {isExpanded && (
+                <div className="mt-4 border-t border-border-light dark:border-border-dark pt-4 space-y-6">
+                  {workout.subWorkouts && workout.subWorkouts.length > 0 ? (
+                    workout.subWorkouts.map((sw: any, sIdx: number) => (
+                      <div key={sIdx} className="space-y-3 bg-background-light/30 dark:bg-background-dark/30 p-4 rounded-xl border border-border-light dark:border-border-dark">
+                        <h4 className="font-black text-text-light-primary dark:text-text-dark-primary text-base flex items-center gap-2">
+                          <span className="p-1 rounded bg-primary/20 text-primary text-xs uppercase font-extrabold">Dia {sIdx + 1}</span>
+                          <span>{sw.name}</span>
+                        </h4>
+                        
+                        <div className="space-y-2.5">
+                          {(sw.exercises || []).map((ex: any, eIdx: number) => (
+                            <div key={eIdx} className="p-3 bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                              <div>
+                                <p className="font-extrabold text-sm text-text-light-primary dark:text-text-dark-primary">{ex.name}</p>
+                                <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary font-medium uppercase mt-0.5 tracking-wider">
+                                  {ex.category || 'Geral'} • {ex.sets || '3'} séries x {ex.reps || '10'} {ex.seriesForm === 'Minuto' ? 'min' : ex.seriesForm === 'Segundo' ? 'seg' : 'reps'}
+                                </p>
+                              </div>
+                              {ex.rest && (
+                                <span className="text-xs font-mono font-bold text-primary/80 font-semibold">Descanso: {ex.rest}s</span>
+                              )}
+                            </div>
+                          ))}
+                          {(sw.exercises || []).length === 0 && (
+                            <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary italic opacity-70">Nenhum exercício cadastrado para este dia.</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="space-y-2.5">
+                      {(workout.exercises || []).map((ex: any, eIdx: number) => (
+                        <div key={eIdx} className="p-3 bg-background-light/30 dark:bg-background-dark/30 rounded-xl border border-border-light dark:border-border-dark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <div>
+                            <p className="font-semibold text-sm text-text-light-primary dark:text-text-dark-primary">{ex.name}</p>
+                            <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary uppercase mt-0.5 tracking-wide">
+                              {ex.category || 'Geral'} • {ex.sets || '3'} séries x {ex.reps || '10'} {ex.seriesForm === 'Minuto' ? 'min' : ex.seriesForm === 'Segundo' ? 'seg' : 'reps'}
+                            </p>
+                          </div>
+                          {ex.rest && (
+                            <span className="text-xs font-mono font-bold text-primary/80 font-semibold">Descanso: {ex.rest}s</span>
+                          )}
+                        </div>
+                      ))}
+                      {(workout.exercises || []).length === 0 && (
+                        <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary italic text-center p-4">Nenhum exercício cadastrado para esta ficha.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            
-            {(workout.status === 'ativa' || workout.status === 'sem_periodizacao' || (!workout.status && !workout.completed)) && (
-              <button 
-                onClick={() => {
-                  // Set as active workout if needed
-                  setIsTraining(true);
-                }}
-                className="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/30 hover:brightness-110 transition-all"
-              >
-                Iniciar Treino
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
 
         {workouts.filter(w => {
           if (workoutTab === 'history') return w.status === 'encerrada' || w.completed;
@@ -1059,6 +1254,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       <div className="flex flex-col h-full w-full bg-background-light dark:bg-[#121212] overflow-hidden relative">
         <header className="flex flex-col gap-1 px-4 py-3 border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shrink-0 z-20 shadow-sm w-full">
           <div className="flex items-center gap-3 overflow-hidden max-w-4xl mx-auto w-full">
+            <button
+              onClick={() => handleTabChange('dashboard')}
+              className="md:hidden flex items-center justify-center text-text-light-primary dark:text-text-dark-primary hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0 shrink-0"
+              title="Voltar ao Início"
+            >
+              <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
+            </button>
             <div className="relative shrink-0">
               <div 
                 className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-10 w-10 border border-border-light dark:border-border-dark" 
@@ -1189,12 +1391,474 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     );
   };
 
+  const renderTodayWorkout = () => {
+    if (isAccessBlocked) {
+      return (
+        <div className="max-w-4xl mx-auto flex flex-col items-center justify-center p-12 bg-card-light dark:bg-card-dark rounded-2xl border border-dashed border-border-light dark:border-border-dark text-center">
+          <div className="size-20 bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
+            <span className="material-symbols-outlined text-4xl text-amber-500">lock_clock</span>
+          </div>
+          <h2 className="text-2xl font-black text-text-light-primary dark:text-text-dark-primary mb-4 uppercase italic">Prazo de Acesso Expirado</h2>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary max-w-md mb-8 leading-relaxed">
+            Seu prazo de 24 horas para adquirir um plano expirou. Adquira um plano com seu personal para continuar acessando seus treinos e suporte.
+          </p>
+          <button 
+            onClick={() => setActiveTab('subscription')}
+            className="px-8 h-12 bg-primary text-background-dark rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+          >
+            Ver Planos Disponíveis
+          </button>
+        </div>
+      );
+    }
+
+    if (!todayWorkout) {
+      return (
+        <div className="max-w-4xl mx-auto py-16 text-center bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark p-8">
+          <div className="flex justify-start mb-4 md:hidden">
+            <button
+              onClick={() => handleTabChange('dashboard')}
+              className="flex items-center justify-center text-text-light-primary dark:text-text-dark-primary hover:text-primary transition-colors cursor-pointer p-0 bg-transparent"
+            >
+              <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
+            </button>
+          </div>
+          <span className="material-symbols-outlined text-5xl text-text-secondary mb-3 font-light animate-bounce">fitness_center</span>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary font-bold text-lg">Aguardando seu treinador atribuir um treino.</p>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm mt-1">Fale com seu personal trainer para receber sua primeira ficha de treinos.</p>
+        </div>
+      );
+    }
+
+    // Determine current subworkout
+    const subWorkouts = todayWorkout.subWorkouts || [];
+    const totalRealizados = todayWorkout.treinosRealizados !== undefined 
+      ? todayWorkout.treinosRealizados 
+      : (todayWorkout.completedSessionsCount || 0);
+
+    const hasSubworkouts = subWorkouts.length > 0;
+    const subIndex = hasSubworkouts ? (totalRealizados % subWorkouts.length) : 0;
+    const currentSub = hasSubworkouts ? subWorkouts[subIndex] : null;
+
+    const displayTitle = currentSub ? currentSub.name : todayWorkout.title;
+    const displayExercises = currentSub ? (currentSub.exercises || []) : (todayWorkout.exercises || []);
+
+    return (
+      <div className="max-w-4xl mx-auto pb-24 animate-in fade-in duration-300">
+        {/* Beautiful alert popup for rest finished */}
+        {restAlertActive && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-card-light dark:bg-card-dark p-6 rounded-2xl border-2 border-primary/40 shadow-2xl max-w-sm w-full text-center flex flex-col items-center gap-4 animate-in zoom-in-95 duration-200">
+              <div className="size-16 bg-primary/10 rounded-full flex items-center justify-center ring-4 ring-primary/5 animate-bounce">
+                <span className="material-symbols-outlined text-4xl text-primary font-bold">alarm_on</span>
+              </div>
+              <h3 className="text-xl font-black text-text-light-primary dark:text-text-dark-primary uppercase italic">Sucesso!</h3>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary font-semibold leading-relaxed">
+                {restAlertMessage}
+              </p>
+              <button
+                onClick={() => setRestAlertActive(false)}
+                className="mt-2 w-full h-11 px-6 rounded-xl bg-primary text-background-dark font-black text-sm uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-center shrink-0 cursor-pointer"
+              >
+                Entendido, próxima série!
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Title & Banner row */}
+        <div className="mb-6 p-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                handleTabChange('dashboard');
+              }}
+              className="flex items-center justify-center text-text-light-primary dark:text-text-dark-primary hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0"
+              title="Voltar para o Dashboard"
+            >
+              <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
+            </button>
+            <div>
+              <h1 className="text-text-light-primary dark:text-text-dark-primary text-3xl font-black leading-tight tracking-[-0.015em]">
+                Treino do Dia
+              </h1>
+              <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal mt-1">
+                {displayTitle} — Ciclo de treinamento atual
+              </p>
+            </div>
+          </div>
+
+          {isTrackingWorkout && (
+            <button
+              onClick={() => {
+                if (window.confirm("Deseja realmente reiniciar o treino e zerar todo o progresso atual?")) {
+                  handleClearWorkoutState();
+                }
+              }}
+              className="h-10 px-4 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer select-none"
+            >
+              <span className="material-symbols-outlined text-sm font-bold">replay</span>
+              Reiniciar Treino
+            </button>
+          )}
+        </div>
+
+        {/* Not tracking overview */}
+        {!isTrackingWorkout ? (
+          <div className="space-y-6">
+            <div className="bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div className="space-y-2">
+                <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-black bg-primary/20 text-primary border border-primary/20 uppercase tracking-widest">
+                  Ficha Ativa: Dia {subIndex + 1}
+                </span>
+                <h2 className="text-2xl font-black text-text-light-primary dark:text-text-dark-primary">{displayTitle}</h2>
+                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm">
+                  {todayWorkout.description || 'Siga a rotina programada hoje pelo seu personal coach.'}
+                </p>
+                <div className="flex gap-4 text-xs font-medium text-text-light-secondary dark:text-text-dark-secondary pt-1">
+                  <span>💪 {displayExercises.length} Exercícios</span>
+                  <span>🔄 {totalRealizados} Sessões Concluídas</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <button
+                  onClick={() => {
+                    setIsTrackingWorkout(true);
+                    setWorkoutMode('simple');
+                    // Initialize statuses
+                    const initialStates: Record<string, 'pending' | 'running' | 'completed'> = {};
+                    displayExercises.forEach((_: any, idx: number) => {
+                      initialStates[`ex-${idx}`] = 'pending';
+                    });
+                    setWorkoutExercisesState(initialStates);
+                    setWorkoutExerciseSetsCompleted({});
+                    setWorkoutExerciseActiveSetRunning({});
+                  }}
+                  className="w-full sm:w-auto h-12 px-5 rounded-xl bg-card-dark text-white border border-border-dark/60 hover:bg-white/5 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  <span className="material-symbols-outlined text-sm">visibility</span>
+                  Iniciar Treino
+                </button>
+                <button
+                  onClick={() => {
+                    setIsTrackingWorkout(true);
+                    setWorkoutMode('tracked');
+                    // Initialize statuses
+                    const initialStates: Record<string, 'pending' | 'running' | 'completed'> = {};
+                    displayExercises.forEach((_: any, idx: number) => {
+                      initialStates[`ex-${idx}`] = 'pending';
+                    });
+                    setWorkoutExercisesState(initialStates);
+                    setWorkoutExerciseSetsCompleted({});
+                    setWorkoutExerciseActiveSetRunning({});
+                  }}
+                  className="w-full sm:w-auto h-12 px-5 rounded-xl bg-primary text-background-dark font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg shadow-primary/20 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  <span className="material-symbols-outlined font-black text-sm">sports_gymnastics</span>
+                  Acompanhar Treino
+                </button>
+              </div>
+            </div>
+
+            {/* Read-only listing preview */}
+            <div className="space-y-4">
+              <h3 className="text-text-light-primary dark:text-text-dark-primary font-bold text-lg">Exercícios Prescritos</h3>
+              {displayExercises.map((ex: any, idx: number) => (
+                <div key={idx} className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 flex justify-between items-center gap-4">
+                  <div>
+                    <h4 className="font-extrabold text-text-light-primary dark:text-text-dark-primary">{ex.name}</h4>
+                    <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary mt-1 uppercase tracking-wider font-semibold">
+                      {ex.category || 'Geral'} • {ex.sets || '3'} séries x {ex.reps || '10'} {ex.seriesForm === 'Minuto' ? 'min' : ex.seriesForm === 'Segundo' ? 'seg' : 'reps'}
+                    </p>
+                  </div>
+                  {ex.rest && (
+                    <span className="text-xs font-mono font-black text-primary px-2 py-1 bg-primary/10 rounded-lg animate-pulse">
+                      ⏱️ {ex.rest}s
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Active Workout Training flow tracker */
+          <div className="space-y-6 relative">
+            {/* Simple banner for countdown when active */}
+            {activeTimerSeconds !== null && (
+              <div className="fixed bottom-24 left-4 right-4 md:left-auto md:right-8 bg-card-dark border-2 border-primary text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-6 z-[100] animate-in slide-in-from-bottom duration-300 max-w-sm">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary text-3xl animate-pulse">timer</span>
+                  <div>
+                    <p className="text-xs font-extrabold text-text-dark-secondary uppercase tracking-wider">Intervalo de Descanso</p>
+                    <p className="text-2xl font-mono font-black text-primary">{activeTimerSeconds}s</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveTimerSeconds(null);
+                    setTimerStartedAt(null);
+                    setTimerTotalDuration(null);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-black uppercase transition-all whitespace-nowrap"
+                >
+                  Pular
+                </button>
+              </div>
+            )}
+
+            <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
+                <span className="size-2 rounded-full bg-primary animate-ping"></span>
+                Modo: {workoutMode === 'tracked' ? 'Acompanhado (Monitorando Séries)' : 'Simples (Apenas Ficha)'}
+              </span>
+              <button
+                onClick={() => handleClearWorkoutState()}
+                className="text-xs text-text-light-secondary dark:text-text-dark-secondary hover:text-red-500 font-bold transition-colors uppercase tracking-wider"
+              >
+                Sair do Treino
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {displayExercises.map((ex: any, idx: number) => {
+                const exKey = `ex-${idx}`;
+                const exState = workoutExercisesState[exKey] || 'pending';
+                const totalSets = Math.max(1, parseInt(ex.sets) || 3);
+                const completedSets = workoutExerciseSetsCompleted[exKey] || 0;
+                const isSetRunning = workoutExerciseActiveSetRunning[exKey] || false;
+
+                return (
+                  <div
+                    key={idx}
+                    className={`bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark shadow-sm p-6 flex flex-col gap-4 transition-all duration-300 ${
+                      exState === 'completed' ? 'opacity-55 scale-[0.98]' : exState === 'running' ? 'ring-2 ring-primary/50 bg-primary/5' : ''
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        {ex.isSpecial && (
+                          <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-black tracking-widest uppercase bg-primary/20 text-primary mb-2 border border-primary/20 animate-pulse">Série Especial</span>
+                        )}
+                        <h3 className="text-xl font-black text-text-light-primary dark:text-text-dark-primary">{ex.name}</h3>
+                        <p className="text-text-light-secondary dark:text-text-dark-secondary text-xs uppercase tracking-wider font-black mt-1">
+                          {ex.category || 'GERAL'} • Exercício {idx + 1} de {displayExercises.length}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                        {workoutMode === 'simple' ? (
+                          // Controls for Simple Workout Mode (Independent of tracked)
+                          exState === 'completed' ? (
+                            <button
+                              onClick={() => {
+                                setWorkoutExercisesState(prev => ({
+                                  ...prev,
+                                  [exKey]: 'pending'
+                                }));
+                              }}
+                              className="w-full sm:w-auto h-11 px-5 rounded-xl bg-primary/10 border border-primary/20 text-primary font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:bg-primary/20 transition-all"
+                            >
+                              <span className="material-symbols-outlined text-sm font-bold">check_circle</span>
+                              Concluído! Desmarcar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setWorkoutExercisesState(prev => ({
+                                  ...prev,
+                                  [exKey]: 'completed'
+                                }));
+                              }}
+                              className="w-full sm:w-auto h-11 px-5 rounded-xl bg-primary text-background-dark font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.02] transition-all"
+                            >
+                              <span className="material-symbols-outlined text-sm font-bold">check</span>
+                              Concluir Exercício
+                            </button>
+                          )
+                        ) : (
+                          // Controls for Tracked Workout Mode
+                          exState === 'completed' ? (
+                            <div className="flex items-center gap-1.5 px-4 py-2 bg-primary/15 border border-primary/20 text-primary font-black rounded-xl text-xs uppercase">
+                              <span className="material-symbols-outlined text-sm font-black text-primary">check_circle</span>
+                              Concluído ({totalSets}/{totalSets})
+                            </div>
+                          ) : exState === 'pending' ? (
+                            <button
+                              onClick={() => {
+                                setWorkoutExercisesState(prev => ({
+                                  ...prev,
+                                  [exKey]: 'running'
+                                }));
+                                setWorkoutExerciseActiveSetRunning(prev => ({
+                                  ...prev,
+                                  [exKey]: true
+                                }));
+                              }}
+                              className="w-full sm:w-auto h-11 px-5 rounded-xl bg-primary text-background-dark font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-95 transition-all"
+                            >
+                              <span className="material-symbols-outlined text-sm font-bold">play_arrow</span>
+                              Iniciar 1ª Série
+                            </button>
+                          ) : (
+                            // Running state with set interaction
+                            isSetRunning ? (
+                              <button
+                                onClick={() => {
+                                  // Finish current set
+                                  setWorkoutExerciseActiveSetRunning(prev => ({
+                                    ...prev,
+                                    [exKey]: false
+                                  }));
+                                  
+                                  const nextCompleted = completedSets + 1;
+                                  setWorkoutExerciseSetsCompleted(prev => ({
+                                    ...prev,
+                                    [exKey]: nextCompleted
+                                  }));
+
+                                  if (nextCompleted >= totalSets) {
+                                    // Workout fully done!
+                                    setWorkoutExercisesState(prev => ({
+                                      ...prev,
+                                      [exKey]: 'completed'
+                                    }));
+                                    setActiveTimerSeconds(null);
+                                    setTimerStartedAt(null);
+                                    setTimerTotalDuration(null);
+                                  } else {
+                                    // Start Rest countdown
+                                    const restVal = parseInt(ex.rest) || 60;
+                                    setTimerTargetIndex(idx);
+                                    setTimerStartedAt(Date.now());
+                                    setTimerTotalDuration(restVal);
+                                    setActiveTimerSeconds(restVal);
+                                  }
+                                }}
+                                className="w-full sm:w-auto h-11 px-5 rounded-xl bg-orange-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                              >
+                                <span className="material-symbols-outlined text-sm font-bold">check</span>
+                                Concluir {completedSets + 1}ª Série
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setWorkoutExerciseActiveSetRunning(prev => ({
+                                    ...prev,
+                                    [exKey]: true
+                                  }));
+                                  if (timerTargetIndex === idx) {
+                                    setActiveTimerSeconds(null);
+                                    setTimerStartedAt(null);
+                                    setTimerTotalDuration(null);
+                                  }
+                                }}
+                                className="w-full sm:w-auto h-11 px-5 rounded-xl bg-primary text-background-dark font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                              >
+                                <span className="material-symbols-outlined text-sm font-bold">play_arrow</span>
+                                Iniciar {completedSets + 1}ª Série
+                              </button>
+                            )
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Specs table for this exercise */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-background-light dark:bg-background-dark/50 p-2.5 rounded-xl border border-border-light dark:border-border-dark text-center">
+                        <p className="text-[10px] uppercase font-black text-text-light-secondary dark:text-text-dark-secondary mb-0.5">Séries</p>
+                        <p className="text-base font-black text-primary">{ex.sets || "3"}</p>
+                      </div>
+                      <div className="bg-background-light dark:bg-background-dark/50 p-2.5 rounded-xl border border-border-light dark:border-border-dark text-center">
+                        <p className="text-[10px] uppercase font-black text-text-light-secondary dark:text-text-dark-secondary mb-0.5">Reps/Tempo</p>
+                        <p className="text-base font-black text-primary">
+                          {ex.reps || "10"} {ex.seriesForm === "Minuto" ? "min" : ex.seriesForm === "Segundo" ? "seg" : ""}
+                        </p>
+                      </div>
+                      <div className="bg-background-light dark:bg-background-dark/50 p-2.5 rounded-xl border border-border-light dark:border-border-dark text-center">
+                        <p className="text-[10px] uppercase font-black text-text-light-secondary dark:text-text-dark-secondary mb-0.5">Carga/Config</p>
+                        <p className="text-base font-black text-primary">
+                          {ex.loadConfig || "Peso Corp."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Dynamic set tracking progress details for Tracked Mode */}
+                    {workoutMode === 'tracked' && (
+                      <div className="mt-1 flex items-center justify-between text-xs font-bold text-text-light-secondary dark:text-text-dark-secondary">
+                        <span>Progresso de Séries:</span>
+                        <span className="text-primary font-black font-mono">{completedSets} de {totalSets} concluídas</span>
+                      </div>
+                    )}
+
+                    {/* Continuous Rest Display clock under exercise card */}
+                    {workoutMode === 'tracked' && exState === 'running' && !isSetRunning && activeTimerSeconds !== null && timerTargetIndex === idx && (
+                      <div className="mt-1 text-xs font-bold text-orange-500 bg-orange-500/10 px-3 py-2 rounded-lg border border-orange-500/20 flex items-center gap-1.5 animate-pulse">
+                        <span className="material-symbols-outlined text-base animate-spin text-orange-500">sync</span>
+                        <span>Descansando... Tempo restante: {activeTimerSeconds}s</span>
+                      </div>
+                    )}
+
+                    {/* Resting info config */}
+                    <div className="flex items-center gap-1.5 text-xs text-text-light-secondary dark:text-text-dark-secondary font-bold">
+                      <span className="material-symbols-outlined text-sm text-primary">timer</span>
+                      <span>Configurações de Descanso: {ex.rest || 60}s</span>
+                    </div>
+
+                    {ex.notes && (
+                      <div className="bg-background-light/40 dark:bg-background-dark/40 border border-border-light dark:border-border-dark p-4 rounded-xl text-xs">
+                        <p className="font-extrabold uppercase tracking-wider text-text-light-primary dark:text-text-dark-primary mb-1 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[15px] text-primary">tips_and_updates</span>
+                          Notas Técnicas do Treino:
+                        </p>
+                        <p className="text-text-light-secondary dark:text-text-dark-secondary leading-relaxed whitespace-pre-line">{ex.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Finish Workout CTA */}
+            <div className="mt-12 flex flex-col items-center gap-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-2xl shadow-sm text-center">
+              <h4 className="text-lg font-black text-text-light-primary dark:text-text-dark-primary">Fim da Sessão de Hoje?</h4>
+              <p className="text-sm text-text-light-secondary dark:text-text-dark-secondary max-w-sm">
+                Conclua e salve seu treino para atualizar suas estatísticas com seu personal trainer.
+              </p>
+              <button
+                onClick={async () => {
+                  if (todayWorkout.id) {
+                    await dataService.completeWorkout(user.id, todayWorkout.id);
+                    handleClearWorkoutState();
+                    setActiveTab('dashboard');
+                  }
+                }}
+                className="w-full max-w-xs h-12 rounded-xl bg-primary text-background-dark font-black text-sm uppercase tracking-wider hover:scale-[1.01] shadow-lg shadow-primary/20 transition-all cursor-pointer"
+              >
+                Salvar e Finalizar Treino
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderProgress = () => (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       <div className="flex flex-wrap justify-between gap-4 items-center mb-6">
         <div className="flex flex-col gap-1">
-          <p className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">Meu Progresso</p>
-          <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal">Acompanhe sua evolução e mantenha-se motivado.</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleTabChange('dashboard')}
+              className="md:hidden flex items-center justify-center text-text-light-primary dark:text-text-dark-primary hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0"
+            >
+              <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
+            </button>
+            <p className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">Meu Progresso</p>
+          </div>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal mt-1">Acompanhe sua evolução e mantenha-se motivado.</p>
         </div>
         <div className="flex items-center gap-2">
           <select className="rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-text-light-primary dark:text-text-dark-primary text-sm focus:ring-primary focus:border-primary px-4 py-2 cursor-pointer transition-colors">
@@ -1573,17 +2237,20 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
 
   const renderSubscription = () => (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-      {/* Breadcrumbs & Heading */}
+      {/* Heading */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-sm">
-          <button onClick={() => setActiveTab('dashboard')} className="text-text-secondary hover:text-primary transition-colors">Dashboard</button>
-          <span className="text-white/40">/</span>
-          <span className="text-white font-medium">Assinatura</span>
-        </div>
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mt-2">
           <div className="flex flex-col gap-1">
-            <h1 className="text-white text-3xl md:text-4xl font-black tracking-tight">Meus Planos e Assinatura</h1>
-            <p className="text-text-secondary text-base font-light">Gerencie sua assinatura, métodos de pagamento e histórico.</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleTabChange('dashboard')}
+                className="md:hidden flex items-center justify-center text-text-light-primary dark:text-text-dark-primary hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0"
+              >
+                <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
+              </button>
+              <h1 className="text-white text-3xl md:text-4xl font-black tracking-tight">Meu Plano</h1>
+            </div>
+            <p className="text-text-secondary text-base font-light mt-1">Gerencie sua assinatura, métodos de pagamento e histórico.</p>
           </div>
         </div>
       </div>
@@ -1693,7 +2360,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const renderSettings = () => (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       <div className="mb-8 p-1">
-        <h1 className="text-text-light-primary dark:text-text-dark-primary text-3xl font-bold leading-tight tracking-[-0.015em]">Ajustes</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => handleTabChange('dashboard')}
+            className="md:hidden flex items-center justify-center text-text-light-primary dark:text-text-dark-primary hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0"
+          >
+            <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
+          </button>
+          <h1 className="text-text-light-primary dark:text-text-dark-primary text-3xl font-bold leading-tight tracking-[-0.015em]">Ajustes</h1>
+        </div>
         <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal mt-1">Gerencie suas informações de perfil, notificações e privacidade.</p>
       </div>
 
@@ -2115,6 +2790,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         return renderDashboard();
       case 'my-workouts':
         return renderWorkouts();
+      case 'today-workout':
+        return renderTodayWorkout();
       case 'chat':
         return renderChat();
       case 'progress':
@@ -2172,14 +2849,23 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         {/* Spacer for fixed top nav on mobile */}
         <div className="md:hidden shrink-0 h-16"></div>
 
-        <div className={`flex-1 overflow-hidden flex flex-col h-full ${activeTab === 'chat' ? 'p-0 pb-[84px] md:pb-0' : 'overflow-y-auto p-4 md:p-8 pb-[calc(8.5rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
+        <div className={`flex-1 overflow-hidden flex flex-col h-full ${
+          activeTab === 'chat' 
+            ? 'p-0 md:pb-0' 
+            : `overflow-y-auto p-4 md:p-8 ${
+                ['progress', 'subscription', 'settings', 'chat', 'my-workouts', 'today-workout'].includes(activeTab) 
+                  ? 'pb-[calc(2.5rem+env(safe-area-inset-bottom))]' 
+                  : 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]'
+              } md:pb-8`
+        }`}>
           <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto h-full'}`}>
             {renderContent()}
           </div>
         </div>
 
         {/* Mobile Bottom Navbar with Curved SVG cutout */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[84px] z-50">
+        {!['progress', 'subscription', 'settings', 'chat', 'my-workouts', 'today-workout'].includes(activeTab) && (
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[84px] z-50">
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 84" preserveAspectRatio="none">
             <path
               d="M0 0 H120 C135 0 140 3 145 10 C 158 52 217 52 230 10 C 235 3 240 0 255 0 H375 V84 H0 Z"
@@ -2238,6 +2924,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
             </button>
           </div>
         </nav>
+        )}
       </main>
     </div>
   );

@@ -132,6 +132,17 @@
         "social": { "type": "object" },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "WorkoutSession": {
+      "title": "Workout Session Log",
+      "description": "Log of a completed workout session",
+      "type": "object",
+      "properties": {
+        "workoutId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["workoutId", "studentId", "completedAt"]
     }
   },
   "firestore": {
@@ -143,6 +154,7 @@
     "/exercises/{exerciseId}": { "schema": "Exercise", "description": "Exercises collection" },
     "/agendaEvents/{eventId}": { "schema": "AgendaEvent", "description": "Agenda events collection" },
     "/linkRequests/{requestId}": { "schema": "LinkRequest", "description": "Link requests collection" },
-    "/chats/{chatId}/messages/{messageId}": { "schema": "ChatMessage", "description": "Chat messages collection" }
+    "/chats/{chatId}/messages/{messageId}": { "schema": "ChatMessage", "description": "Chat messages collection" },
+    "/workoutSessions/{sessionId}": { "schema": "WorkoutSession", "description": "Log of completed workouts" }
   }
 }
