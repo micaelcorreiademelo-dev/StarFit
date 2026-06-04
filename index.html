@@ -13,8 +13,31 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png">
     <link rel="manifest" href="/manifest.json">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    
+    <!-- Preload para carregar a fonte Lexend antes da renderizacao -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=block"
+    />
+    <!-- Carregamento da fonte Lexend com display=block -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=block"
+    />
+
+    <!-- Preload para carregar a fonte Material Symbols Outlined antes da renderizacao -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block"
+    />
+    <!-- Carregamento da fonte Material Symbols Outlined com display=block -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block"
+    />
+
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -29,7 +52,7 @@
               'text-secondary': '#a1bfaa',
             },
             fontFamily: {
-              display: ['Lexend', 'sans-serif'],
+              display: ['Lexend', 'Trebuchet MS', 'Arial', 'sans-serif'],
             },
           },
         },

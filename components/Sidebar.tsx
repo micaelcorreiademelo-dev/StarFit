@@ -156,9 +156,9 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span
               className={`material-symbols-outlined ${activeTab === "settings" ? "fill" : ""}`}
             >
-              settings
+              tune
             </span>
-            <p className="text-sm font-medium leading-normal">Configurações</p>
+            <p className="text-sm font-medium leading-normal">Ajustes</p>
           </button>
           <button
             onClick={onLogout}

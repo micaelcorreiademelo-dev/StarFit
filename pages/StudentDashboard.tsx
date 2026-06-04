@@ -530,82 +530,84 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
               </div>
             </div>
 
-          <h2 className="text-text-light-primary dark:text-text-dark-primary text-[22px] font-bold leading-tight tracking-[-0.015em] pt-2">
-            Evolução Corporal
-          </h2>
+          <div className="hidden md:block space-y-4">
+            <h2 className="text-text-light-primary dark:text-text-dark-primary text-[22px] font-bold leading-tight tracking-[-0.015em] pt-2">
+              Evolução Corporal
+            </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col gap-2 rounded-xl border border-border-light dark:border-border-dark p-6 bg-card-light dark:bg-card-dark shadow-[0_0_12px_rgba(0,0,0,0.05)]">
-              <p className="text-text-light-primary dark:text-text-dark-primary text-base font-medium leading-normal">Peso Corporal (kg)</p>
-              <p className="text-text-light-primary dark:text-text-dark-primary tracking-light text-[32px] font-bold leading-tight truncate">
-                {studentStats.lastWeight || '--'} kg
-              </p>
-              <div className="flex gap-1 items-center">
-                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Histórico Recente</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2 rounded-xl border border-border-light dark:border-border-dark p-6 bg-card-light dark:bg-card-dark shadow-[0_0_12px_rgba(0,0,0,0.05)]">
+                <p className="text-text-light-primary dark:text-text-dark-primary text-base font-medium leading-normal">Peso Corporal (kg)</p>
+                <p className="text-text-light-primary dark:text-text-dark-primary tracking-light text-[32px] font-bold leading-tight truncate">
+                  {studentStats.lastWeight || '--'} kg
+                </p>
+                <div className="flex gap-1 items-center">
+                  <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Histórico Recente</p>
+                </div>
+                <div className="h-[180px] w-full mt-4">
+                  {studentStats.weightHistory.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={studentStats.weightHistory}>
+                        <defs>
+                          <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="date" hide />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#1a2c20', border: 'none', borderRadius: '8px', color: '#fff' }}
+                          itemStyle={{ color: '#13ec5b' }}
+                        />
+                        <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorWeight)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-text-light-secondary dark:text-text-dark-secondary text-xs opacity-50 text-center">
+                      Aguardando primeiros dados de progresso...
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="h-[180px] w-full mt-4">
-                {studentStats.weightHistory.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={studentStats.weightHistory}>
-                      <defs>
-                        <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="date" hide />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1a2c20', border: 'none', borderRadius: '8px', color: '#fff' }}
-                        itemStyle={{ color: '#13ec5b' }}
-                      />
-                      <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorWeight)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-text-light-secondary dark:text-text-dark-secondary text-xs opacity-50 text-center">
-                    Aguardando primeiros dados de progresso...
-                  </div>
-                )}
-              </div>
-            </div>
 
-            <div className="flex flex-col gap-2 rounded-xl border border-border-light dark:border-border-dark p-6 bg-card-light dark:bg-card-dark shadow-[0_0_12px_rgba(0,0,0,0.05)]">
-              <p className="text-text-light-primary dark:text-text-dark-primary text-base font-medium leading-normal">Gordura Corporal (%)</p>
-              <p className="text-text-light-primary dark:text-text-dark-primary tracking-light text-[32px] font-bold leading-tight truncate">
-                {studentStats.lastFat || '--'} %
-              </p>
-              <div className="flex gap-1 items-center">
-                <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Histórico Recente</p>
-              </div>
-              <div className="h-[180px] w-full mt-4">
-                {studentStats.fatHistory.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={studentStats.fatHistory}>
-                      <defs>
-                        <linearGradient id="colorFat" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#13ec5b" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="date" hide />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1a2c20', border: 'none', borderRadius: '8px', color: '#fff' }}
-                        itemStyle={{ color: '#13ec5b' }}
-                      />
-                      <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorFat)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-text-light-secondary dark:text-text-dark-secondary text-xs opacity-50 text-center">
-                    Aguardando primeiros dados de progresso...
-                  </div>
-                )}
+              <div className="flex flex-col gap-2 rounded-xl border border-border-light dark:border-border-dark p-6 bg-card-light dark:bg-card-dark shadow-[0_0_12px_rgba(0,0,0,0.05)]">
+                <p className="text-text-light-primary dark:text-text-dark-primary text-base font-medium leading-normal">Gordura Corporal (%)</p>
+                <p className="text-text-light-primary dark:text-text-dark-primary tracking-light text-[32px] font-bold leading-tight truncate">
+                  {studentStats.lastFat || '--'} %
+                </p>
+                <div className="flex gap-1 items-center">
+                  <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm font-normal leading-normal">Histórico Recente</p>
+                </div>
+                <div className="h-[180px] w-full mt-4">
+                  {studentStats.fatHistory.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={studentStats.fatHistory}>
+                        <defs>
+                          <linearGradient id="colorFat" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.2}/>
+                            <stop offset="15%" stopColor="#13ec5b" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="date" hide />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#1a2c20', border: 'none', borderRadius: '8px', color: '#fff' }}
+                          itemStyle={{ color: '#13ec5b' }}
+                        />
+                        <Area type="monotone" dataKey="value" stroke="#13ec5b" strokeWidth={3} fillOpacity={1} fill="url(#colorFat)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-text-light-secondary dark:text-text-dark-secondary text-xs opacity-50 text-center">
+                      Aguardando primeiros dados de progresso...
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-1 flex flex-col gap-6">
+        <div className="hidden md:flex lg:col-span-1 flex-col gap-6">
           <div className="bg-card-light dark:bg-card-dark rounded-xl p-6 shadow-[0_0_12px_rgba(0,0,0,0.05)] border border-border-light dark:border-border-dark">
             <h3 className="text-text-light-primary dark:text-text-dark-primary text-lg font-bold leading-tight tracking-[-0.015em] mb-4">
               Histórico de Treinos
@@ -1690,8 +1692,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
 
   const renderSettings = () => (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
-      <div className="mb-8">
-        <h1 className="text-text-light-primary dark:text-text-dark-primary text-3xl font-bold leading-tight tracking-[-0.015em]">Configurações</h1>
+      <div className="mb-8 p-1">
+        <h1 className="text-text-light-primary dark:text-text-dark-primary text-3xl font-bold leading-tight tracking-[-0.015em]">Ajustes</h1>
         <p className="text-text-light-secondary dark:text-text-dark-secondary text-base font-normal leading-normal mt-1">Gerencie suas informações de perfil, notificações e privacidade.</p>
       </div>
 
@@ -1969,6 +1971,21 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           </button>
         </div>
       </div>
+
+      {/* Sair do Aplicativo */}
+      <div className="bg-card-light dark:bg-card-dark rounded-xl shadow-[0_0_12px_rgba(0,0,0,0.05)] border border-border-light dark:border-border-dark p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 className="text-text-light-primary dark:text-text-dark-primary text-lg font-bold leading-tight">Sair do Aplicativo</h2>
+          <p className="text-text-light-secondary dark:text-text-dark-secondary text-sm mt-1">Encerre sua sessão atual de forma segura.</p>
+        </div>
+        <button 
+          onClick={onLogout}
+          className="w-full md:w-auto px-6 py-2.5 rounded-lg bg-red-500/10 text-red-500 font-bold hover:bg-red-500/20 transition-all text-sm flex items-center justify-center gap-2"
+        >
+          <span className="material-symbols-outlined text-sm font-bold">logout</span>
+          Sair da Sessão
+        </button>
+      </div>
     </div>
   );
 
@@ -2123,42 +2140,104 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       />
       
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between px-4 h-16 bg-white dark:bg-card-dark border-b border-border-light dark:border-border-dark shrink-0">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 text-text-light-primary dark:text-text-dark-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
-            >
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary fill">fitness_center</span>
-              <span className="font-black text-xl tracking-tighter text-text-light-primary dark:text-text-dark-primary">StarFit</span>
-            </div>
+        {/* Mobile Header / Top Navbar */}
+        <header className="md:hidden flex items-center justify-between px-4 h-16 bg-primary border-b border-primary shrink-0 z-40 fixed top-0 w-full left-0 right-0">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-background-dark fill text-2xl">
+              fitness_center
+            </span>
+            <span className="font-black text-xl tracking-tighter text-background-dark">
+              StarFit
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <button
-                className="p-2 text-text-light-primary dark:text-text-dark-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+                className="flex items-center justify-center size-10 text-background-dark hover:bg-background-dark/10 rounded-lg transition-colors font-bold"
                 title="Notificações"
             >
                 <span className="material-symbols-outlined">notifications</span>
             </button>
-            <button
-                className="p-2 text-text-light-primary dark:text-text-dark-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
-                title="Chat"
-                onClick={() => setActiveTab('chat')}
-            >
-                <span className="material-symbols-outlined">chat</span>
-            </button>
+            {user.trainerId && (
+              <button
+                  className="flex items-center justify-center size-10 text-background-dark hover:bg-background-dark/10 rounded-lg transition-colors font-bold"
+                  title="Chat"
+                  onClick={() => handleTabChange('chat')}
+              >
+                  <span className="material-symbols-outlined">chat</span>
+              </button>
+            )}
           </div>
         </header>
 
-        <div className={`flex-1 overflow-hidden flex flex-col h-full ${activeTab === 'chat' ? 'p-0 pb-[84px] md:pb-0' : 'overflow-y-auto p-4 md:p-8 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
+        {/* Spacer for fixed top nav on mobile */}
+        <div className="md:hidden shrink-0 h-16"></div>
+
+        <div className={`flex-1 overflow-hidden flex flex-col h-full ${activeTab === 'chat' ? 'p-0 pb-[84px] md:pb-0' : 'overflow-y-auto p-4 md:p-8 pb-[calc(8.5rem+env(safe-area-inset-bottom))] md:pb-8'}`}>
           <div className={`${activeTab === 'chat' ? 'w-full h-full' : 'max-w-7xl mx-auto h-full'}`}>
             {renderContent()}
           </div>
         </div>
+
+        {/* Mobile Bottom Navbar with Curved SVG cutout */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[84px] z-50">
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 375 84" preserveAspectRatio="none">
+            <path
+              d="M0 0 H120 C135 0 140 3 145 10 C 158 52 217 52 230 10 C 235 3 240 0 255 0 H375 V84 H0 Z"
+              className="fill-card-light dark:fill-card-dark"
+            />
+            <path
+              d="M0 0 H120 C135 0 140 3 145 10 C 158 52 217 52 230 10 C 235 3 240 0 255 0 H375"
+              className="stroke-primary"
+              strokeWidth="1"
+              fill="none"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-around px-2 pb-2">
+            <button
+                onClick={() => handleTabChange('dashboard')}
+                className={`flex flex-col items-center justify-center gap-1 w-16 transition-colors ${activeTab === 'dashboard' ? 'text-primary' : 'text-text-light-secondary dark:text-text-secondary hover:text-white'}`}
+            >
+                <span className={`material-symbols-outlined text-2xl transition-all ${activeTab === 'dashboard' ? 'fill scale-110' : ''}`}>dashboard</span>
+                {activeTab === 'dashboard' && <span className="text-[10px] font-medium tracking-wide">Início</span>}
+            </button>
+            <button
+                onClick={() => handleTabChange('progress')}
+                className={`flex flex-col items-center justify-center gap-1 w-16 transition-colors ${activeTab === 'progress' ? 'text-primary' : 'text-text-light-secondary dark:text-text-secondary hover:text-white'}`}
+            >
+                <span className={`material-symbols-outlined text-2xl transition-all ${activeTab === 'progress' ? 'fill scale-110' : ''}`}>trending_up</span>
+                {activeTab === 'progress' && <span className="text-[10px] font-medium tracking-wide">Progresso</span>}
+            </button>
+ 
+            {/* My Workouts Elevated Central Button */}
+            <div className="relative w-[80px] h-[80px] -mt-[110px] flex items-center justify-center z-50">
+              <button
+                  onClick={() => handleTabChange('my-workouts')}
+                  className={`flex items-center justify-center rounded-full transition-all ease-out duration-250 active:scale-95 ${
+                    activeTab === 'my-workouts'
+                      ? 'size-[80px] bg-primary text-background-dark scale-105 border-4 border-background-light dark:border-background-dark shadow-[0_12px_35px_rgba(19,236,91,0.4)]' 
+                      : 'size-[80px] bg-primary text-background-dark/90 border-4 border-background-light dark:border-background-dark shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(19,236,91,0.25)] hover:brightness-110'
+                  }`}
+              >
+                  <span className="material-symbols-outlined text-[40px] drop-shadow-sm font-bold animate-in zoom-in-50 duration-200">fitness_center</span>
+              </button>
+            </div>
+
+            <button
+                onClick={() => handleTabChange('subscription')}
+                className={`flex flex-col items-center justify-center gap-1 w-16 transition-colors ${activeTab === 'subscription' ? 'text-primary' : 'text-text-light-secondary dark:text-text-secondary hover:text-white'}`}
+            >
+                <span className={`material-symbols-outlined text-2xl transition-all ${activeTab === 'subscription' ? 'fill scale-110' : ''}`}>credit_card</span>
+                {activeTab === 'subscription' && <span className="text-[10px] font-medium tracking-wide">Assinatura</span>}
+            </button>
+            <button
+                onClick={() => handleTabChange('settings')}
+                className={`flex flex-col items-center justify-center gap-1 w-16 transition-colors ${activeTab === 'settings' ? 'text-primary' : 'text-text-light-secondary dark:text-text-secondary hover:text-white'}`}
+            >
+                <span className={`material-symbols-outlined text-2xl transition-all ${activeTab === 'settings' ? 'fill scale-110' : ''}`}>tune</span>
+                {activeTab === 'settings' && <span className="text-[10px] font-medium tracking-wide">Ajustes</span>}
+            </button>
+          </div>
+        </nav>
       </main>
     </div>
   );
