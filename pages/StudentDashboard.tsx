@@ -1377,7 +1377,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           </div>
         </div>
 
-        <footer className="shrink-0 bg-background-light dark:bg-card-dark px-4 py-3 sm:px-6 w-full border-t border-border-light dark:border-border-dark z-20">
+        <footer className="shrink-0 bg-background-light dark:bg-card-dark px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-3 sm:px-6 w-full border-t border-border-light dark:border-border-dark z-20">
           <div className="max-w-4xl mx-auto w-full flex flex-col">
             {chatContext && (
                <div className="flex justify-between items-center bg-card-light dark:bg-background-dark px-3 py-2 rounded-xl mb-3 border border-border-light/50 dark:border-border-dark/50 text-xs">
@@ -2875,7 +2875,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   };
 
   return (
-    <div className="flex h-screen w-full bg-background-light dark:bg-background-dark overflow-hidden transition-colors">
+    <div className="flex h-screen h-[100dvh] w-full bg-background-light dark:bg-background-dark overflow-hidden transition-colors">
       <Sidebar 
         user={user} 
         onLogout={onLogout} 
@@ -2885,7 +2885,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         onClose={() => setIsSidebarOpen(false)}
       />
       
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 h-screen h-[100dvh] overflow-hidden">
         {/* Mobile Header / Top Navbar */}
         {activeTab !== 'chat' && (
           <>
