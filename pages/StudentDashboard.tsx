@@ -125,6 +125,28 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const [restAlertActive, setRestAlertActive] = useState(false);
   const [restAlertMessage, setRestAlertMessage] = useState('');
   const [expandedWorkouts, setExpandedWorkouts] = useState<Record<string, boolean>>({});
+  const [videoModalUrl, setVideoModalUrl] = useState<string | null>(null);
+  const [genericAlert, setGenericAlert] = useState<{title: string, message: string} | null>(null);
+
+  const getEmbedUrl = (url: string) => {
+    if (!url) return null;
+    let videoId = '';
+    if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1].split('?')[0];
+    } else if (url.includes('youtube.com/watch')) {
+      try {
+        const urlParams = new URL(url).searchParams;
+        videoId = urlParams.get('v') || '';
+      } catch (e) {
+        // Fallback for malformed URLs
+        videoId = url.split('v=')[1]?.split('&')[0] || '';
+      }
+    }
+    if (videoId) {
+      return `https://www.youtube-nocookie.com/embed/${videoId}?controls=1&modestbranding=1&rel=0&playsinline=1`;
+    }
+    return null;
+  };
 
   // Timer Countdown Effect
   useEffect(() => {
@@ -1069,6 +1091,27 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                   <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
                     <button
                       onClick={() => {
+                        const url = getEmbedUrl(ex.videoUrl);
+                        if (url) {
+                          setVideoModalUrl(url);
+                        } else {
+                          setGenericAlert({
+                            title: 'Vídeo Indisponível',
+                            message: 'Vídeo não disponível para este exercício.'
+                          });
+                        }
+                      }}
+                      className={`size-11 flex shrink-0 items-center justify-center rounded-xl transition-all ${
+                        getEmbedUrl(ex.videoUrl)
+                          ? 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20'
+                          : 'bg-background-light dark:bg-background-dark text-text-light-secondary dark:text-text-dark-secondary/50 border border-border-light dark:border-border-dark opacity-60'
+                      }`}
+                      title={getEmbedUrl(ex.videoUrl) ? "Ver Vídeo do Exercício" : "Vídeo não disponível"}
+                    >
+                      <span className="material-symbols-outlined text-xl">play_circle</span>
+                    </button>
+                    <button
+                      onClick={() => {
                         const id = `full-${index}`;
                         setCompletedExercises(prev => 
                           prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
@@ -1586,25 +1629,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           <div className="space-y-6 relative">
             {/* Simple banner for countdown when active */}
             {activeTimerSeconds !== null && (
-              <div className="fixed bottom-24 left-4 right-4 md:left-auto md:right-8 bg-card-dark border-2 border-primary text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-6 z-[100] animate-in slide-in-from-bottom duration-300 max-w-sm">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-primary text-3xl animate-pulse">timer</span>
-                  <div>
-                    <p className="text-xs font-extrabold text-text-dark-secondary uppercase tracking-wider">Intervalo de Descanso</p>
-                    <p className="text-2xl font-mono font-black text-primary">{activeTimerSeconds}s</p>
+              <>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] md:hidden"></div>
+                <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:top-auto md:left-auto md:translate-x-0 md:translate-y-0 md:bottom-8 md:right-8 bg-card-dark border-2 border-primary text-white p-6 md:p-4 rounded-3xl md:rounded-2xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4 z-[100] animate-in zoom-in-95 md:slide-in-from-bottom duration-300 w-[90%] max-w-xs md:max-w-sm">
+                  <div className="flex flex-col md:flex-row items-center gap-4 md:gap-3 text-center md:text-left w-full justify-center md:justify-start">
+                    <span className="material-symbols-outlined text-primary text-5xl md:text-3xl animate-pulse">timer</span>
+                    <div>
+                      <p className="text-xs font-extrabold text-text-dark-secondary uppercase tracking-wider mb-1 md:mb-0">Intervalo de Descanso</p>
+                      <p className="text-6xl md:text-2xl font-mono font-black text-primary">{activeTimerSeconds}s</p>
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setActiveTimerSeconds(null);
-                    setTimerStartedAt(null);
-                    setTimerTotalDuration(null);
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-black uppercase transition-all whitespace-nowrap"
-                >
-                  Pular
-                </button>
-              </div>
+              </>
             )}
 
             <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex items-center justify-between">
@@ -1647,6 +1683,27 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                       </div>
 
                       <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                        <button
+                          onClick={() => {
+                            const url = getEmbedUrl(ex.videoUrl);
+                            if (url) {
+                              setVideoModalUrl(url);
+                            } else {
+                              setGenericAlert({
+                                title: 'Vídeo Indisponível',
+                                message: 'Vídeo não disponível para este exercício.'
+                              });
+                            }
+                          }}
+                          className={`size-11 flex shrink-0 items-center justify-center rounded-xl transition-all ${
+                            getEmbedUrl(ex.videoUrl)
+                              ? 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 cursor-pointer'
+                              : 'bg-background-light dark:bg-background-dark/50 text-text-light-secondary dark:text-text-dark-secondary/50 border border-border-light dark:border-border-dark opacity-60 cursor-pointer grayscale'
+                          }`}
+                          title={getEmbedUrl(ex.videoUrl) ? "Ver Vídeo do Exercício" : "Vídeo não disponível"}
+                        >
+                          <span className="material-symbols-outlined text-xl">play_circle</span>
+                        </button>
                         {workoutMode === 'simple' ? (
                           // Controls for Simple Workout Mode (Independent of tracked)
                           exState === 'completed' ? (
@@ -1686,6 +1743,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                           ) : exState === 'pending' ? (
                             <button
                               onClick={() => {
+                                if (activeTimerSeconds !== null) return;
                                 setWorkoutExercisesState(prev => ({
                                   ...prev,
                                   [exKey]: 'running'
@@ -1695,7 +1753,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                                   [exKey]: true
                                 }));
                               }}
-                              className="w-full sm:w-auto h-11 px-5 rounded-xl bg-primary text-background-dark font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-95 transition-all"
+                              disabled={activeTimerSeconds !== null}
+                              className={`w-full sm:w-auto h-11 px-5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                                activeTimerSeconds !== null 
+                                  ? 'bg-primary/50 text-background-dark/50 cursor-not-allowed'
+                                  : 'bg-primary text-background-dark cursor-pointer hover:scale-[1.02] active:scale-95'
+                              }`}
                             >
                               <span className="material-symbols-outlined text-sm font-bold">play_arrow</span>
                               Iniciar 1ª Série
@@ -1743,6 +1806,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                             ) : (
                               <button
                                 onClick={() => {
+                                  if (activeTimerSeconds !== null) return;
                                   setWorkoutExerciseActiveSetRunning(prev => ({
                                     ...prev,
                                     [exKey]: true
@@ -1753,7 +1817,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                                     setTimerTotalDuration(null);
                                   }
                                 }}
-                                className="w-full sm:w-auto h-11 px-5 rounded-xl bg-primary text-background-dark font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                                disabled={activeTimerSeconds !== null}
+                                className={`w-full sm:w-auto h-11 px-5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                                  activeTimerSeconds !== null
+                                    ? 'bg-primary/50 text-background-dark/50 cursor-not-allowed'
+                                    : 'bg-primary text-background-dark cursor-pointer hover:brightness-110 active:scale-95'
+                                }`}
                               >
                                 <span className="material-symbols-outlined text-sm font-bold">play_arrow</span>
                                 Iniciar {completedSets + 1}ª Série
@@ -2818,36 +2887,40 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Mobile Header / Top Navbar */}
-        <header className="md:hidden flex items-center justify-between px-4 h-16 bg-primary border-b border-primary shrink-0 z-40 fixed top-0 w-full left-0 right-0">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-background-dark fill text-2xl">
-              fitness_center
-            </span>
-            <span className="font-black text-xl tracking-tighter text-background-dark">
-              StarFit
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-                className="flex items-center justify-center size-10 text-background-dark hover:bg-background-dark/10 rounded-lg transition-colors font-bold"
-                title="Notificações"
-            >
-                <span className="material-symbols-outlined">notifications</span>
-            </button>
-            {user.trainerId && (
-              <button
-                  className="flex items-center justify-center size-10 text-background-dark hover:bg-background-dark/10 rounded-lg transition-colors font-bold"
-                  title="Chat"
-                  onClick={() => handleTabChange('chat')}
-              >
-                  <span className="material-symbols-outlined">chat</span>
-              </button>
-            )}
-          </div>
-        </header>
+        {activeTab !== 'chat' && (
+          <>
+            <header className="md:hidden flex items-center justify-between px-4 h-16 bg-primary border-b border-primary shrink-0 z-40 fixed top-0 w-full left-0 right-0">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-background-dark fill text-2xl">
+                  fitness_center
+                </span>
+                <span className="font-black text-xl tracking-tighter text-background-dark">
+                  StarFit
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                    className="flex items-center justify-center size-10 text-background-dark hover:bg-background-dark/10 rounded-lg transition-colors font-bold"
+                    title="Notificações"
+                >
+                    <span className="material-symbols-outlined">notifications</span>
+                </button>
+                {user.trainerId && (
+                  <button
+                      className="flex items-center justify-center size-10 text-background-dark hover:bg-background-dark/10 rounded-lg transition-colors font-bold"
+                      title="Chat"
+                      onClick={() => handleTabChange('chat')}
+                  >
+                      <span className="material-symbols-outlined">chat</span>
+                  </button>
+                )}
+              </div>
+            </header>
 
-        {/* Spacer for fixed top nav on mobile */}
-        <div className="md:hidden shrink-0 h-16"></div>
+            {/* Spacer for fixed top nav on mobile */}
+            <div className="md:hidden shrink-0 h-16"></div>
+          </>
+        )}
 
         <div className={`flex-1 overflow-hidden flex flex-col h-full ${
           activeTab === 'chat' 
@@ -2926,6 +2999,58 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         </nav>
         )}
       </main>
+
+      {/* Generic Alert Modal */}
+      {genericAlert && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card-light dark:bg-card-dark p-6 rounded-2xl border-2 border-primary/40 shadow-xl max-w-sm w-full text-center flex flex-col items-center gap-4 animate-in zoom-in-95 duration-200">
+            <div className="size-16 bg-primary/10 rounded-full flex items-center justify-center ring-4 ring-primary/5">
+              <span className="material-symbols-outlined text-4xl text-primary font-bold">info</span>
+            </div>
+            <h3 className="text-xl font-black text-text-light-primary dark:text-text-dark-primary">{genericAlert.title}</h3>
+            <p className="text-text-light-secondary dark:text-text-dark-secondary font-medium leading-relaxed">
+              {genericAlert.message}
+            </p>
+            <button
+              onClick={() => setGenericAlert(null)}
+              className="mt-2 w-full h-11 px-6 rounded-xl bg-primary text-background-dark font-black text-sm uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all text-center cursor-pointer"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Video Embed Modal */}
+      {videoModalUrl && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-0 md:p-8 animate-in fade-in duration-200">
+          <div className="w-full h-full md:h-auto md:max-w-4xl flex flex-col bg-black md:rounded-3xl overflow-hidden shadow-2xl relative animate-in slide-in-from-bottom md:zoom-in-95 duration-300">
+            {/* Header */}
+            <div className="absolute top-0 left-0 right-0 p-4 flex justify-end z-10 bg-gradient-to-b from-black/80 to-transparent">
+              <button
+                onClick={() => setVideoModalUrl(null)}
+                className="size-10 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center backdrop-blur-sm transition-all"
+                title="Fechar vídeo"
+              >
+                <span className="material-symbols-outlined font-black">close</span>
+              </button>
+            </div>
+            {/* 16:9 Container */}
+            <div className="w-full flex-1 flex items-center justify-center pt-16 md:pt-0">
+              <div className="w-full aspect-video">
+                <iframe
+                  src={videoModalUrl}
+                  title="Execução do Exercício"
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
