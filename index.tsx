@@ -62,7 +62,6 @@ if (!isSessionStorageAvailable) {
 
 // Now we can safely import other files that might use localStorage at the top level
 import App from './App';
-import { registerSW } from 'virtual:pwa-register';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // 2. Register/Unregister service worker logically
@@ -77,19 +76,12 @@ if ('serviceWorker' in navigator) {
       }
     }).catch(() => {});
   } else {
-    try {
-      const updateSW = registerSW({
-        immediate: true,
-        onNeedRefresh() {
-          updateSW(true);
-        },
-        onOfflineReady() {
-          console.log("App ready to work offline");
-        }
-      });
-    } catch (err) {
-      console.warn("PWA registration bypassed due to browser policy:", err);
-    }
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/service-worker.js')
+        .then(reg => console.log('SW registrado com sucesso:', reg.scope))
+        .catch(err => console.error('SW falhou ao registrar:', err));
+    });
   }
 }
 

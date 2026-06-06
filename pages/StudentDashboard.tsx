@@ -241,17 +241,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
 
     // Check for linked trainer
     let unsubTrainer: () => void = () => {};
+    let unsubTrainerPlans: () => void = () => {};
     let unsubRequests: () => void = () => {};
 
     if (user.trainerId) {
       setTrainerLinkStatus('linked');
       unsubTrainer = dataService.subscribeToUserById(user.trainerId, (t) => {
         setTrainer(t);
-        if (t) {
-          dataService.getTrainerPlans(t.id).then(plans => {
-            setTrainerPlans(plans);
-          });
-        }
+      });
+      unsubTrainerPlans = dataService.subscribeToTrainerPlans(user.trainerId, (plans) => {
+        setTrainerPlans(plans);
       });
     } else {
       // Check if there's a pending request
@@ -277,6 +276,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       unsubWorkouts();
       unsubProgress();
       unsubTrainer();
+      unsubTrainerPlans();
       unsubRequests();
     };
   }, [user]);
@@ -2370,7 +2370,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         </div>
       </section>
 
-      {trainerPlans.length > 0 && (
+      {trainerPlans.filter(p => !p.hiddenGlobal).length > 0 && (
         <section className="space-y-6">
           <h2 className="text-2xl font-bold text-white">Planos do seu Personal</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

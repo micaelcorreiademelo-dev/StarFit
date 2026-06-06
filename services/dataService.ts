@@ -541,6 +541,38 @@ export const dataService = {
     }
   },
 
+  subscribeToTrainerPlans: (trainerId: string, callback: (plans: any[]) => void) => {
+    let innerUnsub: (() => void) | null = null;
+    
+    const outerUnsub = onSnapshot(doc(db, 'users', trainerId), (trainerSnap) => {
+      if (!trainerSnap.exists()) {
+        callback([]);
+        return;
+      }
+      
+      const trainerData = trainerSnap.data();
+      const username = (trainerData.username || trainerId).replace('@', '').toLowerCase();
+      const landingRef = doc(db, 'landingPages', `@${username}`);
+      
+      if (innerUnsub) {
+        innerUnsub();
+      }
+      
+      innerUnsub = onSnapshot(landingRef, (landingSnap) => {
+        if (landingSnap.exists()) {
+          callback(landingSnap.data().plans || []);
+        } else {
+          callback([]);
+        }
+      });
+    });
+    
+    return () => {
+      outerUnsub();
+      if (innerUnsub) innerUnsub();
+    };
+  },
+
   assignWorkoutToStudent: async (workoutId: string, studentId: string) => {
     try {
       const workoutRef = doc(db, 'workouts', workoutId);
