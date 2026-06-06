@@ -17,6 +17,35 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Explicitly serve a valid sw.js in development or fallback to prevent HTML MIME type errors
+  app.get('/sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    
+    // In production, attempt to serve the built Service Worker file
+    const distSwPath = path.join(__dirname, 'dist', 'sw.js');
+    if (fs.existsSync(distSwPath)) {
+      return res.sendFile(distSwPath);
+    }
+    
+    // Otherwise (or in development/fallback), serve a standard, robust Service Worker
+    res.send(`/* StarFit PWA Dev SW Fallback */
+const CACHE_NAME = 'starfit-dev-cache-v1';
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+  console.log('StarFit PWA Dev SW: Installed successfully.');
+});
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
+  console.log('StarFit PWA Dev SW: Activated and Claimed Clients successfully.');
+});
+self.addEventListener('fetch', (event) => {
+  // Simple dev bypass: fetch from network, fallback to cache if available
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
+  );
+});`);
+  });
+
   // Initialize Firebase for the Server proxy
   let storage: any = null;
   try {
