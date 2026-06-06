@@ -2370,13 +2370,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         </div>
       </section>
 
-      {trainerPlans.filter(p => !p.hiddenGlobal && !p.ocultarGlobalmente).length > 0 && (
+      {trainerPlans.filter(p => !p.hiddenGlobal).length > 0 && (
         <section className="space-y-6">
           <h2 className="text-2xl font-bold text-white">Planos do seu Personal</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trainerPlans.filter(p => !p.hiddenGlobal && !p.ocultarGlobalmente).map((plan) => {
-              const isActivePlan = (plan.id && user.planoAtivoId && plan.id === user.planoAtivoId) ||
-                                  (plan.name && user.plan && plan.name.toLowerCase() === user.plan.toLowerCase());
+            {trainerPlans.filter(p => !p.hiddenGlobal).map((plan) => {
+              const isActivePlan = (user.activePlan && plan.name && user.activePlan.toLowerCase() === plan.name.toLowerCase()) ||
+                                   (user.plan && plan.name && user.plan.toLowerCase() === plan.name.toLowerCase());
               return (
                 <div 
                   key={plan.id}

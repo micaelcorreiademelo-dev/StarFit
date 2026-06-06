@@ -30,9 +30,11 @@ export function PWAInstallBanner() {
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     
+    // TEMPORÁRIO para teste visual — remover após confirmar
+    setShowPrompt(true);
+
     if (isIosDevice) {
       setIsIOS(true);
-      setShowPrompt(true);
     } else {
       const handleBeforeInstallPrompt = (e: Event) => {
         // Prevent the mini-infobar from appearing on mobile
@@ -93,7 +95,7 @@ export function PWAInstallBanner() {
           initial={{ opacity: 0, y: 50, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 50, scale: 0.95 }}
-          className="fixed bottom-6 left-4 right-4 md:bottom-8 md:left-auto md:right-8 md:w-[380px] z-[9999] bg-card-dark border-2 border-primary/40 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] p-5 flex flex-col gap-4"
+          className="fixed bottom-[100px] left-4 right-4 md:bottom-8 md:left-auto md:right-8 md:w-[380px] z-[99999] bg-card-dark border-2 border-primary/40 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] p-5 flex flex-col gap-4"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex gap-3">
