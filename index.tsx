@@ -64,7 +64,12 @@ if (!isSessionStorageAvailable) {
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-// 2. Register/Unregister service worker logically
+// 2. Capture prompt globally to share with the PWA banner across rendering cycles
+window.addEventListener('beforeinstallprompt', (e) => {
+  (window as any).globalDeferredPrompt = e;
+});
+
+// 3. Register/Unregister service worker logically
 // We unregister service workers inside development or iframe preview window to prevent caching of outdated bundles/index.html
 if ('serviceWorker' in navigator) {
   if (window.top !== window.self) {

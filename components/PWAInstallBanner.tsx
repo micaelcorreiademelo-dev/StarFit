@@ -90,41 +90,50 @@ export function PWAInstallBanner() {
     <AnimatePresence>
       {showPrompt && (
         <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.9 }}
+          initial={{ opacity: 0, y: 50, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 50, scale: 0.9 }}
-          className="fixed bottom-[100px] left-4 right-4 md:bottom-8 md:left-auto md:right-8 md:w-[350px] z-[9999] bg-card-dark border-2 border-primary rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] p-4 flex flex-col gap-3"
+          exit={{ opacity: 0, y: 50, scale: 0.95 }}
+          className="fixed bottom-6 left-4 right-4 md:bottom-8 md:left-auto md:right-8 md:w-[380px] z-[9999] bg-card-dark border-2 border-primary/40 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] p-5 flex flex-col gap-4"
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="size-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary shrink-0">
-                <span className="material-symbols-outlined shrink-0 text-xl">install_mobile</span>
-              </div>
+            <div className="flex gap-3">
+              <span className="text-3xl shrink-0" role="img" aria-label="workout">🏋️</span>
               <div className="flex flex-col">
-                <h3 className="text-white font-medium text-sm">Instale o App StarFit</h3>
-                <p className="text-text-secondary text-xs leading-snug mt-0.5">
+                <h3 className="text-white font-black text-base tracking-tight leading-tight">
+                  Leve o app para onde quiser!
+                </h3>
+                <p className="text-text-secondary text-xs leading-normal mt-1">
                   {isIOS 
-                    ? 'Para instalar no iOS: toque em "Compartilhar" e depois "Adicionar à Tela de Início".' 
-                    : 'Adicione à tela inicial para uma experiência nativa muito mais rápida.'}
+                    ? 'Instale gratuitamente no seu celular: toque em "Compartilhar" e depois em "Adicionar à Tela de Início".' 
+                    : 'Instale gratuitamente no seu celular e acesse seus treinos offline.'}
                 </p>
               </div>
             </div>
             <button 
               onClick={handleDismiss}
-              className="text-text-secondary hover:text-white p-1 rounded-md transition-colors shrink-0"
+              className="text-text-secondary hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors shrink-0"
             >
               <span className="material-symbols-outlined text-sm">close</span>
             </button>
           </div>
-          {!isIOS && (
+          
+          <div className="flex items-center gap-3 mt-1">
             <button
-              onClick={handleInstallClick}
-              className="w-full bg-primary text-black font-semibold text-sm py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors mt-2"
+              onClick={handleDismiss}
+              className="flex-1 bg-white/5 hover:bg-white/10 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-all border border-white/10 text-center"
             >
-              <span className="material-symbols-outlined text-[18px]">download</span>
-              Baixar Aplicativo
+              Agora não
             </button>
-          )}
+            {!isIOS && (
+              <button
+                onClick={handleInstallClick}
+                className="flex-1 bg-primary hover:bg-primary/95 text-background-dark font-black text-xs py-2.5 px-4 rounded-xl transition-all shadow-lg shadow-primary/20 text-center flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px] font-black">download</span>
+                Instalar Agora
+              </button>
+            )}
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

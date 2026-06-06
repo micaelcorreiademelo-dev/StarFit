@@ -2370,41 +2370,82 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         </div>
       </section>
 
-      {trainerPlans.filter(p => !p.hiddenGlobal).length > 0 && (
+      {trainerPlans.filter(p => !p.hiddenGlobal && !p.ocultarGlobalmente).length > 0 && (
         <section className="space-y-6">
           <h2 className="text-2xl font-bold text-white">Planos do seu Personal</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trainerPlans.filter(p => !p.hiddenGlobal).map((plan) => (
-              <div 
-                key={plan.id}
-                className={`bg-card-dark rounded-2xl p-6 border transition-all flex flex-col ${plan.isPopular ? 'border-primary shadow-lg shadow-primary/5' : 'border-border-dark'}`}
-              >
-                {plan.isPopular && (
-                  <span className="bg-primary text-background-dark text-[10px] font-black px-2 py-1 rounded w-fit mb-4 uppercase tracking-wider">Mais Popular</span>
-                )}
-                <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                <div className="my-4">
-                  <span className="text-3xl font-black text-white">{plan.price}</span>
-                  <span className="text-text-secondary text-sm"> / {plan.durationDays} dias</span>
-                </div>
-                <ul className="space-y-3 mb-8 flex-1">
-                  {plan.features.map((f: string, i: number) => (
-                    <li key={i} className="flex items-center gap-2 text-text-secondary text-sm">
-                      <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <button 
-                  onClick={() => {
-                     navigate(`/@${trainer.username?.replace('@', '') || trainer.trainerCode || ''}?plan=${encodeURIComponent(plan.name)}#planos`);
-                  }}
-                  className={`w-full py-3 rounded-xl font-bold transition-all ${plan.isPopular ? 'bg-primary text-background-dark shadow-lg shadow-primary/20' : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'}`}
+            {trainerPlans.filter(p => !p.hiddenGlobal && !p.ocultarGlobalmente).map((plan) => {
+              const isActivePlan = (plan.id && user.planoAtivoId && plan.id === user.planoAtivoId) ||
+                                  (plan.name && user.plan && plan.name.toLowerCase() === user.plan.toLowerCase());
+              return (
+                <div 
+                  key={plan.id}
+                  className={`bg-card-dark rounded-2xl p-6 border transition-all flex flex-col relative overflow-hidden ${
+                    isActivePlan 
+                      ? 'border-emerald-500 bg-gradient-to-b from-emerald-950/20 to-card-dark shadow-xl shadow-emerald-500/5 ring-1 ring-emerald-500/20' 
+                      : plan.isPopular 
+                        ? 'border-primary shadow-lg shadow-primary/5' 
+                        : 'border-border-dark'
+                  }`}
                 >
-                  Escolher Plano
-                </button>
-              </div>
-            ))}
+                  {/* Decorative glowing backdrops for active card */}
+                  {isActivePlan && (
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    {isActivePlan ? (
+                      <span className="bg-emerald-500/15 text-emerald-400 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-emerald-500/25">
+                        <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Plano Atual
+                      </span>
+                    ) : plan.isPopular ? (
+                      <span className="bg-primary text-background-dark text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider">
+                        Mais Popular
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                  <div className="my-4">
+                    <span className="text-3xl font-black text-white">{plan.price}</span>
+                    <span className="text-text-secondary text-sm"> / {plan.durationDays || 30} dias</span>
+                  </div>
+                  
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {plan.features.map((f: string, i: number) => (
+                      <li key={i} className="flex items-center gap-2 text-text-secondary text-sm">
+                        <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {isActivePlan ? (
+                    <button 
+                      disabled
+                      className="w-full py-3 rounded-xl font-bold transition-all bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 cursor-default flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                      Plano Ativo
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => {
+                         navigate(`/@${trainer.username?.replace('@', '') || trainer.trainerCode || ''}?plan=${encodeURIComponent(plan.name)}#planos`);
+                      }}
+                      className={`w-full py-3 rounded-xl font-bold transition-all ${
+                        plan.isPopular 
+                          ? 'bg-primary text-background-dark shadow-lg shadow-primary/20 hover:bg-primary/90' 
+                          : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      Escolher Plano
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
