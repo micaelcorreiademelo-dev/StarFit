@@ -9,7 +9,7 @@ interface TrainerSettingsProps {
 }
 
 const TrainerSettings: React.FC<TrainerSettingsProps> = ({ user }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'financial' | 'notifications' | 'security'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'financial' | 'notifications' | 'security' | 'app'>('profile');
   
   const [username, setUsername] = useState(user.username || '');
   const [name, setName] = useState(user.name || '');
@@ -172,6 +172,13 @@ const TrainerSettings: React.FC<TrainerSettingsProps> = ({ user }) => {
           >
             <span className="material-symbols-outlined text-[20px]">lock</span>
             Senha e Acesso
+          </button>
+          <button 
+            onClick={() => setActiveTab('app')}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-left ${activeTab === 'app' ? 'bg-primary text-background-dark' : 'text-text-secondary hover:bg-white/5 hover:text-white'}`}
+          >
+            <span className="material-symbols-outlined text-[22px]">install_mobile</span>
+            Baixar Aplicativo
           </button>
         </aside>
 
@@ -422,6 +429,112 @@ const TrainerSettings: React.FC<TrainerSettingsProps> = ({ user }) => {
                 >
                   Enviar E-mail de Redefinição
                 </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'app' && (
+            <div className="flex flex-col gap-8 animate-in fade-in duration-300 relative z-10">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-xl font-black text-white italic uppercase">Instalar Aplicativo StarFit</h2>
+                <p className="text-sm text-text-secondary">Transforme sua experiência utilizando o StarFit como um aplicativo nativo.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Status Card */}
+                <div className="bg-background-dark border border-border-dark p-6 rounded-2xl flex flex-col gap-4">
+                  <h3 className="font-bold text-white flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">info</span>
+                    Status de Instalação
+                  </h3>
+                  
+                  <div className="flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/5 text-sm">
+                    <div className="w-3 h-3 rounded-full shrink-0 bg-yellow-500 animate-pulse" />
+                    <span className="text-text-primary text-xs leading-snug">
+                      Detectável e pronto para instalação em smartphones e desktops.
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    A versão PWA (Progressive Web App) permite acessar o ecossistema diretamente de sua tela inicial, com maior velocidade de carregamento, sem a barra de tarefas do navegador e com suporte parcial no modo offline.
+                  </p>
+                </div>
+
+                {/* Installation Trigger Card */}
+                <div className="bg-background-dark border border-border-dark p-6 rounded-2xl flex flex-col gap-4">
+                  <h3 className="font-bold text-white flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">install_desktop</span>
+                    Ação Recomendada
+                  </h3>
+
+                  {(() => {
+                    const isIosDevice = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+                    if (isIosDevice) {
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <p className="text-text-primary text-xs leading-relaxed">
+                            No iOS/Safari, a instalação direta pelo navegador não possui instaladores flutuantes do Chrome.
+                          </p>
+                          <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col gap-2">
+                            <p className="text-xs font-bold text-white flex items-center gap-2">
+                              <span className="material-symbols-outlined text-text-secondary text-[16px]">share</span>
+                              Como Instalar no iPhone/iPad:
+                            </p>
+                            <ol className="list-decimal list-inside text-xs text-text-secondary flex flex-col gap-1.5 leading-relaxed">
+                              <li>Toque no botão de <strong>Compartilhar</strong> (ícone de quadrado com flecha para cima).</li>
+                              <li>Role para baixo e selecione <strong>Adicionar à Tela de Início</strong>.</li>
+                              <li>Confirme o nome do aplicativo e clique em <strong>Adicionar</strong>.</li>
+                            </ol>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // For Web / Android, let's render a custom install button!
+                    return (
+                      <div className="flex flex-col gap-4">
+                        <p className="text-xs text-text-secondary leading-relaxed">
+                          Clique no botão abaixo para baixar o aplicativo para sua tela inicial ou desktop de forma instantânea.
+                        </p>
+                        <button
+                          onClick={() => {
+                            const promptEvent = (window as any).globalDeferredPrompt;
+                            if (promptEvent) {
+                              promptEvent.prompt();
+                              promptEvent.userChoice.then(({ outcome }: any) => {
+                                if (outcome === 'accepted') {
+                                  console.log('User accepted install.');
+                                }
+                              });
+                            } else {
+                              alert('Seu navegador já instalou o StarFit ou a sessão atual está bloqueada em iframe. Se estiver no Chrome/Edge, você também pode usar o ícone de instalação direta na barra superior de URLs ou no menu "Instalar aplicativo".');
+                            }
+                          }}
+                          className="w-full bg-primary text-background-dark font-black h-11 rounded-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all text-sm mb-1"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">download</span>
+                          Instalar no Dispositivo
+                        </button>
+                        <p className="text-[11px] text-text-secondary text-center italic">
+                          Dica: Se estiver no Desktop, procure pelo ícone de monitor com seta na barra de endereços do seu navegador.
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Benefits Banner */}
+              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 flex flex-col md:flex-row items-start gap-4">
+                <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                  <span className="material-symbols-outlined text-2xl">offline_bolt</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h4 className="text-white font-bold text-sm">Quais os benefícios de instalar?</h4>
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    Diga adeus às barras de navegação do Chrome/Safari que reduzem sua tela útil. Experimente transições suaves a 60fps, acesso instantâneo a treinos e cronômetros mesmo sem conexão ativa de internet e carregamento extremamente veloz otimizado por cache inteligente do Service Worker local.
+                  </p>
+                </div>
               </div>
             </div>
           )}

@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import { User, ChatMessage, Chat } from '../types';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { PWADashboardBanner } from '../components/PWADashboardBanner';
 import { dataService } from '../services/dataService';
 import { chatService } from '../services/chatService';
 import { db, auth } from '../services/firebase';
@@ -621,6 +622,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
             </p>
           </div>
         </div>
+
+        <PWADashboardBanner />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 flex flex-col gap-6">
@@ -2304,168 +2307,208 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
     </div>
   );
 
-  const renderSubscription = () => (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-      {/* Heading */}
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mt-2">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handleTabChange('dashboard')}
-                className="md:hidden flex items-center justify-center text-text-light-primary dark:text-text-dark-primary hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0"
-              >
-                <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
-              </button>
-              <h1 className="text-white text-3xl md:text-4xl font-black tracking-tight">Meu Plano</h1>
-            </div>
-            <p className="text-text-secondary text-base font-light mt-1">Gerencie sua assinatura, métodos de pagamento e histórico.</p>
-          </div>
-        </div>
-      </div>
+  const handleSelectPlan = async (plan: any) => {
+    if (!user || !user.id) return;
+    
+    try {
+      const durationDays = parseInt(plan.durationDays) || 30;
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + durationDays);
+      
+      await dataService.updateUser(user.id, {
+        plan: plan.name,
+        subscriptionExpiry: expiry.toISOString(),
+        paymentStatus: 'paid',
+        status: 'Ativa'
+      });
+    } catch (error) {
+      console.error("Erro ao selecionar plano:", error);
+      alert("Ocorreu um erro ao selecionar o plano. Tente novamente.");
+    }
+  };
 
-      <section className="bg-card-dark rounded-2xl p-1 shadow-lg ring-1 ring-white/5 relative overflow-hidden group border border-border-dark">
-        <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-700"></div>
-        <div className="bg-[#152a1d] rounded-xl p-6 md:p-8 flex flex-col md:flex-row gap-8 relative z-10">
-          <div className="flex-1 flex flex-col justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded">Plano Ativo</span>
-                {user.paymentStatus === 'paid' && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
-                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Ativo
-                  </span>
-                )}
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-1 uppercase">{user.plan || 'Aguardando Atribuição'}</h2>
-              <p className="text-text-secondary font-medium">Expira em: <span className="text-white">{user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : 'A definir'}</span></p>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-white/80">
-              <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5">
-                <span className="material-symbols-outlined text-primary text-[20px]">payments</span>
-                <span>Pagamento: <span className={user.paymentStatus === 'paid' ? 'text-primary font-bold' : 'text-yellow-500 font-bold'}>{user.paymentStatus === 'paid' ? 'Confirmado' : 'Pendente'}</span></span>
-              </div>
-            </div>
-          </div>
-          <div className="w-full md:w-auto md:min-w-[280px] flex flex-col gap-3 justify-center border-t md:border-t-0 md:border-l border-white/10 pt-6 md:pt-0 md:pl-8">
-            <div className="flex flex-col gap-1 mb-2">
-              <span className="text-text-secondary text-sm">Próximo Vencimento</span>
-              <span className="text-2xl font-bold text-white">{user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : '--'}</span>
-            </div>
-            <button 
-              onClick={() => {
-                if (trainer) {
-                  navigate(`/@${trainer.username?.replace('@', '') || trainer.trainerCode || ''}#planos`);
-                } else {
-                  alert("Vincule um Personal Trainer primeiro para ver os planos disponíveis.");
-                }
-              }}
-              className="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-            >
-              <span className="material-symbols-outlined text-[20px] fill">refresh</span>
-              Pagar Mensalidade
-            </button>
-          </div>
-        </div>
-      </section>
+  const renderSubscription = () => {
+    const visiblePlans = trainerPlans.filter(p => !p.hiddenGlobal);
+    const hasActivePlan = user.plan && user.plan !== 'Aguardando Atribuição';
 
-      {trainerPlans.filter(p => !p.hiddenGlobal).length > 0 && (
-        <section className="space-y-6">
-          <h2 className="text-2xl font-bold text-white">Planos do seu Personal</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trainerPlans.filter(p => !p.hiddenGlobal).map((plan) => {
-              const isActivePlan = (user.activePlan && plan.name && user.activePlan.toLowerCase() === plan.name.toLowerCase()) ||
-                                   (user.plan && plan.name && user.plan.toLowerCase() === plan.name.toLowerCase());
-              return (
-                <div 
-                  key={plan.id}
-                  className={`bg-card-dark rounded-2xl p-6 border transition-all flex flex-col relative overflow-hidden ${
-                    isActivePlan 
-                      ? 'border-emerald-500 bg-gradient-to-b from-emerald-950/20 to-card-dark shadow-xl shadow-emerald-500/5 ring-1 ring-emerald-500/20' 
-                      : plan.isPopular 
-                        ? 'border-primary shadow-lg shadow-primary/5' 
-                        : 'border-border-dark'
-                  }`}
+    return (
+      <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+        {/* Heading */}
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mt-2">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleTabChange('dashboard')}
+                  className="md:hidden flex items-center justify-center text-text-light-primary dark:text-[10px] hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0"
                 >
-                  {/* Decorative glowing backdrops for active card */}
-                  {isActivePlan && (
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-                  )}
+                  <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
+                </button>
+                <h1 className="text-white text-3xl md:text-4xl font-black tracking-tight uppercase italic flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-3xl">credit_card</span>
+                  Meu Plano
+                </h1>
+              </div>
+              <p className="text-text-secondary text-base font-light mt-1">Gerencie seu plano de treino, suporte e benefícios oferecidos pelo seu personal trainer.</p>
+            </div>
+          </div>
+        </div>
 
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    {isActivePlan ? (
-                      <span className="bg-emerald-500/15 text-emerald-400 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 border border-emerald-500/25">
-                        <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        Plano Atual
+        {/* Status bar if active plan exists */}
+        {hasActivePlan && (
+          <div className="bg-gradient-to-r from-emerald-500/10 to-transparent p-4 rounded-xl border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                <span className="material-symbols-outlined text-xl">verified</span>
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">Você possui um plano ativo</p>
+                <p className="text-xs text-text-secondary">
+                  Plano: <span className="text-emerald-400 font-extrabold">{user.plan}</span> • Vencimento: <span className="text-white font-bold">{user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : 'A definir'}</span>
+                </p>
+              </div>
+            </div>
+            {user.paymentStatus === 'paid' && (
+              <span className="text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Pagamento Homologado
+              </span>
+            )}
+          </div>
+        )}
+
+        {visiblePlans.length > 0 ? (
+          <div className="space-y-6">
+            <div className="flex flex-col gap-1 text-left">
+              <h2 className="text-xl font-extrabold text-white uppercase italic tracking-wider flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">local_mall</span>
+                Tabela de Planos Disponíveis
+              </h2>
+              <p className="text-xs text-text-secondary">Selecione ou mude seu plano de acompanhamento com {trainer?.name || 'seu personal'}.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visiblePlans.map((plan) => {
+                const isActive = user.plan === plan.name;
+                return (
+                  <div 
+                    key={plan.id}
+                    className={`bg-card-dark rounded-2xl p-6 border transition-all flex flex-col relative overflow-hidden group text-left ${
+                      isActive 
+                        ? 'border-primary ring-2 ring-primary/20 shadow-xl shadow-primary/5 bg-[#0e1f13]' 
+                        : plan.isPopular 
+                          ? 'border-primary/40 shadow-lg shadow-primary/5 hover:border-primary/60' 
+                          : 'border-border-dark hover:border-white/10'
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute top-0 right-0 bg-primary text-background-dark text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest font-mono flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">done_all</span>
+                        Plano Ativo
+                      </div>
+                    )}
+
+                    {!isActive && plan.isPopular && (
+                      <span className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-black px-2.5 py-1 rounded w-fit mb-4 uppercase tracking-widest">
+                        Recomendado
                       </span>
-                    ) : plan.isPopular ? (
-                      <span className="bg-primary text-background-dark text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider">
-                        Mais Popular
-                      </span>
-                    ) : null}
-                  </div>
+                    )}
 
-                  <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                  <div className="my-4">
-                    <span className="text-3xl font-black text-white">{plan.price}</span>
-                    <span className="text-text-secondary text-sm"> / {plan.durationDays || 30} dias</span>
-                  </div>
-                  
-                  <ul className="space-y-3 mb-8 flex-1">
-                    {plan.features.map((f: string, i: number) => (
-                      <li key={i} className="flex items-center gap-2 text-text-secondary text-sm">
-                        <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
+                    <div className="flex flex-col gap-1 mb-4 mt-2">
+                      <h3 className="text-xl font-bold text-white uppercase tracking-tight">{plan.name}</h3>
+                      {plan.description && (
+                        <p className="text-xs text-text-secondary leading-relaxed line-clamp-2 mt-1">{plan.description}</p>
+                      )}
+                    </div>
 
-                  {isActivePlan ? (
+                    <div className="my-4 border-y border-white/5 py-4 flex items-baseline gap-1.5 justify-start">
+                      <span className="text-3xl font-black text-white italic tracking-tight">{plan.price}</span>
+                      <span className="text-text-secondary text-xs uppercase font-bold tracking-wider">/ {plan.durationDays} dias</span>
+                    </div>
+
+                    <div className="flex-1 space-y-3 mb-8">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-text-secondary">O que está incluso:</p>
+                      <ul className="space-y-2.5">
+                        {plan.features?.map((f: string, i: number) => (
+                          <li key={i} className="flex items-start gap-2 text-text-secondary text-xs leading-relaxed">
+                            <span className="material-symbols-outlined text-primary text-base select-none shrink-0 mt-0.5">check_circle</span>
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                        {(!plan.features || plan.features.length === 0) && (
+                          <li className="text-xs text-text-secondary italic">Acesso completo aos treinos</li>
+                        )}
+                      </ul>
+                    </div>
+
                     <button 
-                      disabled
-                      className="w-full py-3 rounded-xl font-bold transition-all bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 cursor-default flex items-center justify-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                      Plano Ativo
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => {
-                         navigate(`/@${trainer.username?.replace('@', '') || trainer.trainerCode || ''}?plan=${encodeURIComponent(plan.name)}#planos`);
-                      }}
-                      className={`w-full py-3 rounded-xl font-bold transition-all ${
-                        plan.isPopular 
-                          ? 'bg-primary text-background-dark shadow-lg shadow-primary/20 hover:bg-primary/90' 
-                          : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
+                      onClick={() => handleSelectPlan(plan)}
+                      disabled={isActive}
+                      className={`w-full py-3.5 h-12 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        isActive 
+                          ? 'bg-primary/20 text-primary border border-primary/30 cursor-not-allowed font-extrabold' 
+                          : plan.isPopular 
+                            ? 'bg-primary text-background-dark shadow-lg shadow-primary/20 hover:brightness-110 active:scale-[0.98]' 
+                            : 'bg-white/5 text-white border border-white/10 hover:bg-white/10 active:scale-[0.98]'
                       }`}
                     >
-                      Escolher Plano
+                      {isActive ? (
+                        <>
+                          <span className="material-symbols-outlined text-base">verified</span>
+                          Seu Plano Atual
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-base">shopping_cart</span>
+                          Escolher Plano
+                        </>
+                      )}
                     </button>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </section>
-      )}
+        ) : (
+          <div className="bg-card-dark border border-border-dark rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4 py-16">
+            <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 animate-pulse">
+              <span className="material-symbols-outlined text-3xl">error_outline</span>
+            </div>
+            <div className="flex flex-col gap-1 max-w-md items-center">
+              <h3 className="text-white text-lg font-bold">Planos indisponíveis</h3>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                Seu personal ainda não disponibilizou planos para contratação. Entre em contato diretamente com ele pelo chat para regularizar ou solicitar sua ativação.
+              </p>
+            </div>
+            <button 
+              onClick={() => setActiveTab('chat')}
+              className="mt-2 px-6 h-11 bg-primary text-background-dark font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-base">forum</span>
+              Falar com meu Personal
+            </button>
+          </div>
+        )}
 
-      {/* Section: Help */}
-      <section className="bg-card-dark rounded-2xl p-8 border border-border-dark flex flex-col items-center text-center gap-4">
-          <div className="bg-primary/10 p-4 rounded-full">
-            <span className="material-symbols-outlined text-primary text-3xl">help_outline</span>
+        {/* Section: Help */}
+        <section className="bg-card-dark rounded-2xl p-8 border border-border-dark flex flex-col sm:flex-row items-center gap-6 text-left">
+          <div className="bg-primary/10 w-14 h-14 rounded-xl flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-primary text-3xl">support_agent</span>
           </div>
-          <h3 className="text-white text-xl font-bold">Dúvida sobre sua assinatura?</h3>
-          <p className="text-text-secondary max-w-md">Para questões sobre pagamentos, renovações ou mudança de plano, entre em contato diretamente com seu personal trainer via chat.</p>
+          <div className="flex-1 flex flex-col gap-1">
+            <h3 className="text-white text-lg font-bold">Dúvida sobre sua assinatura ou pagamentos?</h3>
+            <p className="text-text-secondary text-sm leading-relaxed max-w-xl font-light">Para questões sobre pagamentos, renovações manuais ou mudança de plano físico, entre em contato diretamente com seu personal trainer via chat.</p>
+          </div>
           <button 
             onClick={() => setActiveTab('chat')}
-            className="text-primary font-bold hover:underline"
+            className="w-full sm:w-auto shrink-0 bg-white/5 text-white hover:bg-white/10 px-5 h-11 rounded-xl text-xs uppercase tracking-wider font-extrabold border border-white/10 transition-colors cursor-pointer"
           >
-            Falar com meu Personal
+            Falar pelo Chat
           </button>
-      </section>
-    </div>
-  );
+        </section>
+      </div>
+    );
+  };
 
   const renderSettings = () => (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">

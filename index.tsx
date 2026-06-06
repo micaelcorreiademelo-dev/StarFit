@@ -62,14 +62,10 @@ if (!isSessionStorageAvailable) {
 
 // Now we can safely import other files that might use localStorage at the top level
 import App from './App';
+import { registerSW } from 'virtual:pwa-register';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-// 2. Capture prompt globally to share with the PWA banner across rendering cycles
-window.addEventListener('beforeinstallprompt', (e) => {
-  (window as any).globalDeferredPrompt = e;
-});
-
-// 3. Register/Unregister service worker logically
+// 2. Register/Unregister service worker logically
 // We unregister service workers inside development or iframe preview window to prevent caching of outdated bundles/index.html
 if ('serviceWorker' in navigator) {
   if (window.top !== window.self) {
@@ -81,12 +77,19 @@ if ('serviceWorker' in navigator) {
       }
     }).catch(() => {});
   } else {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker
-        .register('/service-worker.js')
-        .then(reg => console.log('SW registrado com sucesso:', reg.scope))
-        .catch(err => console.error('SW falhou ao registrar:', err));
-    });
+    try {
+      const updateSW = registerSW({
+        immediate: true,
+        onNeedRefresh() {
+          updateSW(true);
+        },
+        onOfflineReady() {
+          console.log("App ready to work offline");
+        }
+      });
+    } catch (err) {
+      console.warn("PWA registration bypassed due to browser policy:", err);
+    }
   }
 }
 

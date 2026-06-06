@@ -58,7 +58,7 @@ service cloud.firestore {
       // Standard update for owners and admins
       allow update: if (isOwner(userId) || isAdmin()) && (
         isValidUser(incoming()) && 
-        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'birthdate', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications', 'privacy', 'isOnline', 'lastActive']) && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'birthdate', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications', 'privacy', 'isOnline', 'lastActive', 'subscriptionExpiry', 'paymentStatus']) && 
         (isAdmin() || ('role' in incoming() && 'role' in existing() && incoming().role == existing().role))
       );
 
@@ -84,6 +84,7 @@ service cloud.firestore {
                (!('privacy' in data) || data.privacy is map) &&
                (!('expDate' in data) || data.expDate is string) &&
                (!('subscriptionExpiry' in data) || data.subscriptionExpiry is string || data.subscriptionExpiry == null) &&
+               (!('paymentStatus' in data) || data.paymentStatus is string || data.paymentStatus == null) &&
                (!('isOnline' in data) || data.isOnline is bool) &&
                (!('lastActive' in data) || data.lastActive is timestamp);
       }
