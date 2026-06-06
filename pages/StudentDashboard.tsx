@@ -2340,7 +2340,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handleTabChange('dashboard')}
-                  className="md:hidden flex items-center justify-center text-text-light-primary dark:text-[10px] hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0"
+                  className="md:hidden flex items-center justify-center text-text-light-primary dark:text-text-dark-primary hover:text-primary transition-colors cursor-pointer select-none bg-transparent border-none p-0"
                 >
                   <span className="material-symbols-outlined text-3xl font-black">arrow_back</span>
                 </button>
