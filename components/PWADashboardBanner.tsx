@@ -10,6 +10,15 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
+interface AuditInfo {
+  manifestStatus: string;
+  swStatus: string;
+  promptStatus: string;
+  iframeStatus: string;
+  standaloneStatus: string;
+  details: string;
+}
+
 export function PWADashboardBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
@@ -17,6 +26,91 @@ export function PWADashboardBanner() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [auditInfo, setAuditInfo] = useState<AuditInfo | null>(null);
+  const [showDiagnosticsPanel, setShowDiagnosticsPanel] = useState(false);
+
+  // Run a comprehensive PWA standards audit
+  const runPWAAudit = async (currentPrompt: BeforeInstallPromptEvent | null) => {
+    const isIframe = window.self !== window.top;
+    let manifestStatus = 'Verificando...';
+    let details = '';
+
+    // 1. Audit Web Manifest
+    try {
+      const response = await fetch('/manifest.json');
+      if (response.ok) {
+        const content = await response.json();
+        if (content.short_name && content.icons && content.icons.length > 0) {
+          manifestStatus = `OK (Nome: "${content.name || content.short_name}")`;
+        } else {
+          manifestStatus = 'Inválido - Campos estruturais short_name ou icons em falta';
+          details += 'O arquivo de manifesto PWA está incompleto. ';
+        }
+      } else {
+        manifestStatus = `ERRO (HTTP ${response.status})`;
+        details += 'Não foi possível carregar o arquivo manifest.json na raiz do servidor. ';
+      }
+    } catch (err) {
+      manifestStatus = `Falha ao requisitar (${String(err)})`;
+    }
+
+    // 2. Audit Service Worker registration
+    let swStatus = 'Não suportado por este navegador';
+    if ('serviceWorker' in navigator) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length > 0) {
+          const activeSws = registrations.map(r => r.active ? 'Ativo' : 'Pendente').join(', ');
+          swStatus = `OK (${registrations.length} registrado(s) [${activeSws}])`;
+        } else {
+          swStatus = 'Sem registro ativo';
+          details += 'Nenhum Service Worker está operando para esta origem. ';
+        }
+      } catch (err) {
+        swStatus = `Falha ao auditar (${String(err)})`;
+      }
+    }
+
+    // 3. Audit beforeinstallprompt event
+    const hasPrompt = !!(currentPrompt || (window as any).globalDeferredPrompt);
+    const promptStatus = hasPrompt ? 'OK (Disparado e interceptado)' : 'NÃO DISPARADO';
+
+    const iframeStatus = isIframe ? 'SIM (Ambiente restrito)' : 'NÃO (Ambiente nativo)';
+    const standaloneStatus = (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true)
+      ? 'SIM (Executando instalado)'
+      : 'NÃO (Presença no navegador)';
+
+    // Compile explanation
+    let motivo = '';
+    if (isIframe) {
+      motivo = 'A execução de prompts de PWAs modernos é estritamente bloqueada por navegadores dentro de frames (iframes) e caixas de areia por razões de segurança sanitária de cliques (clickjacking/UI redress).';
+    } else if (!hasPrompt) {
+      motivo = 'O evento de prompt nativo ("beforeinstallprompt") ainda não foi emitido pelo motor Chromium do navegador. Causas típicas: 1. O navegador ainda está avaliando a integridade dos pacotes estáticos ou inicializando o service worker offline (aguarde de 5 a 10 segundos). 2. A aplicação já está instalada neste computador/dispositivo. 3. O navegador possui restrições internas contra PWAs nesta origem.';
+    } else {
+      motivo = 'Nenhum impeditivo detectado. O evento foi coletado perfeitamente e está pronto para instalação no sistema operacional.';
+    }
+
+    const auditData: AuditInfo = {
+      manifestStatus,
+      swStatus,
+      promptStatus,
+      iframeStatus,
+      standaloneStatus,
+      details: motivo + (details ? ' Observações: ' + details : '')
+    };
+
+    setAuditInfo(auditData);
+
+    // Logging report requested in USER_REQUEST
+    console.group('%c StarFit PWA Installation Audit ', 'background: #102216; color: #13ec5b; font-weight: bold; font-size: 13px; padding: 4px; border: 1px solid #3a5543; border-radius: 4px;');
+    console.log(`Manifest: ${manifestStatus}`);
+    console.log(`Service Worker: ${swStatus}`);
+    console.log(`beforeinstallprompt Event: ${promptStatus}`);
+    console.log(`Iframe Sandbox Check: ${iframeStatus}`);
+    console.log(`App Already Installed (Standalone): ${standaloneStatus}`);
+    console.log(`Motivo Diagnóstico: ${motivo}`);
+    console.groupEnd();
+  };
 
   useEffect(() => {
     // 1. Check if already installed (standalone mode)
@@ -48,50 +142,67 @@ export function PWADashboardBanner() {
     const isAndroidDevice = /android/.test(userAgent);
     const isWindowsDevice = /windows/.test(userAgent);
 
+    let detectedPlatform: 'ios' | 'android' | 'windows' | 'other' = 'other';
     if (isIosDevice) {
-      setPlatform('ios');
-      setShowBanner(true);
+      detectedPlatform = 'ios';
     } else if (isAndroidDevice) {
-      setPlatform('android');
-      setShowBanner(true);
+      detectedPlatform = 'android';
     } else if (isWindowsDevice) {
-      setPlatform('windows');
-      setShowBanner(true);
-    } else {
-      setPlatform('other');
-      setShowBanner(true);
+      detectedPlatform = 'windows';
     }
+    setPlatform(detectedPlatform);
+    setShowBanner(true);
 
-    // 4. Listen for beforeinstallprompt
+    // 4. Capture native prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const promptEvent = e as BeforeInstallPromptEvent;
+      setDeferredPrompt(promptEvent);
+      runPWAAudit(promptEvent);
     };
 
+    // 5. Capture custom event dispatched by index.html (solves asynchronous mounting races)
+    const handleCustomPromptFired = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setDeferredPrompt(customEvent.detail);
+        runPWAAudit(customEvent.detail);
+      }
+    };
+
+    // Check early global prompt stashed in index.html
     if ((window as any).globalDeferredPrompt) {
-      setDeferredPrompt((window as any).globalDeferredPrompt);
+      const earlyPrompt = (window as any).globalDeferredPrompt;
+      setDeferredPrompt(earlyPrompt);
+      runPWAAudit(earlyPrompt);
+    } else {
+      runPWAAudit(null);
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('pwa-beforeinstallprompt-fired', handleCustomPromptFired);
 
     return () => {
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-beforeinstallprompt-fired', handleCustomPromptFired);
     };
   }, []);
 
   const handleInstallClick = () => {
     setErrorMessage(null);
 
-    // iOS flow: directly show help instructions (Safari doesn't support beforeinstallprompt)
+    // Run active audit immediately to get latest diagnostic data
+    const promptEvent = deferredPrompt || (window as any).globalDeferredPrompt;
+    runPWAAudit(promptEvent);
+
+    // iOS flow: directly show manual help instructions (Safari doesn't support beforeinstallprompt)
     if (platform === 'ios') {
       setShowHelp(true);
       return;
     }
 
     // Android, Windows, or other chromium browser flow: Try native beforeinstallprompt
-    const promptEvent = deferredPrompt || (window as any).globalDeferredPrompt;
-
     if (promptEvent) {
       promptEvent.prompt();
       promptEvent.userChoice.then(({ outcome }: { outcome: string }) => {
@@ -102,14 +213,19 @@ export function PWADashboardBanner() {
         }
       }).catch((err: any) => {
         console.error("Erro no fluxo do prompt PWA:", err);
+        setErrorMessage(`Falha na chamada do instalador nativo: ${err.message || err}`);
       });
     } else {
-      // If no native prompt exists, but user is on Android or Windows, they might be in an iframe (e.g. AI Studio Preview) or pre-prompt phase
-      if (platform === 'android' || platform === 'windows') {
-        setErrorMessage("Seu navegador não suporta instalação automática ou a sessão atual está bloqueada em iframe. Tente acessar diretamente no Chrome ou Edge fora do frame e clique em 'Instalar aplicativo' ou adicione à tela inicial.");
+      // No prompt captured. Evaluate IFRAME presence strictly to prevent FALSE POSITIVES
+      const isRealIframe = window.self !== window.top;
+      if (isRealIframe) {
+        setErrorMessage("A sessão atual está sendo executada dentro de um painel de visualização (Iframe). Para realizar a instalação automática, acesse o StarFit diretamente na barra de URL principal do seu navegador Chrome, Edge ou Safari.");
       } else {
-        setErrorMessage("Seu navegador não suporta instalação automática. Utilize um navegador compatível como Chrome, Edge ou Safari.");
+        setErrorMessage("Seu navegador ainda não ativou a instalação automática para esta sessão. Isso pode ocorrer porque o Service Worker está registrando os arquivos estáticos para navegação offline. Aguarde alguns segundos e tente novamente clique em 'Instalar Aplicativo', ou use a opção nativa do menu do seu navegador.");
       }
+      
+      // Auto toggle audit panel to display details helper
+      setShowDiagnosticsPanel(true);
     }
   };
 
@@ -155,11 +271,14 @@ export function PWADashboardBanner() {
               </span>
             </div>
 
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               <h2 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tight flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[28px]">install_mobile</span>
                 Instale nosso aplicativo
               </h2>
+              <p className="text-text-secondary text-xs md:text-sm leading-relaxed max-w-2xl font-light">
+                Acesse o StarFit diretamente de sua tela inicial como um aplicativo nativo. Desfrute de desempenho fluido, inicialização instantânea e maior facilidade para acompanhar seus treinos.
+              </p>
             </div>
           </div>
 
@@ -188,14 +307,44 @@ export function PWADashboardBanner() {
           </div>
         </div>
 
-        {/* Error reporting if anything goes wrong inside the web container */}
+        {/* Error reporting and helpful diagnostics */}
         {errorMessage && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs text-orange-400 leading-relaxed"
+            className="mt-4 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 text-xs text-orange-400 flex flex-col gap-2 shadow-inner"
           >
-            {errorMessage}
+            <div className="flex items-start gap-2">
+              <span className="material-symbols-outlined text-orange-400 text-sm select-none shrink-0 mt-0.5">warning</span>
+              <p className="leading-relaxed font-light">{errorMessage}</p>
+            </div>
+            
+            {auditInfo && (
+              <div className="border-t border-orange-500/10 pt-2.5 mt-1 flex flex-col gap-1.5">
+                <button
+                  onClick={() => setShowDiagnosticsPanel(!showDiagnosticsPanel)}
+                  className="text-[10px] text-primary hover:underline font-bold uppercase tracking-wider text-left w-fit flex items-center gap-1 select-none cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[14px]">{showDiagnosticsPanel ? 'expand_less' : 'expand_more'}</span>
+                  {showDiagnosticsPanel ? 'Ocultar diagnósticos técnicos' : 'Visualizar diagnósticos técnicos'}
+                </button>
+                
+                {showDiagnosticsPanel && (
+                  <div className="bg-black/40 p-3 rounded-lg border border-white/5 space-y-1.5 mt-1">
+                    <p className="text-white font-bold text-[10px] uppercase tracking-wider">PWA Install Status:</p>
+                    <div className="grid grid-cols-2 gap-y-1 text-[10px]">
+                      <div><span className="text-text-secondary font-medium">Manifesto:</span> <span className="text-white font-mono">{auditInfo.manifestStatus}</span></div>
+                      <div><span className="text-text-secondary font-medium">Service Worker:</span> <span className="text-white font-mono">{auditInfo.swStatus}</span></div>
+                      <div><span className="text-text-secondary font-medium">Instâncias de Prompts:</span> <span className="text-white font-mono">{auditInfo.promptStatus}</span></div>
+                      <div><span className="text-text-secondary font-medium">Nesting Iframe:</span> <span className="text-white font-mono">{auditInfo.iframeStatus}</span></div>
+                    </div>
+                    <div className="text-[10px] leading-normal border-t border-white/5 pt-1.5 mt-1 text-text-secondary">
+                      <span className="text-white font-bold">Diagnóstico:</span> {auditInfo.details}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -214,7 +363,7 @@ export function PWADashboardBanner() {
                 </div>
                 <button 
                   onClick={() => setShowHelp(false)} 
-                  className="text-xs text-primary hover:underline font-bold"
+                  className="text-xs text-primary hover:underline font-bold select-none cursor-pointer"
                 >
                   Ocultar ajuda
                 </button>
@@ -256,4 +405,3 @@ export function PWADashboardBanner() {
     </AnimatePresence>
   );
 }
-
