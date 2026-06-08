@@ -34,12 +34,14 @@ export default defineConfig(({ mode }) => {
             enabled: true,
           },
           manifest: {
+            id: '/',
             name: 'StarFit Fitness Ecosystem',
             short_name: 'StarFit',
             description: 'Plataforma completa para personal trainers e alunos',
             theme_color: '#102216',
             background_color: '#102216',
             display: 'standalone',
+            display_override: ['standalone', 'fullscreen', 'minimal-ui'],
             orientation: 'portrait',
             start_url: '/',
             scope: '/',
@@ -47,47 +49,56 @@ export default defineConfig(({ mode }) => {
               {
                 src: '/pwa-64x64.png',
                 sizes: '64x64',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: '/pwa-72x72.png',
                 sizes: '72x72',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: '/pwa-96x96.png',
                 sizes: '96x96',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: '/pwa-128x128.png',
                 sizes: '128x128',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: '/pwa-144x144.png',
                 sizes: '144x144',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: '/pwa-152x152.png',
                 sizes: '152x152',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: '/pwa-192x192.png',
                 sizes: '192x192',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: '/pwa-384x384.png',
                 sizes: '384x384',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: '/pwa-512x512.png',
                 sizes: '512x512',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: '/maskable-icon-512x512.png',
