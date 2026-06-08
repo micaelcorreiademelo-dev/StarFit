@@ -16,7 +16,7 @@ async function startServer() {
   // Initialize Firebase for the Server proxy
   let storage: any = null;
   try {
-    const configPath = path.join(__dirname, 'firebase-applet-config.json');
+    const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
     if (fs.existsSync(configPath)) {
       const configObj = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       const firebaseApp = initializeApp(configObj, 'server-app');
@@ -107,6 +107,12 @@ async function startServer() {
     }
   });
 
+  // PWA Manifest Strict Check
+  app.get('/manifest.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/manifest+json');
+    res.sendFile(path.join(process.cwd(), 'dist', 'manifest.json'));
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -115,7 +121,7 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(__dirname, 'dist');
+    const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*all', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));

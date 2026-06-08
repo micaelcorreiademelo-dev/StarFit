@@ -9,10 +9,17 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="StarFit" />
     <title>StarFit - Dashboard</title>
+    
+    <!-- Evitando favicon simples que o Windows rouba do PWA -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png">
+    
+    <!-- Mantendo apenas fallback web seguro -->
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/starfit-icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png">
-    <link rel="manifest" href="/manifest.json">
+    
+    <!-- O vite-plugin-pwa já injeta o manifest, não devemos colocar aqui manualmente se injectRegister for auto. 
+         MAS se estivermos usando includeAssets, talvez seja melhor garantir apenas UMA declaração clara -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     
     <!-- Preload para carregar a fonte Lexend antes da renderizacao -->

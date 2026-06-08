@@ -220,12 +220,14 @@ export function PWADashboardBanner() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto shrink-0">
-               <button
-                 onClick={handleInstallClick}
-                 className="w-full sm:w-auto px-6 py-3 bg-primary text-background-dark font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all outline-none"
-               >
-                 Instalar Aplicativo
-               </button>
+               {((deferredPrompt || (window as any).globalDeferredPrompt) || platform === 'ios') && (
+                 <button
+                   onClick={handleInstallClick}
+                   className="w-full sm:w-auto px-6 py-3 bg-primary text-background-dark font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all outline-none"
+                 >
+                   Instalar Aplicativo
+                 </button>
+               )}
                <button
                  onClick={handleClose}
                  className="w-full sm:w-auto px-6 py-3 bg-white/5 text-white font-bold rounded-lg hover:bg-white/10 active:scale-95 transition-all outline-none"
