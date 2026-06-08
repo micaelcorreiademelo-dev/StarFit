@@ -20,6 +20,8 @@ import { dataService } from './services/dataService';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
 
+import { PWADashboardBanner } from './components/PWADashboardBanner';
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -144,6 +146,7 @@ const App: React.FC = () => {
 
   return (
     <Router>
+      <PWADashboardBanner />
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />

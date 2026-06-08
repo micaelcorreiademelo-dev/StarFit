@@ -98,7 +98,10 @@ export default defineConfig(({ mode }) => {
             ]
           },
           workbox: {
-            maximumFileSizeToCacheInBytes: 5000000 // 5MB
+            clientsClaim: true,
+            skipWaiting: true,
+            maximumFileSizeToCacheInBytes: 5000000, // 5MB
+            globPatterns: ['**/*.{js,css,html,ico,png,svg}']
           }
         })
       ],
