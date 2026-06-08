@@ -113,6 +113,67 @@ async function startServer() {
     res.sendFile(path.join(process.cwd(), 'dist', 'manifest.json'));
   });
 
+  // Strict Service Worker Route
+  app.get('/sw.js', (req, res) => {
+    const swPath = path.join(process.cwd(), 'dist', 'sw.js');
+    if (fs.existsSync(swPath)) {
+      res.setHeader('Content-Type', 'application/javascript');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      return res.sendFile(swPath);
+    }
+    res.status(404).send('Service worker not found');
+  });
+
+  // Strict Workbox Route
+  app.get('/workbox-:hash.js', (req, res) => {
+    const hash = req.params.hash;
+    const workboxPath = path.join(process.cwd(), 'dist', `workbox-${hash}.js`);
+    if (fs.existsSync(workboxPath)) {
+      res.setHeader('Content-Type', 'application/javascript');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.sendFile(workboxPath);
+    }
+    res.status(404).send('Workbox script not found');
+  });
+
+  // Strict PWA Icons and Static Root Assets Route
+  app.get('/:filename', (req, res, next) => {
+    const filename = req.params.filename;
+    const allowedPwaFiles = [
+      'pwa-64x64.png',
+      'pwa-72x72.png',
+      'pwa-96x96.png',
+      'pwa-128x128.png',
+      'pwa-144x144.png',
+      'pwa-152x152.png',
+      'pwa-192x192.png',
+      'pwa-384x384.png',
+      'pwa-512x512.png',
+      'maskable-icon-512x512.png',
+      'apple-touch-icon-180x180.png',
+      'favicon.ico',
+      'starfit-icon.svg'
+    ];
+
+    if (allowedPwaFiles.includes(filename)) {
+      const filePath = path.join(process.cwd(), 'dist', filename);
+      if (fs.existsSync(filePath)) {
+        let contentType = 'application/octet-stream';
+        if (filename.endsWith('.png')) {
+          contentType = 'image/png';
+        } else if (filename.endsWith('.svg')) {
+          contentType = 'image/svg+xml';
+        } else if (filename.endsWith('.ico')) {
+          contentType = 'image/x-icon';
+        }
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.sendFile(filePath);
+      }
+    }
+    next();
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
