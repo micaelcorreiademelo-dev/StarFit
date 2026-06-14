@@ -16,7 +16,7 @@ import TrainerLandingPage from "./TrainerLandingPage";
 import TrainerSettings from "./TrainerSettings";
 import TrainerPlans from "./TrainerPlans";
 import UserSupport from "../components/UserSupport";
-import { PWADashboardBanner } from "../components/PWADashboardBanner";
+
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, startOfWeek, endOfWeek, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfDay, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { dataService } from "../services/dataService";
@@ -871,8 +871,6 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           </button>
         </div>
       </div>
-
-      <PWADashboardBanner />
 
       {/* KPI Grid */}
       <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">

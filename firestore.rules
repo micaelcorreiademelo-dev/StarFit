@@ -267,7 +267,13 @@ service cloud.firestore {
     // --- Landing Pages ---
     match /landingPages/{username} {
       allow read: if true; // Public access
-      allow write: if isSignedIn() && (isAdmin() || (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username));
+      allow write: if isSignedIn() && (
+        isAdmin() || 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username) ||
+        ('@' + get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username) ||
+        (request.auth.uid == username) ||
+        ('@' + request.auth.uid == username)
+      );
     }
   }
 }

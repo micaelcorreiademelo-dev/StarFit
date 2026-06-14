@@ -13,14 +13,36 @@ const PaymentSuccess: React.FC = () => {
       if (!auth.currentUser) return;
       
       let durationDays = 30;
-      const pendingCheckoutRaw = localStorage.getItem('pending_plan_checkout');
-      if (pendingCheckoutRaw) {
-        try {
-          const pending = JSON.parse(pendingCheckoutRaw);
-          durationDays = pending.durationDays || 30;
-          localStorage.removeItem('pending_plan_checkout');
-        } catch (e) {
-          console.error("Error parsing pending checkout", e);
+      let planName = 'Plano Ativo';
+      
+      // Try to parse external_reference back from Mercado Pago
+      const externalRefStr = searchParams.get('external_reference');
+      if (externalRefStr && externalRefStr !== 'null') {
+         try {
+             const externalRef = JSON.parse(externalRefStr);
+             if (externalRef.durationDays) {
+                 durationDays = parseInt(externalRef.durationDays, 10);
+             }
+             if (externalRef.planName) {
+                 planName = externalRef.planName;
+             }
+         } catch (e) {
+             console.error("Error parsing external_reference param", e);
+         }
+      }
+
+      // Fallback
+      if (!externalRefStr) {
+        const pendingCheckoutRaw = localStorage.getItem('pending_plan_checkout');
+        if (pendingCheckoutRaw) {
+          try {
+            const pending = JSON.parse(pendingCheckoutRaw);
+            durationDays = pending.durationDays || 30;
+            planName = pending.planName || planName;
+            localStorage.removeItem('pending_plan_checkout');
+          } catch (e) {
+            console.error("Error parsing pending checkout", e);
+          }
         }
       }
 
@@ -29,8 +51,10 @@ const PaymentSuccess: React.FC = () => {
 
       try {
         await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+          plan: planName,
           paymentStatus: 'paid',
           subscriptionExpiry: expiryDate.toISOString(),
+          status: 'Ativa',
           updatedAt: new Date().toISOString()
         });
       } catch (err) {

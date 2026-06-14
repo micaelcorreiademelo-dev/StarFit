@@ -10,7 +10,7 @@ import AdminSupport from '../components/AdminSupport';
 import AdminSecurity from '../components/AdminSecurity';
 import AdminSettings from '../components/AdminSettings';
 import { User } from '../types';
-import { PWADashboardBanner } from '../components/PWADashboardBanner';
+
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { MOCK_MRR_DATA } from '../constants';
 import { db } from '../services/firebase';
@@ -164,8 +164,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 </button>
               </div>
             </header>
-
-            <PWADashboardBanner />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {kpis.map((kpi, i) => (

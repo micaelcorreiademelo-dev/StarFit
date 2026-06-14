@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import { User, ChatMessage, Chat } from '../types';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { PWADashboardBanner } from '../components/PWADashboardBanner';
+
 import { dataService } from '../services/dataService';
 import { chatService } from '../services/chatService';
 import { db, auth } from '../services/firebase';
@@ -43,6 +43,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const [foundTrainer, setFoundTrainer] = useState<any>(null);
   const [trainer, setTrainer] = useState<any>(null);
   const [trainerPlans, setTrainerPlans] = useState<any[]>([]);
+  const [paymentLoading, setPaymentLoading] = useState<number | null>(null);
 
   // Data State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -622,8 +623,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
             </p>
           </div>
         </div>
-
-        <PWADashboardBanner />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 flex flex-col gap-6">
@@ -2308,22 +2307,55 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   );
 
   const handleSelectPlan = async (plan: any) => {
-    if (!user || !user.id) return;
+    if (!user || !user.id || !user.trainerId) return;
     
+    setPaymentLoading(plan.id);
     try {
-      const durationDays = parseInt(plan.durationDays) || 30;
-      const expiry = new Date();
-      expiry.setDate(expiry.getDate() + durationDays);
+      const trainerDocRef = doc(db, 'users', user.trainerId);
+      const trainerSnap = await getDoc(trainerDocRef);
+      if (!trainerSnap.exists()) {
+        alert("Dados do personal não encontrados.");
+        setPaymentLoading(null);
+        return;
+      }
+      const trainerData = trainerSnap.data();
       
-      await dataService.updateUser(user.id, {
-        plan: plan.name,
-        subscriptionExpiry: expiry.toISOString(),
-        paymentStatus: 'paid',
-        status: 'Ativa'
+      if (!trainerData.financialSettings?.mpAccessToken) {
+        alert("Seu personal ainda não configurou uma forma de pagamento no sistema.");
+        setPaymentLoading(null);
+        return;
+      }
+
+      const response = await fetch('/api/payments/create-preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trainerAccessToken: trainerData.financialSettings.mpAccessToken,
+          studentEmail: user.email || 'aluno@starfit.com',
+          planName: plan.name,
+          price: (plan.price || '0').replace('R$', '').trim(),
+          studentId: user.id,
+          trainerId: user.trainerId,
+          metadata: {
+            durationDays: plan.durationDays || 30
+          }
+        })
       });
+
+      const result = await response.json();
+      if (result.init_point) {
+        localStorage.setItem('pending_plan_checkout', JSON.stringify({
+          durationDays: plan.durationDays || 30,
+          planName: plan.name
+        }));
+        window.location.href = result.init_point;
+      } else {
+        throw new Error(result.error || "Erro ao gerar link de pagamento.");
+      }
     } catch (error) {
       console.error("Erro ao selecionar plano:", error);
-      alert("Ocorreu um erro ao selecionar o plano. Tente novamente.");
+      alert("Ocorreu um erro ao processar o pagamento. Tente novamente.");
+      setPaymentLoading(null);
     }
   };
 
@@ -2346,7 +2378,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                 </button>
                 <h1 className="text-white text-3xl md:text-4xl font-black tracking-tight uppercase italic flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary text-3xl">credit_card</span>
-                  Meu Plano
+                  Planos Disponíveis
                 </h1>
               </div>
               <p className="text-text-secondary text-base font-light mt-1">Gerencie seu plano de treino, suporte e benefícios oferecidos pelo seu personal trainer.</p>
@@ -2443,7 +2475,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
 
                     <button 
                       onClick={() => handleSelectPlan(plan)}
-                      disabled={isActive}
+                      disabled={isActive || paymentLoading === plan.id}
                       className={`w-full py-3.5 h-12 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 ${
                         isActive 
                           ? 'bg-primary/20 text-primary border border-primary/30 cursor-not-allowed font-extrabold' 
@@ -2457,10 +2489,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                           <span className="material-symbols-outlined text-base">verified</span>
                           Seu Plano Atual
                         </>
+                      ) : paymentLoading === plan.id ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-background-dark border-t-transparent rounded-full animate-spin" />
+                          Processando...
+                        </>
                       ) : (
                         <>
                           <span className="material-symbols-outlined text-base">shopping_cart</span>
-                          Escolher Plano
+                          Assinar Plano
                         </>
                       )}
                     </button>
@@ -2471,22 +2508,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           </div>
         ) : (
           <div className="bg-card-dark border border-border-dark rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4 py-16">
-            <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 animate-pulse">
-              <span className="material-symbols-outlined text-3xl">error_outline</span>
+            <div className="w-16 h-16 rounded-full bg-border-dark flex items-center justify-center text-text-secondary">
+              <span className="material-symbols-outlined text-3xl">inbox</span>
             </div>
             <div className="flex flex-col gap-1 max-w-md items-center">
-              <h3 className="text-white text-lg font-bold">Planos indisponíveis</h3>
+              <h3 className="text-white text-lg font-bold">Nenhum plano cadastrado</h3>
               <p className="text-sm text-text-secondary leading-relaxed">
-                Seu personal ainda não disponibilizou planos para contratação. Entre em contato diretamente com ele pelo chat para regularizar ou solicitar sua ativação.
+                Nenhum plano foi ativado ou disponibilizado no momento.
               </p>
             </div>
-            <button 
-              onClick={() => setActiveTab('chat')}
-              className="mt-2 px-6 h-11 bg-primary text-background-dark font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-base">forum</span>
-              Falar com meu Personal
-            </button>
           </div>
         )}
 

@@ -1,5 +1,4 @@
 
-/// <reference types="vite-plugin-pwa/client" />
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -62,60 +61,7 @@ if (!isSessionStorageAvailable) {
 
 // Now we can safely import other files that might use localStorage at the top level
 import App from './App';
-import { registerSW } from 'virtual:pwa-register';
 import { ErrorBoundary } from './components/ErrorBoundary';
-
-// 2. Register service worker with redundant native fallback to guarantee active control
-if ('serviceWorker' in navigator) {
-  const isIframe = window.top !== window.self;
-  
-  if (isIframe) {
-    // Clean stale workers if inside iframe to prevent stale cache issues
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (const registration of registrations) {
-        registration.unregister().then((success) => {
-          if (success) console.log("PWA Diagnostics: Stale Service Worker unregistered to prevent cache iframe lockups.");
-        });
-      }
-    }).catch(() => {});
-  } else {
-    // Normal registration
-    try {
-      // 1. Try Virtual register first
-      const updateSW = registerSW({
-        immediate: true,
-        onNeedRefresh() {
-          updateSW(true);
-        },
-        onOfflineReady() {
-          console.log("PWA Diagnostics: App ready to work offline via Workbox");
-        }
-      });
-    } catch (err) {
-      console.warn("PWA Diagnostics: Virtual register SW failed, attempting native registration:", err);
-    }
-
-    // 2. Belt-and-suspenders: Double-check registration natively to be 100% foolproof in production
-    // This solves registration failure in certain CDN / bundle environments
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      const hasRegistered = registrations.some(r => r.active || r.installing || r.waiting);
-      if (!hasRegistered) {
-        console.log("PWA Diagnostics: No service worker registered. Initiating native registration...");
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
-          .then((reg) => {
-            console.log("PWA Diagnostics: Native Service Worker registered successfully under scope:", reg.scope);
-          })
-          .catch((err) => {
-            console.warn("PWA Diagnostics: Native Service Worker registration failed:", err);
-          });
-      } else {
-        console.log(`PWA Diagnostics: Active/Waiting Service Worker already verified: ${registrations.length} registrations found.`);
-      }
-    }).catch((err) => {
-      console.error("PWA Diagnostics: Error checking registrations:", err);
-    });
-  }
-}
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error("Root element not found");

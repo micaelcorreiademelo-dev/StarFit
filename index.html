@@ -10,9 +10,6 @@
     <meta name="apple-mobile-web-app-title" content="StarFit" />
     <title>StarFit - Dashboard</title>
     
-    <!-- Evitando favicon simples que o Windows rouba do PWA -->
-    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png">
-    
     <!-- Mantendo apenas fallback web seguro -->
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/starfit-icon.svg" type="image/svg+xml">
@@ -102,25 +99,7 @@
         }
       }
     </style>
-    <script>
-      window.globalDeferredPrompt = null;
-      window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent default browser behavior
-        e.preventDefault();
-        // Stash the event
-        window.globalDeferredPrompt = e;
-        // Dispatch custom global event to notify any mounted React components
-        window.dispatchEvent(new CustomEvent('pwa-beforeinstallprompt-fired', { detail: e }));
-        console.log('PWA Diagnostics: beforeinstallprompt successfully captured!');
-      });
-      
-      // Let's check service worker status
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then((registrations) => {
-          console.log(`PWA Diagnostics: Found ${registrations.length} registered Service Worker(s) during init.`);
-        });
-      }
-    </script>
+
   <script type="importmap">
 {
   "imports": {
