@@ -11,6 +11,9 @@ const TrainerPlans: React.FC<TrainerPlansProps> = ({ user }) => {
   
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -85,17 +88,44 @@ const TrainerPlans: React.FC<TrainerPlansProps> = ({ user }) => {
       updatedPlans = [...plans, newPlan];
     }
     
-    setPlans(updatedPlans);
-    await trainerService.savePlans(username, updatedPlans);
-    resetForm();
+    setActionLoading(true);
+    setActionSuccess(null);
+    setActionError(null);
+    try {
+      setPlans(updatedPlans);
+      await trainerService.savePlans(username, updatedPlans);
+      setActionSuccess("Planos atualizados e sincronizados com sucesso na nuvem!");
+      setTimeout(() => setActionSuccess(null), 5000);
+      resetForm();
+    } catch (err: any) {
+      console.error(err);
+      setActionError(`Erro ao salvar planos no banco de dados (${err.message || err}). Mudanças mantidas localmente.`);
+      setTimeout(() => setActionError(null), 8000);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
     if (confirm("Tem certeza que deseja excluir este plano?")) {
       const updatedPlans = plans.filter((p) => p.id !== id);
-      setPlans(updatedPlans);
-      await trainerService.savePlans(username, updatedPlans);
-      if (isEditing === id) resetForm();
+      
+      setActionLoading(true);
+      setActionSuccess(null);
+      setActionError(null);
+      try {
+        setPlans(updatedPlans);
+        await trainerService.savePlans(username, updatedPlans);
+        setActionSuccess("Plano excluído com sucesso!");
+        setTimeout(() => setActionSuccess(null), 5000);
+        if (isEditing === id) resetForm();
+      } catch (err: any) {
+        console.error(err);
+        setActionError(`Erro ao excluir do servidor (${err.message || err}). Mudança mantida localmente.`);
+        setTimeout(() => setActionError(null), 8000);
+      } finally {
+        setActionLoading(false);
+      }
     }
   };
 
@@ -133,6 +163,20 @@ const TrainerPlans: React.FC<TrainerPlansProps> = ({ user }) => {
           Crie e gerencie os planos de assinatura. A validade de acesso do aluno será definida pelo tempo que você configurar em cada plano.
         </p>
       </div>
+
+      {actionSuccess && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-sm flex items-center gap-2">
+          <span className="material-symbols-outlined text-emerald-400">check_circle</span>
+          <span>{actionSuccess}</span>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm flex items-center gap-2">
+          <span className="material-symbols-outlined text-red-500">error</span>
+          <span>{actionError}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Formulário de Criação/Edição */}
@@ -301,15 +345,25 @@ const TrainerPlans: React.FC<TrainerPlansProps> = ({ user }) => {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={handleSave}
-                disabled={!name || !price}
-                className="flex-1 bg-primary text-background-dark font-bold py-3 rounded-xl hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_14px_0_rgba(19,236,91,0.2)]"
+                disabled={!name || !price || actionLoading}
+                className="flex-1 bg-primary text-background-dark font-bold py-3 rounded-xl hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_14px_0_rgba(19,236,91,0.2)] flex items-center justify-center gap-2"
               >
-                {isEditing ? "Salvar Alterações" : "Criar Plano"}
+                {actionLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-background-dark border-t-transparent rounded-full animate-spin" />
+                    <span>Sincronizando...</span>
+                  </>
+                ) : isEditing ? (
+                  "Salvar Alterações"
+                ) : (
+                  "Criar Plano"
+                )}
               </button>
               {isEditing && (
                 <button
                   onClick={resetForm}
-                  className="px-6 bg-background-dark text-text-secondary font-bold py-3 rounded-xl border border-divider-dark hover:text-white transition-all"
+                  disabled={actionLoading}
+                  className="px-6 bg-background-dark text-text-secondary font-bold py-3 rounded-xl border border-divider-dark hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>

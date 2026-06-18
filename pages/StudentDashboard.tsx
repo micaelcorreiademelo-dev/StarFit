@@ -10,6 +10,8 @@ import { chatService } from '../services/chatService';
 import { db, auth } from '../services/firebase';
 import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, query, collection, where, onSnapshot } from 'firebase/firestore';
+import { uploadImage, getStoragePathFromUrl, deleteImage } from '../services/uploadService';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 
 interface StudentDashboardProps {
   user: User;
@@ -97,6 +99,128 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   });
 
   // Settings State
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [selectedImageSrc, setSelectedImageSrc] = useState('');
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      
+      if (!file.type.startsWith('image/')) {
+        setAvatarUploadError('Por favor, selecione uma imagem válida (JPG, PNG ou WEBP).');
+        return;
+      }
+      
+      const sizeMB = file.size / (1024 * 1024);
+      if (sizeMB > 15) {
+        setAvatarUploadError('A imagem original excede o limite de 15MB.');
+        return;
+      }
+      
+      setAvatarUploadError(null);
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setSelectedImageSrc(reader.result);
+          setCropperOpen(true);
+        }
+      };
+      reader.onerror = () => {
+        setAvatarUploadError('Erro ao carregar o arquivo de imagem.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = async (croppedDataUrl: string) => {
+    setUploadingAvatar(true);
+    setAvatarUploadError(null);
+    const oldAvatarUrl = user.avatar;
+    
+    try {
+      // 1. Convert cropped Base64 to a standard File object
+      const res = await fetch(croppedDataUrl);
+      const blob = await res.blob();
+      const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+      
+      console.log("[AVATAR] Enviando imagem de perfil tratada e cortada ao Firebase Storage...");
+      // 2. Upload with userId option so upload path complies with folders allowed in storage.rules (uploads/{userId})
+      const result = await uploadImage(croppedFile, {
+        userId: user.id,
+        folder: 'uploads',
+      });
+      const finalUrl = result.url;
+      console.log("[AVATAR] Upload no Firebase Storage concluído com sucesso:", finalUrl);
+      
+      // 3. Delete old image from Storage if it exists and is a Firebase Storage URL
+      if (oldAvatarUrl) {
+         try {
+           const oldPath = getStoragePathFromUrl(oldAvatarUrl);
+           if (oldPath) {
+             await deleteImage(oldPath);
+             console.log("[AVATAR] Antigo avatar removido do Storage com sucesso:", oldPath);
+           }
+         } catch (cleanErr) {
+           console.warn("[AVATAR] Falha não-crítica ao limpar avatar antigo:", cleanErr);
+         }
+      }
+      
+      // 4. Update core User document avatar field
+      await dataService.updateUser(user.id, {
+        avatar: finalUrl
+      });
+      
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { photoURL: finalUrl });
+      }
+    } catch (err: any) {
+      console.error('Erro ao atualizar foto de perfil:', err);
+      setAvatarUploadError(err.message || 'Erro ao definir a foto de perfil. Tente novamente.');
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!user.avatar) return;
+    
+    setUploadingAvatar(true);
+    setAvatarUploadError(null);
+    const oldAvatarUrl = user.avatar;
+    
+    try {
+      await dataService.updateUser(user.id, {
+        avatar: ''
+      });
+      
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { photoURL: '' });
+      }
+      
+      // Delete old file from Storage if applicable
+      try {
+        const oldPath = getStoragePathFromUrl(oldAvatarUrl);
+        if (oldPath) {
+          await deleteImage(oldPath);
+          console.log("[AVATAR] Antigo avatar deletado do Storage após remoção.");
+        }
+      } catch (cleanErr) {
+        console.warn("[AVATAR] Erro não-crítico ao deletar imagem ao remover avatar:", cleanErr);
+      }
+    } catch (err: any) {
+      console.error('Erro ao remover avatar:', err);
+      setAvatarUploadError('Erro ao remover o avatar.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const [profileSettings, setProfileSettings] = useState({
     name: user.name || '',
     email: user.email || '',
@@ -281,7 +405,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       unsubTrainerPlans();
       unsubRequests();
     };
-  }, [user]);
+  }, [user.id, user.trainerId]);
 
   useEffect(() => {
     if (!activeChatId || !user.id) return;
@@ -2566,14 +2690,52 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
             <div className="flex flex-col items-center gap-2">
               <div className="relative">
                 <div 
-                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-24 border-2 border-primary/20" 
-                  style={{ backgroundImage: `url(${user.avatar})` }}
-                ></div>
-                <button className="absolute bottom-0 right-0 flex items-center justify-center size-8 bg-primary rounded-full text-background-dark hover:brightness-110 transition-all shadow-md">
+                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-24 border-2 border-primary/20 relative overflow-hidden bg-background-light dark:bg-background-dark/30" 
+                  style={{ backgroundImage: `url(${user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop'})` }}
+                >
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-white animate-spin text-2xl">sync</span>
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute bottom-0 right-0 flex items-center justify-center size-8 bg-primary rounded-full text-background-dark hover:brightness-110 hover:scale-105 transition-all shadow-md disabled:opacity-50"
+                  title="Upload foto de perfil"
+                  type="button"
+                >
                   <span className="material-symbols-outlined text-lg">edit</span>
                 </button>
+                <input 
+                  type="file" 
+                  ref={avatarInputRef} 
+                  onChange={handleAvatarChange} 
+                  accept="image/jpeg,image/png,image/webp" 
+                  className="hidden" 
+                />
+                <ImageCropperModal
+                  isOpen={cropperOpen}
+                  imageSrc={selectedImageSrc}
+                  onClose={() => setCropperOpen(false)}
+                  onCrop={handleCropComplete}
+                  aspectRatio="circle"
+                />
               </div>
-              <button className="text-sm text-primary hover:underline font-medium">Remover</button>
+              {avatarUploadError && (
+                <p className="text-red-500 text-[11px] font-medium text-center mt-1 max-w-[150px]">{avatarUploadError}</p>
+              )}
+              {user.avatar && (
+                <button 
+                  onClick={handleRemoveAvatar}
+                  disabled={uploadingAvatar}
+                  className="text-sm text-red-500 hover:text-red-400 hover:underline font-medium disabled:opacity-50 cursor-pointer"
+                  type="button"
+                >
+                  Remover
+                </button>
+              )}
             </div>
             
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">

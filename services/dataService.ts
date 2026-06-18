@@ -543,33 +543,87 @@ export const dataService = {
 
   subscribeToTrainerPlans: (trainerId: string, callback: (plans: any[]) => void) => {
     let innerUnsub: (() => void) | null = null;
+    let fallbackUnsub: (() => void) | null = null;
+    
+    console.log("[PLANS SUB] Iniciando subscribeToTrainerPlans para trainerId:", trainerId);
     
     const outerUnsub = onSnapshot(doc(db, 'users', trainerId), (trainerSnap) => {
+      console.log("[PLANS SUB] Snapshot de user recebido. Existe?", trainerSnap.exists());
       if (!trainerSnap.exists()) {
+        console.warn("[PLANS SUB] Documento do trainer não existe no Firestore!");
         callback([]);
         return;
       }
       
-      const trainerData = trainerSnap.data();
-      const username = (trainerData.username || trainerId).replace('@', '').toLowerCase();
-      const landingRef = doc(db, 'landingPages', `@${username}`);
+      const trainerData = trainerSnap.data() || {};
+      const trainerIdLower = trainerId.toLowerCase();
+      const resolvedUsername = (trainerData.username || '').replace('@', '').toLowerCase();
+      
+      const primaryDocId = resolvedUsername ? `@${resolvedUsername}` : `@${trainerIdLower}`;
+      const fallbackDocId = resolvedUsername && resolvedUsername !== trainerIdLower ? `@${trainerIdLower}` : null;
+      
+      const primaryRef = doc(db, 'landingPages', primaryDocId);
+      console.log("[PLANS SUB] Subscrevendo a doc de landingPage principal:", primaryDocId);
       
       if (innerUnsub) {
         innerUnsub();
       }
+      if (fallbackUnsub) {
+        fallbackUnsub();
+      }
       
-      innerUnsub = onSnapshot(landingRef, (landingSnap) => {
+      innerUnsub = onSnapshot(primaryRef, (landingSnap) => {
+        console.log("[PLANS SUB] Snapshot da landingPage principal recebido. Existe?", landingSnap.exists());
         if (landingSnap.exists()) {
-          callback(landingSnap.data().plans || []);
+          const lData = landingSnap.data() || {};
+          const plans = lData.plans || [];
+          console.log("[PLANS SUB] Planos encontrados no principal:", plans.length);
+          
+          if (plans.length > 0 || !fallbackDocId) {
+            callback(plans);
+            if (fallbackUnsub) {
+              fallbackUnsub();
+              fallbackUnsub = null;
+            }
+            return;
+          }
+        }
+        
+        // Fallback if primary page doc doesn't exist or is empty, and fallback doc id is distinct
+        if (fallbackDocId) {
+          console.log("[PLANS SUB] O documento principal de planos de treino está vazio ou não existe. Tentando fallback:", fallbackDocId);
+          const fallbackRef = doc(db, 'landingPages', fallbackDocId);
+          if (fallbackUnsub) fallbackUnsub();
+          
+          fallbackUnsub = onSnapshot(fallbackRef, (fallbackSnap) => {
+            console.log("[PLANS SUB] Snapshot da landingPage de fallback recebido. Existe?", fallbackSnap.exists());
+            if (fallbackSnap.exists()) {
+              const fData = fallbackSnap.data() || {};
+              callback(fData.plans || []);
+            } else {
+              callback([]);
+            }
+          }, (fallbackErr) => {
+            console.error("[PLANS SUB] Erro ao subscrever em landingPage fallback:", fallbackErr);
+            callback([]);
+          });
         } else {
           callback([]);
         }
+      }, (error) => {
+        console.error("[PLANS SUB] Erro ao subscrever em landingPage principal:", error);
+        callback([]);
       });
+    }, (error) => {
+      console.error("[PLANS SUB] Erro ao subscrever em trainer user:", error);
+      callback([]);
     });
     
     return () => {
+      console.log("[PLANS SUB] Cancelando inscrições");
       outerUnsub();
       if (innerUnsub) innerUnsub();
+      if (fallbackUnsub) fallbackUnsub();
     };
   },
 

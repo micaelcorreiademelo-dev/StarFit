@@ -53,13 +53,13 @@ service cloud.firestore {
         ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) || 
         ('email' in resource.data && resource.data.email == request.auth.token.email)
       );
-      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().keys().hasAll(['id', 'name', 'email', 'role']);
       
       // Standard update for owners and admins
       allow update: if (isOwner(userId) || isAdmin()) && (
         isValidUser(incoming()) && 
-        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'birthdate', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications', 'privacy', 'isOnline', 'lastActive', 'subscriptionExpiry', 'paymentStatus']) && 
-        (isAdmin() || ('role' in incoming() && 'role' in existing() && incoming().role == existing().role))
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'birthdate', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications', 'privacy', 'isOnline', 'lastActive', 'subscriptionExpiry', 'paymentStatus', 'weight', 'height', 'activePlan', 'trialUntil', 'expDate']) && 
+        (isAdmin() || (incoming().get('role', '') == existing().get('role', '')))
       );
 
       // Specific update for trainers managing their students
@@ -68,25 +68,28 @@ service cloud.firestore {
       allow delete: if isOwner(userId) || isAdmin();
 
       function isValidUser(data) {
-        return data.keys().hasAll(['id', 'name', 'email', 'role']) &&
-               data.id == userId &&
-               (isAdmin() || data.email == request.auth.token.email || (resource != null && 'email' in resource.data && data.email == resource.data.email)) &&
-               data.role in ['ADMIN', 'TRAINER', 'STUDENT'] &&
-               data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-               (!('username' in data) || (data.username is string && data.username.size() <= 50)) &&
-               (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
-               (!('specialty' in data) || (data.specialty is string && data.specialty.size() <= 200)) &&
-               (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 1000)) &&
-               (!('phone' in data) || (data.phone is string && data.phone.size() <= 50)) &&
-               (!('birthdate' in data) || (data.birthdate is string && data.birthdate.size() <= 20)) &&
-               (!('financialSettings' in data) || data.financialSettings is map) &&
-               (!('notifications' in data) || data.notifications is map) &&
-               (!('privacy' in data) || data.privacy is map) &&
-               (!('expDate' in data) || data.expDate is string) &&
-               (!('subscriptionExpiry' in data) || data.subscriptionExpiry is string || data.subscriptionExpiry == null) &&
-               (!('paymentStatus' in data) || data.paymentStatus is string || data.paymentStatus == null) &&
-               (!('isOnline' in data) || data.isOnline is bool) &&
-               (!('lastActive' in data) || data.lastActive is timestamp);
+        return (!('id' in data) || data.id == userId) &&
+               (!('email' in data) || (isAdmin() || data.email == request.auth.token.email || (resource != null && 'email' in resource.data && data.email == resource.data.email))) &&
+               (!('role' in data) || data.role in ['ADMIN', 'TRAINER', 'STUDENT']) &&
+               (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() < 100)) &&
+               (!('username' in data) || data.username == null || (data.username is string && data.username.size() <= 50)) &&
+               (!('bio' in data) || data.bio == null || (data.bio is string && data.bio.size() <= 1000)) &&
+               (!('specialty' in data) || data.specialty == null || (data.specialty is string && data.specialty.size() <= 200)) &&
+               (!('avatar' in data) || data.avatar == null || (data.avatar is string && data.avatar.size() <= 10000000)) &&
+               (!('phone' in data) || data.phone == null || (data.phone is string && data.phone.size() <= 50)) &&
+               (!('birthdate' in data) || data.birthdate == null || (data.birthdate is string && data.birthdate.size() <= 20)) &&
+               (!('financialSettings' in data) || data.financialSettings == null || data.financialSettings is map) &&
+               (!('notifications' in data) || data.notifications == null || data.notifications is map) &&
+               (!('privacy' in data) || data.privacy == null || data.privacy is map) &&
+               (!('expDate' in data) || data.expDate == null || data.expDate is string) &&
+               (!('trialUntil' in data) || data.trialUntil == null || data.trialUntil is timestamp || data.trialUntil is string) &&
+               (!('activePlan' in data) || data.activePlan == null || data.activePlan is string) &&
+               (!('weight' in data) || data.weight == null || data.weight is string || data.weight is number) &&
+               (!('height' in data) || data.height == null || data.height is string || data.height is number) &&
+               (!('subscriptionExpiry' in data) || data.subscriptionExpiry == null || data.subscriptionExpiry is string) &&
+               (!('paymentStatus' in data) || data.paymentStatus == null || data.paymentStatus is string) &&
+               (!('isOnline' in data) || data.isOnline == null || data.isOnline is bool) &&
+               (!('lastActive' in data) || data.lastActive == null || data.lastActive is timestamp);
       }
 
       function isTrainerApproving(targetStudentId) {
@@ -190,6 +193,29 @@ service cloud.firestore {
       }
     }
 
+    // --- Assessments ---
+    match /assessments/{assessmentId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || 
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) ||
+        ('studentId' in resource.data && resource.data.studentId == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (
+        isAdmin() || 
+        ('trainerId' in request.resource.data && request.resource.data.trainerId == request.auth.uid) ||
+        ('studentId' in request.resource.data && request.resource.data.studentId == request.auth.uid)
+      );
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) ||
+        ('studentId' in resource.data && resource.data.studentId == request.auth.uid)
+      );
+      allow delete: if isSignedIn() && (
+        isAdmin() || 
+        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid)
+      );
+    }
+
     // --- Progress ---
     match /progress/{progressId} {
       allow read: if isSignedIn() && (
@@ -269,10 +295,19 @@ service cloud.firestore {
       allow read: if true; // Public access
       allow write: if isSignedIn() && (
         isAdmin() || 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username) ||
-        ('@' + get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username) ||
-        (request.auth.uid == username) ||
-        ('@' + request.auth.uid == username)
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+            (
+              'username' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && (
+                username.lower() == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username.lower() ||
+                username.lower() == ('@' + get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username).lower() ||
+                ('@' + username).lower() == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username.lower()
+              )
+            ) ||
+            (request.auth.uid.lower() == username.lower()) ||
+            (('@' + request.auth.uid).lower() == username.lower())
+          )
+        )
       );
     }
   }

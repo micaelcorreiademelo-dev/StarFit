@@ -58,6 +58,8 @@ interface LibraryExercise {
   imageUrl: string;
 }
 
+import { StudentAssessmentsFlow } from "../components/StudentAssessmentsFlow";
+
 const GROWTH_DATA = [
   { month: "Jan", value: 30 },
   { month: "Fev", value: 35 },
@@ -2829,7 +2831,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
                           {/* WhatsApp */}
                           <a
-                            className="hidden" href=""
+                            href=""
                             target="_blank"
                             rel="noreferrer"
                             title="Falar no WhatsApp"
@@ -6046,6 +6048,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         )}
       </AnimatePresence>
       
+      {/* Assessments Modal/Flow */}
+      {addingEvaluationStudent && (
+        <StudentAssessmentsFlow
+          student={addingEvaluationStudent}
+          user={user}
+          onClose={() => setAddingEvaluationStudent(null)}
+        />
+      )}
+
       {/* Unlink Confirmation Modal */}
       {studentToUnlink && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-200">

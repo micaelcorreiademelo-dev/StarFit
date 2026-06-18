@@ -95,6 +95,9 @@ export const trainerService = {
     } catch (err) {
       console.error("Error saving landing page to Firestore", err);
       // Still save to localStorage as backup/local state
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}${username.replace('@', '').toLowerCase()}`, JSON.stringify(newData));
+      window.dispatchEvent(new CustomEvent('trainer_data_updated', { detail: { username, data: newData } }));
+      throw err;
     }
     
     localStorage.setItem(`${STORAGE_KEY_PREFIX}${username.replace('@', '').toLowerCase()}`, JSON.stringify(newData));
