@@ -1270,18 +1270,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         {/* Main Agenda Section */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="flex flex-wrap justify-between gap-3 pb-6">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-white text-4xl font-black leading-tight tracking-[-0.033em]">
+          <header className="flex items-center justify-between pb-6">
+            <div className="flex flex-col">
+              <h1 className="text-white text-2xl md:text-4xl font-black leading-tight tracking-[-0.033em]">
                 Agenda
               </h1>
-              <p className="text-text-secondary text-base font-normal leading-normal">
+              <p className="text-text-secondary text-xs md:text-base font-normal leading-normal">
                 Gerencie seus compromissos e sessões.
               </p>
             </div>
-            <button onClick={() => setIsCreatingEvent(true)} className="flex h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/20 hover:brightness-110 transition-all">
+            <button onClick={() => setIsCreatingEvent(true)} className="flex size-10 md:h-10 md:w-auto items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary text-background-dark text-sm font-bold leading-normal shadow-lg shadow-primary/20 hover:brightness-110 transition-all shrink-0">
               <span className="material-symbols-outlined text-[18px]">add</span>
-              Novo Agendamento
+              <span className="hidden md:inline pr-1">Novo Agendamento</span>
             </button>
           </header>
 
@@ -1367,7 +1367,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               </div>
             </div>
 
-            <div className={`grid ${agendaView === "Dia" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-7"} gap-px bg-border-dark border border-border-dark rounded-xl overflow-hidden`}>
+            {agendaView !== "Dia" && (
+              <div className="grid grid-cols-7 mb-2 text-center text-[10px] md:text-xs uppercase font-bold text-text-secondary tracking-widest">
+                {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
+                  <div key={d}>{d}</div>
+                ))}
+              </div>
+            )}
+            
+            <div className={`grid ${agendaView === "Dia" ? "grid-cols-1" : "grid-cols-7"} gap-px bg-border-dark border border-border-dark rounded-xl overflow-hidden`}>
               {daysToRender.map((day, idx) => {
                 const dayEvents = events.filter(e => isSameDay(e.date, day));
                 const today = isToday(day);
@@ -1376,24 +1384,28 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 return (
                   <div
                     key={`calendar-day-${idx}`}
-                    className={`bg-background-dark p-3 min-h-[160px] flex flex-col gap-3 ${today ? "bg-card-dark/50" : ""} ${agendaView === "Mês" && !isCurrentMonth ? "opacity-30" : ""}`}
+                    className={`bg-background-dark p-1 lg:p-3 min-h-[100px] lg:min-h-[160px] flex flex-col gap-1 lg:gap-3 ${today ? "bg-card-dark/50" : ""} ${agendaView === "Mês" && !isCurrentMonth ? "opacity-30" : ""}`}
                   >
-                    <div className="text-center">
-                      <p
-                        className={`text-xs uppercase tracking-widest ${today ? "text-primary font-black" : "text-text-secondary font-bold"}`}
-                      >
-                        {format(day, "EEE dd", { locale: ptBR })}
-                      </p>
+                    <div className={`text-center ${agendaView !== "Dia" ? "lg:text-left" : ""}`}>
+                      {agendaView === "Dia" ? (
+                        <p className={`text-xs uppercase tracking-widest ${today ? "text-primary font-black" : "text-text-secondary font-bold"}`}>
+                          {format(day, "EEE dd", { locale: ptBR })}
+                        </p>
+                      ) : (
+                        <p className={`text-xs lg:text-sm inline-flex items-center justify-center size-6 lg:size-8 rounded-full ${today ? "bg-primary text-background-dark font-black" : "text-text-secondary font-bold"}`}>
+                          {format(day, "d")}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1 lg:gap-2 overflow-y-auto hide-scrollbar">
                       {dayEvents.map((evt, i) => (
                         <div
                           key={`calendar-event-${i}`}
                           onClick={() => setSelectedEvent(evt)}
-                          className={`p-2 rounded-lg border flex flex-col gap-1.5 shadow-sm hover:brightness-110 transition-all cursor-pointer ${evt.color}`}
+                          className={`p-1 lg:p-2 rounded md:rounded-lg border flex flex-col gap-0.5 lg:gap-1.5 shadow-sm hover:brightness-110 transition-all cursor-pointer ${evt.color}`}
                         >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] uppercase font-black tracking-wider opacity-80">
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <span className="text-[9px] lg:text-[10px] uppercase font-black tracking-wider opacity-80 whitespace-nowrap">
                               {evt.time}
                             </span>
                             <div className="flex items-center gap-1">
@@ -1406,7 +1418,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                       await dataService.deleteAgendaEvent(evt.id);
                                       setDeletingEventId(null);
                                     }}
-                                    className="material-symbols-outlined text-[14px] cursor-pointer text-red-500 hover:text-red-400 font-bold"
+                                    className="material-symbols-outlined text-[12px] lg:text-[14px] cursor-pointer text-red-500 hover:text-red-400 font-bold"
                                   >
                                     check
                                   </span>
@@ -1416,7 +1428,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                       e.stopPropagation();
                                       setDeletingEventId(null);
                                     }}
-                                    className="material-symbols-outlined text-[14px] cursor-pointer text-text-secondary hover:text-white"
+                                    className="material-symbols-outlined text-[12px] lg:text-[14px] cursor-pointer text-text-secondary hover:text-white"
                                   >
                                     close
                                   </span>
@@ -1430,7 +1442,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                       setEditingEventId(evt.id);
                                       setIsCreatingEvent(true);
                                     }}
-                                    className="material-symbols-outlined text-[14px] cursor-pointer hover:text-white"
+                                    className="material-symbols-outlined text-[12px] lg:text-[14px] cursor-pointer hover:text-white hidden lg:block"
                                   >
                                     edit
                                   </span>
@@ -1439,7 +1451,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                       e.stopPropagation();
                                       setDeletingEventId(evt.id);
                                     }}
-                                    className="material-symbols-outlined text-[14px] cursor-pointer hover:text-red-500"
+                                    className="material-symbols-outlined text-[12px] lg:text-[14px] cursor-pointer hover:text-red-500 hidden lg:block"
                                   >
                                     delete
                                   </span>
@@ -1447,7 +1459,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                               )}
                             </div>
                           </div>
-                          <p className="text-xs font-bold leading-tight">
+                          <p className="text-[10px] lg:text-xs font-bold leading-tight truncate">
                             {evt.title}
                           </p>
                           <p className="text-[10px] font-medium opacity-80">
