@@ -259,6 +259,86 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     setIsMobileActionMenuOpen(false);
   }, [activeTab]);
 
+  // Add Student Form State
+  const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentCpf, setNewStudentCpf] = useState("");
+  const [newStudentEmail, setNewStudentEmail] = useState("");
+  const [newStudentPhone, setNewStudentPhone] = useState("");
+  const [newStudentBirthdate, setNewStudentBirthdate] = useState("");
+  const [newStudentWeight, setNewStudentWeight] = useState("");
+  const [newStudentHeight, setNewStudentHeight] = useState("");
+  const [newStudentObjective, setNewStudentObjective] = useState("");
+  const [newStudentNotes, setNewStudentNotes] = useState("");
+  const [newStudentStatus, setNewStudentStatus] = useState("Ativo");
+  const [newStudentPassword, setNewStudentPassword] = useState("starfit123");
+  const [isSavingStudent, setIsSavingStudent] = useState(false);
+  const [addStudentError, setAddStudentError] = useState<string | null>(null);
+  const [createdStudentModal, setCreatedStudentModal] = useState<any | null>(null);
+  const [copiedAccessInfo, setCopiedAccessInfo] = useState(false);
+
+  const handleSaveNewStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trainerId = user?.id || (user as any)?.uid;
+    if (!newStudentName.trim() || !newStudentEmail.trim()) {
+      setAddStudentError("Nome e E-mail de Acesso são obrigatórios.");
+      return;
+    }
+    if (!trainerId) {
+      setAddStudentError("Erro de identificação do personal trainer. Por favor, recarregue a página.");
+      return;
+    }
+
+    setIsSavingStudent(true);
+    setAddStudentError(null);
+
+    try {
+      await dataService.createStudent({
+        name: newStudentName,
+        email: newStudentEmail,
+        phone: newStudentPhone,
+        cpf: newStudentCpf,
+        birthdate: newStudentBirthdate,
+        weight: newStudentWeight,
+        height: newStudentHeight,
+        objective: newStudentObjective,
+        notes: newStudentNotes,
+        status: newStudentStatus,
+        trainerId: trainerId,
+        accessPassword: newStudentPassword || "starfit123",
+      });
+
+      setCreatedStudentModal({
+        name: newStudentName.trim(),
+        email: newStudentEmail.trim().toLowerCase(),
+        password: newStudentPassword || "starfit123",
+        phone: newStudentPhone.trim()
+      });
+
+      setNewStudentName("");
+      setNewStudentCpf("");
+      setNewStudentEmail("");
+      setNewStudentPhone("");
+      setNewStudentBirthdate("");
+      setNewStudentWeight("");
+      setNewStudentHeight("");
+      setNewStudentObjective("");
+      setNewStudentNotes("");
+      setNewStudentStatus("Ativo");
+      setNewStudentPassword("starfit123");
+    } catch (err: any) {
+      console.error("Error creating student:", err);
+      let errMsg = err?.message || "Erro ao cadastrar aluno. Tente novamente.";
+      if (typeof errMsg === "string" && errMsg.includes("Já existe")) {
+        errMsg = "Já existe um aluno cadastrado com este e-mail.";
+      } else if (typeof errMsg === "string" && errMsg.includes("Missing or insufficient permissions")) {
+        errMsg = "Erro de permissão no banco de dados. Tente novamente.";
+      }
+      setAddStudentError(errMsg);
+    } finally {
+      setIsSavingStudent(false);
+    }
+  };
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobileScreen(window.innerWidth < 1024);
@@ -3253,32 +3333,35 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
           Cadastrar Novo Aluno
         </h1>
         <p className="text-text-secondary text-base font-normal leading-normal">
-          Preencha as informações abaixo para adicionar um novo aluno à sua
-          base.
+          Preencha as informações abaixo para adicionar um novo aluno à sua base e liberar seu acesso ao app.
         </p>
       </div>
 
+      {addStudentError && (
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm flex items-center gap-3">
+          <span className="material-symbols-outlined text-red-500">error</span>
+          <span>{addStudentError}</span>
+        </div>
+      )}
+
       {/* Form Container */}
       <div className="bg-card-dark rounded-2xl p-6 md:p-8 border border-border-dark shadow-2xl">
-        <form
-          className="flex flex-col gap-8"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setActiveTab("students");
-          }}
-        >
+        <form className="flex flex-col gap-8" onSubmit={handleSaveNewStudent}>
           {/* Section: Informações Pessoais */}
           <div>
-            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-4 border-b border-border-dark">
-              Informações Pessoais
+            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-4 border-b border-border-dark flex items-center justify-between">
+              <span>Informações Pessoais</span>
+              <span className="text-xs text-text-secondary font-normal">* Campos obrigatórios</span>
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 pt-6">
               <label className="flex flex-col flex-1">
                 <p className="text-text-primary text-base font-medium leading-normal pb-2">
-                  Nome completo
+                  Nome completo *
                 </p>
                 <input
                   required
+                  value={newStudentName}
+                  onChange={(e) => setNewStudentName(e.target.value)}
                   className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all"
                   placeholder="Digite o nome completo do aluno"
                   type="text"
@@ -3289,6 +3372,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   CPF (Opcional)
                 </p>
                 <input
+                  value={newStudentCpf}
+                  onChange={(e) => setNewStudentCpf(e.target.value)}
                   className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all"
                   placeholder="000.000.000-00"
                   type="text"
@@ -3296,10 +3381,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               </label>
               <label className="flex flex-col flex-1">
                 <p className="text-text-primary text-base font-medium leading-normal pb-2">
-                  E-mail
+                  E-mail de Acesso do Aluno *
                 </p>
                 <input
                   required
+                  value={newStudentEmail}
+                  onChange={(e) => setNewStudentEmail(e.target.value)}
                   className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all"
                   placeholder="exemplo@email.com"
                   type="email"
@@ -3307,10 +3394,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               </label>
               <label className="flex flex-col flex-1">
                 <p className="text-text-primary text-base font-medium leading-normal pb-2">
-                  Telefone
+                  Telefone / WhatsApp
                 </p>
                 <input
-                  required
+                  value={newStudentPhone}
+                  onChange={(e) => setNewStudentPhone(e.target.value)}
                   className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all"
                   placeholder="(00) 00000-0000"
                   type="tel"
@@ -3321,11 +3409,25 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   Data de nascimento
                 </p>
                 <input
-                  required
+                  value={newStudentBirthdate}
+                  onChange={(e) => setNewStudentBirthdate(e.target.value)}
                   className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all"
                   placeholder="DD/MM/AAAA"
                   type="text"
                 />
+              </label>
+              <label className="flex flex-col flex-1">
+                <p className="text-text-primary text-base font-medium leading-normal pb-2">
+                  Senha Inicial de Acesso (para o Aluno)
+                </p>
+                <input
+                  value={newStudentPassword}
+                  onChange={(e) => setNewStudentPassword(e.target.value)}
+                  className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all font-mono"
+                  placeholder="starfit123"
+                  type="text"
+                />
+                <span className="text-[11px] text-text-secondary mt-1">O aluno usará esta senha no primeiro login com o e-mail cadastrado.</span>
               </label>
             </div>
           </div>
@@ -3341,6 +3443,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   Peso Inicial (kg)
                 </p>
                 <input
+                  value={newStudentWeight}
+                  onChange={(e) => setNewStudentWeight(e.target.value)}
                   className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all"
                   placeholder="Ex: 75.5"
                   step="0.1"
@@ -3352,6 +3456,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   Altura Inicial (m)
                 </p>
                 <input
+                  value={newStudentHeight}
+                  onChange={(e) => setNewStudentHeight(e.target.value)}
                   className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all"
                   placeholder="Ex: 1.80"
                   step="0.01"
@@ -3362,14 +3468,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 <p className="text-text-primary text-base font-medium leading-normal pb-2">
                   Objetivo
                 </p>
-                <select className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all cursor-pointer">
+                <select
+                  value={newStudentObjective}
+                  onChange={(e) => setNewStudentObjective(e.target.value)}
+                  className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark h-14 placeholder:text-text-secondary/50 px-4 transition-all cursor-pointer"
+                >
                   <option value="">Selecione um objetivo</option>
-                  <option value="hipertrofia">Hipertrofia</option>
-                  <option value="emagrecimento">Emagrecimento</option>
-                  <option value="condicionamento">
-                    Condicionamento Físico
-                  </option>
-                  <option value="reabilitacao">Reabilitação</option>
+                  <option value="Hipertrofia">Hipertrofia</option>
+                  <option value="Emagrecimento">Emagrecimento</option>
+                  <option value="Condicionamento Físico">Condicionamento Físico</option>
+                  <option value="Reabilitação">Reabilitação</option>
                 </select>
               </label>
             </div>
@@ -3386,6 +3494,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   Restrições / Observações médicas
                 </p>
                 <textarea
+                  value={newStudentNotes}
+                  onChange={(e) => setNewStudentNotes(e.target.value)}
                   className="w-full rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark min-h-32 placeholder:text-text-secondary/50 p-4 transition-all"
                   placeholder="Descreva aqui qualquer informação médica relevante..."
                 ></textarea>
@@ -3397,7 +3507,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 <div className="flex items-center gap-6">
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input
-                      defaultChecked
+                      checked={newStudentStatus === 'Ativo'}
+                      onChange={() => setNewStudentStatus('Ativo')}
                       className="text-primary focus:ring-primary/50 bg-background-dark border-border-dark"
                       name="status"
                       type="radio"
@@ -3408,6 +3519,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input
+                      checked={newStudentStatus === 'Inativo'}
+                      onChange={() => setNewStudentStatus('Inativo')}
                       className="text-primary focus:ring-primary/50 bg-background-dark border-border-dark"
                       name="status"
                       type="radio"
@@ -3431,14 +3544,99 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               Cancelar
             </button>
             <button
-              className="px-8 py-3 bg-primary text-background-dark rounded-lg font-bold shadow-lg shadow-primary/20 hover:brightness-110 transition-all"
+              disabled={isSavingStudent}
+              className="px-8 py-3 bg-primary text-background-dark rounded-lg font-bold shadow-lg shadow-primary/20 hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               type="submit"
             >
-              Salvar Aluno
+              {isSavingStudent ? (
+                <>
+                  <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                  <span>Salvando...</span>
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-lg">person_add</span>
+                  <span>Salvar Aluno</span>
+                </>
+              )}
             </button>
           </div>
         </form>
       </div>
+
+      {/* Success Modal with Credentials */}
+      {createdStudentModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-card-dark border border-border-dark rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="text-center space-y-2">
+              <div className="size-16 bg-primary/20 text-primary border border-primary/30 rounded-full flex items-center justify-center mx-auto">
+                <span className="material-symbols-outlined text-3xl">check_circle</span>
+              </div>
+              <h2 className="text-2xl font-black text-white">Aluno Cadastrado!</h2>
+              <p className="text-sm text-text-secondary">
+                O cadastro de <strong className="text-white">{createdStudentModal.name}</strong> foi realizado com sucesso.
+              </p>
+            </div>
+
+            <div className="bg-background-dark border border-border-dark rounded-xl p-4 space-y-3 text-sm">
+              <span className="text-xs uppercase tracking-wider text-primary font-bold block">Credenciais de Acesso do Aluno:</span>
+              <div className="flex items-center justify-between border-b border-border-dark/50 pb-2">
+                <span className="text-text-secondary">E-mail:</span>
+                <span className="text-white font-mono font-medium">{createdStudentModal.email}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-text-secondary">Senha Inicial:</span>
+                <span className="text-primary font-mono font-bold">{createdStudentModal.password}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-text-secondary leading-relaxed text-center">
+              Passe o e-mail e a senha inicial acima para o seu aluno. No primeiro acesso, o aplicativo sincronizará automaticamente todas as fichas e avaliações prescritas por você!
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `Olá ${createdStudentModal.name}! Seu cadastro no aplicativo StarFit foi criado pelo seu Personal Trainer.\n\nPara acessar seu painel:\n1. Abra o app StarFit\n2. Clique em 'Entrar com E-mail'\n3. E-mail: ${createdStudentModal.email}\n4. Senha: ${createdStudentModal.password}`;
+                  navigator.clipboard.writeText(text);
+                  setCopiedAccessInfo(true);
+                  setTimeout(() => setCopiedAccessInfo(false), 3000);
+                }}
+                className="w-full py-3 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl border border-white/10 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">{copiedAccessInfo ? 'check' : 'content_copy'}</span>
+                <span>{copiedAccessInfo ? 'Copiado para a área de transferência!' : 'Copiar Instruções de Acesso'}</span>
+              </button>
+
+              {createdStudentModal.phone && (
+                <a
+                  href={`https://wa.me/${createdStudentModal.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                    `Olá ${createdStudentModal.name}! Seu cadastro no aplicativo StarFit foi criado pelo seu Personal Trainer.\n\nPara acessar seu painel:\n1. Abra o app StarFit\n2. Clique em 'Entrar com E-mail'\n3. E-mail: ${createdStudentModal.email}\n4. Senha: ${createdStudentModal.password}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 bg-[#25D366] text-black font-extrabold rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                  <span className="material-symbols-outlined text-lg">chat</span>
+                  <span>Enviar no WhatsApp do Aluno</span>
+                </a>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatedStudentModal(null);
+                  setActiveTab("students");
+                }}
+                className="w-full py-3.5 bg-primary text-background-dark font-black rounded-xl hover:brightness-110 transition-all text-sm mt-1 cursor-pointer"
+              >
+                Concluído (Ir para Lista de Alunos)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

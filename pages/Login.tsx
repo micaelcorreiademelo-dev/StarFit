@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserRole } from '../types';
-import { loginWithGoogle, loginWithGoogleRedirect, loginWithEmail, registerWithEmail } from '../services/firebase';
+import { loginWithGoogle, loginWithGoogleRedirect, loginWithEmail, registerWithEmail, db } from '../services/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -111,7 +112,8 @@ const Login: React.FC = () => {
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password) {
       setError('Preencha e-mail e senha.');
       return;
     }
@@ -119,10 +121,29 @@ const Login: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await loginWithEmail(email, password);
+      await loginWithEmail(cleanEmail, password);
     } catch (err: any) {
-      console.error(err);
+      console.error("Email login error:", err);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        // Check if this student was manually pre-created by a personal trainer
+        try {
+          const q = query(collection(db, 'users'), where('email', '==', cleanEmail));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const studentData = snap.docs[0].data();
+            const expectedPass = studentData.accessPassword || 'starfit123';
+            if (password === expectedPass) {
+              // First time login for manually created student: create their auth account
+              await registerWithEmail(cleanEmail, password, studentData.name || 'Aluno');
+              return;
+            } else {
+              setError('Senha incorreta para este cadastro de aluno. Verifique a senha informada pelo seu personal trainer.');
+              return;
+            }
+          }
+        } catch (dbErr) {
+          console.error("Error checking manual student record:", dbErr);
+        }
         setError('E-mail ou senha incorretos.');
       } else {
         setError('Ocorreu um erro ao entrar. Tente novamente.');

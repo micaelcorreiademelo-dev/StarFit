@@ -151,6 +151,65 @@ export const syncUserToFirestore = async (firebaseUser: FirebaseUser, role: User
     return existingData;
   }
 
+  // Check if a student profile was pre-created manually by a trainer with this email
+  if (firebaseUser.email) {
+    try {
+      const q = query(collection(db, 'users'), where('email', '==', firebaseUser.email.toLowerCase().trim()));
+      const manualSnap = await getDocs(q);
+      if (!manualSnap.empty) {
+        const manualDoc = manualSnap.docs[0];
+        const manualData = manualDoc.data();
+        const manualDocId = manualDoc.id;
+
+        const mergedUser: User = {
+          ...manualData,
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || manualData.name || 'Aluno',
+          email: firebaseUser.email,
+          role: (manualData.role as UserRole) || 'STUDENT',
+          avatar: firebaseUser.photoURL || manualData.avatar || `https://i.pravatar.cc/150?u=${firebaseUser.uid}`,
+          isManualStudent: false,
+        };
+
+        await setDoc(userDocRef, {
+          ...mergedUser,
+          claimedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        // If the manual document ID was different, migrate workouts & progress to the new firebaseUser.uid
+        if (manualDocId !== firebaseUser.uid) {
+          try {
+            // Update workouts
+            const wQuery = query(collection(db, 'workouts'), where('studentIds', 'array-contains', manualDocId));
+            const wSnap = await getDocs(wQuery);
+            for (const wDoc of wSnap.docs) {
+              const wData = wDoc.data();
+              const updatedStudentIds = (wData.studentIds || []).map((id: string) => id === manualDocId ? firebaseUser.uid : id);
+              await updateDoc(doc(db, 'workouts', wDoc.id), { studentIds: updatedStudentIds });
+            }
+
+            // Update progress entries
+            const pQuery = query(collection(db, 'progress'), where('studentId', '==', manualDocId));
+            const pSnap = await getDocs(pQuery);
+            for (const pDoc of pSnap.docs) {
+              await updateDoc(doc(db, 'progress', pDoc.id), { studentId: firebaseUser.uid });
+            }
+
+            // Clean up original manual doc
+            await deleteDoc(doc(db, 'users', manualDocId));
+          } catch (migErr) {
+            console.error("Erro ao migrar dados do aluno manual:", migErr);
+          }
+        }
+
+        return mergedUser;
+      }
+    } catch (manualLookupErr) {
+      console.error("Erro ao buscar cadastro manual prévio:", manualLookupErr);
+    }
+  }
+
   // Master Admin Bootstrap
   let finalRole = role;
   if (firebaseUser.email === 'micaelcorreiademelo@gmail.com' || firebaseUser.email === 'admin@starfit.com') {

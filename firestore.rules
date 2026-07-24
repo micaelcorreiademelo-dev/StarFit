@@ -48,17 +48,13 @@ service cloud.firestore {
     // --- Users ---
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isSignedIn() && (isAdmin() || 
-        ('role' in resource.data && resource.data.role == 'TRAINER') || 
-        ('trainerId' in resource.data && resource.data.trainerId == request.auth.uid) || 
-        ('email' in resource.data && resource.data.email == request.auth.token.email)
-      );
-      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().keys().hasAll(['id', 'name', 'email', 'role']);
+      allow list: if isSignedIn();
+      allow create: if (isOwner(userId) || isAdmin() || isTrainerCreatingStudent()) && isValidUser(incoming()) && incoming().keys().hasAll(['id', 'name', 'email', 'role']);
       
       // Standard update for owners and admins
       allow update: if (isOwner(userId) || isAdmin()) && (
         isValidUser(incoming()) && 
-        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'birthdate', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications', 'privacy', 'isOnline', 'lastActive', 'subscriptionExpiry', 'paymentStatus', 'weight', 'height', 'activePlan', 'trialUntil', 'expDate']) && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'phone', 'birthdate', 'bio', 'specialty', 'onboardingCompleted', 'role', 'status', 'plan', 'createdAt', 'updatedAt', 'trainerId', 'trainerCode', 'studentsCount', 'username', 'financialSettings', 'notifications', 'privacy', 'isOnline', 'lastActive', 'subscriptionExpiry', 'paymentStatus', 'weight', 'height', 'activePlan', 'trialUntil', 'expDate', 'cpf', 'objective', 'notes', 'accessPassword', 'isManualStudent']) && 
         (isAdmin() || (incoming().get('role', '') == existing().get('role', '')))
       );
 
@@ -67,9 +63,15 @@ service cloud.firestore {
       
       allow delete: if isOwner(userId) || isAdmin();
 
+      function isTrainerCreatingStudent() {
+        return isSignedIn() && 
+               ('trainerId' in incoming() && incoming().trainerId == request.auth.uid) &&
+               ('role' in incoming() && incoming().role == 'STUDENT');
+      }
+
       function isValidUser(data) {
         return (!('id' in data) || data.id == userId) &&
-               (!('email' in data) || (isAdmin() || data.email == request.auth.token.email || (resource != null && 'email' in resource.data && data.email == resource.data.email))) &&
+               (!('email' in data) || (data.email is string && data.email.size() < 100)) &&
                (!('role' in data) || data.role in ['ADMIN', 'TRAINER', 'STUDENT']) &&
                (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() < 100)) &&
                (!('username' in data) || data.username == null || (data.username is string && data.username.size() <= 50)) &&
@@ -89,7 +91,12 @@ service cloud.firestore {
                (!('subscriptionExpiry' in data) || data.subscriptionExpiry == null || data.subscriptionExpiry is string) &&
                (!('paymentStatus' in data) || data.paymentStatus == null || data.paymentStatus is string) &&
                (!('isOnline' in data) || data.isOnline == null || data.isOnline is bool) &&
-               (!('lastActive' in data) || data.lastActive == null || data.lastActive is timestamp);
+               (!('lastActive' in data) || data.lastActive == null || data.lastActive is timestamp) &&
+               (!('cpf' in data) || data.cpf == null || data.cpf is string) &&
+               (!('objective' in data) || data.objective == null || data.objective is string) &&
+               (!('notes' in data) || data.notes == null || data.notes is string) &&
+               (!('accessPassword' in data) || data.accessPassword == null || data.accessPassword is string) &&
+               (!('isManualStudent' in data) || data.isManualStudent == null || data.isManualStudent is bool);
       }
 
       function isTrainerApproving(targetStudentId) {
@@ -223,9 +230,9 @@ service cloud.firestore {
         isTrainer() || 
         ('studentId' in resource.data && resource.data.studentId == request.auth.uid)
       );
-      allow create: if isSignedIn() && (isAdmin() || ('studentId' in request.resource.data && request.resource.data.studentId == request.auth.uid));
-      allow update: if isSignedIn() && (isAdmin() || ('studentId' in resource.data && resource.data.studentId == request.auth.uid));
-      allow delete: if isSignedIn() && (isAdmin() || ('studentId' in resource.data && resource.data.studentId == request.auth.uid));
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (isAdmin() || isTrainer() || ('studentId' in resource.data && resource.data.studentId == request.auth.uid));
+      allow delete: if isSignedIn() && (isAdmin() || isTrainer() || ('studentId' in resource.data && resource.data.studentId == request.auth.uid));
     }
 
     // --- Workout Sessions ---

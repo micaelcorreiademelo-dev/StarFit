@@ -11,6 +11,74 @@ export const dataService = {
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
   },
 
+  createStudent: async (studentData: {
+    name: string;
+    email: string;
+    phone?: string;
+    cpf?: string;
+    birthdate?: string;
+    weight?: number | string;
+    height?: number | string;
+    objective?: string;
+    notes?: string;
+    status?: string;
+    trainerId: string;
+    accessPassword?: string;
+  }) => {
+    try {
+      const emailLower = studentData.email.trim().toLowerCase();
+      // Check if user document with this email already exists
+      const q = query(collection(db, 'users'), where('email', '==', emailLower));
+      const existingSnap = await getDocs(q);
+      if (!existingSnap.empty) {
+        throw new Error('Já existe um aluno cadastrado com este e-mail.');
+      }
+
+      const newDocRef = doc(collection(db, 'users'));
+      const studentId = newDocRef.id;
+
+      const newStudentPayload = {
+        id: studentId,
+        name: studentData.name.trim(),
+        email: emailLower,
+        phone: studentData.phone || '',
+        cpf: studentData.cpf || '',
+        birthdate: studentData.birthdate || '',
+        weight: studentData.weight ? Number(studentData.weight) : '',
+        height: studentData.height ? Number(studentData.height) : '',
+        objective: studentData.objective || '',
+        notes: studentData.notes || '',
+        status: studentData.status || 'Ativo',
+        role: 'STUDENT',
+        trainerId: studentData.trainerId,
+        accessPassword: studentData.accessPassword || 'starfit123',
+        isManualStudent: true,
+        avatar: `https://i.pravatar.cc/150?u=${studentId}`,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      await setDoc(newDocRef, newStudentPayload);
+
+      // Record initial weight in progress if present
+      if (studentData.weight) {
+        await addDoc(collection(db, 'progress'), {
+          studentId: studentId,
+          weight: Number(studentData.weight),
+          height: studentData.height ? Number(studentData.height) : null,
+          notes: 'Medições iniciais no cadastro',
+          date: serverTimestamp(),
+          createdAt: serverTimestamp()
+        });
+      }
+
+      return { id: studentId, ...newStudentPayload };
+    } catch (error: any) {
+      if (error.message?.includes('Já existe')) throw error;
+      handleFirestoreError(error, OperationType.CREATE, 'users');
+    }
+  },
+
   // Progress
   subscribeToStudentProgress: (studentId: string, callback: (progress: any[]) => void) => {
     const q = query(collection(db, 'progress'), where('studentId', '==', studentId));
