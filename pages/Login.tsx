@@ -124,21 +124,41 @@ const Login: React.FC = () => {
       await loginWithEmail(cleanEmail, password);
     } catch (err: any) {
       console.error("Email login error:", err);
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
         // Check if this student was manually pre-created by a personal trainer
         try {
           const q = query(collection(db, 'users'), where('email', '==', cleanEmail));
           const snap = await getDocs(q);
           if (!snap.empty) {
             const studentData = snap.docs[0].data();
-            const expectedPass = studentData.accessPassword || 'starfit123';
-            if (password === expectedPass) {
-              // First time login for manually created student: create their auth account
-              await registerWithEmail(cleanEmail, password, studentData.name || 'Aluno');
-              return;
-            } else {
-              setError('Senha incorreta para este cadastro de aluno. Verifique a senha informada pelo seu personal trainer.');
-              return;
+            // Only attempt initial auto-registration if this is a manual student profile
+            if (studentData.isManualStudent === true || (studentData.accessPassword && studentData.isManualStudent !== false)) {
+              const expectedPass = studentData.accessPassword || 'starfit123';
+              if (password === expectedPass) {
+                // First time login for manually created student: create their Firebase Auth account
+                try {
+                  await registerWithEmail(cleanEmail, password, studentData.name || 'Aluno');
+                  return;
+                } catch (regErr: any) {
+                  console.error("Error auto-registering manual student:", regErr);
+                  if (regErr.code === 'auth/email-already-in-use') {
+                    // Auth account exists, try logging in with provided password
+                    try {
+                      await loginWithEmail(cleanEmail, password);
+                      return;
+                    } catch (loginErr) {
+                      setError('E-mail ou senha incorretos.');
+                      return;
+                    }
+                  } else if (regErr.code === 'auth/weak-password') {
+                    setError('A senha cadastrada pelo personal trainer é muito curta (mínimo de 6 caracteres).');
+                    return;
+                  }
+                }
+              } else {
+                setError('Senha incorreta para este cadastro de aluno. Verifique a senha informada pelo seu personal trainer.');
+                return;
+              }
             }
           }
         } catch (dbErr) {
