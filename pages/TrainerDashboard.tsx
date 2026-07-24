@@ -271,10 +271,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [newStudentNotes, setNewStudentNotes] = useState("");
   const [newStudentStatus, setNewStudentStatus] = useState("Ativo");
   const [newStudentPassword, setNewStudentPassword] = useState("starfit123");
+  const [newStudentTrialDays, setNewStudentTrialDays] = useState("30");
   const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [addStudentError, setAddStudentError] = useState<string | null>(null);
   const [createdStudentModal, setCreatedStudentModal] = useState<any | null>(null);
   const [copiedAccessInfo, setCopiedAccessInfo] = useState(false);
+  const [extendingStudentModal, setExtendingStudentModal] = useState<{ studentId: string; studentName: string; currentExp?: string } | null>(null);
 
   const handleSaveNewStudent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,6 +294,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     setAddStudentError(null);
 
     try {
+      const trialDaysNum = Number(newStudentTrialDays) || 30;
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + trialDaysNum);
+      const expiryIso = expiryDate.toISOString();
+      const expDateStr = expiryDate.toISOString().split('T')[0];
+
       await dataService.createStudent({
         name: newStudentName,
         email: newStudentEmail,
@@ -305,13 +313,19 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         status: newStudentStatus,
         trainerId: trainerId,
         accessPassword: newStudentPassword || "starfit123",
+        subscriptionExpiry: expiryIso,
+        trialUntil: expiryIso,
+        expDate: expDateStr,
+        paymentStatus: 'pending',
       });
 
       setCreatedStudentModal({
         name: newStudentName.trim(),
         email: newStudentEmail.trim().toLowerCase(),
         password: newStudentPassword || "starfit123",
-        phone: newStudentPhone.trim()
+        phone: newStudentPhone.trim(),
+        trialDays: trialDaysNum,
+        expDateFormatted: expiryDate.toLocaleDateString('pt-BR'),
       });
 
       setNewStudentName("");
@@ -325,6 +339,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       setNewStudentNotes("");
       setNewStudentStatus("Ativo");
       setNewStudentPassword("starfit123");
+      setNewStudentTrialDays("30");
     } catch (err: any) {
       console.error("Error creating student:", err);
       let errMsg = err?.message || "Erro ao cadastrar aluno. Tente novamente.";
@@ -526,12 +541,25 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   };
 
   const handleExtendTrial = async (studentId: string) => {
+    const student = studentsData.find(s => s.id === studentId);
+    setExtendingStudentModal({
+      studentId,
+      studentName: student?.name || 'Aluno',
+      currentExp: student?.subscriptionExpiry || student?.expDate
+    });
+  };
+
+  const handleExtendStudentAccess = async (studentId: string, daysToAdd: number) => {
     try {
-      await dataService.extendTrial(studentId);
-      alert("Acesso prorrogado por mais 24 horas!");
+      const res = await dataService.extendStudentAccess(studentId, daysToAdd);
+      if (res) {
+        alert(`Vínculo e acesso de ${extendingStudentModal?.studentName || 'aluno'} estendidos por +${daysToAdd} dias! Novo vencimento: ${new Date(res.newExpiryIso).toLocaleDateString('pt-BR')}`);
+        setStudentsData(prev => prev.map(s => s.id === studentId ? { ...s, subscriptionExpiry: res.newExpiryIso, trialUntil: res.newExpiryIso, expDate: res.newExpDateStr, status: 'Ativo' } : s));
+      }
+      setExtendingStudentModal(null);
     } catch (error) {
-      console.error("Error extending trial:", error);
-      alert("Erro ao prorrogado acesso.");
+      console.error("Error extending student access:", error);
+      alert("Erro ao estender o acesso do aluno.");
     }
   };
 
@@ -3483,6 +3511,56 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
             </div>
           </div>
 
+          {/* Section: Configuração de Vínculo e Tempo de Acesso */}
+          <div>
+            <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-4 border-b border-border-dark flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">schedule</span>
+                Tempo de Vínculo Inicial (Pré-Pagamento)
+              </span>
+              <span className="text-[10px] text-primary font-extrabold uppercase bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
+                Acesso Imediato
+              </span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+              <label className="flex flex-col gap-2">
+                <p className="text-text-primary text-sm font-semibold">
+                  Duração do Vínculo Inicial
+                </p>
+                <select
+                  value={newStudentTrialDays}
+                  onChange={(e) => setNewStudentTrialDays(e.target.value)}
+                  className="w-full h-12 rounded-xl text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-background-dark px-4 transition-all cursor-pointer font-medium"
+                >
+                  <option value="7">7 dias (Degustação Curta)</option>
+                  <option value="15">15 dias (Degustação Média)</option>
+                  <option value="30">30 dias (1 Mês - Padrão)</option>
+                  <option value="60">60 dias (2 Meses)</option>
+                  <option value="90">90 dias (3 Meses)</option>
+                  <option value="180">180 dias (6 Meses)</option>
+                  <option value="365">365 dias (1 Ano)</option>
+                </select>
+              </label>
+
+              <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl flex flex-col justify-center gap-1">
+                <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-sm">verified_user</span>
+                  Vínculo Automático no Primeiro Acesso
+                </div>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Ao logar no app, o aluno já terá seu <strong>vínculo ativo diretamente com você</strong> com vencimento em{" "}
+                  <strong className="text-white font-mono">
+                    {(() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + (Number(newStudentTrialDays) || 30));
+                      return d.toLocaleDateString('pt-BR');
+                    })()}
+                  </strong>, ficando pendente apenas a regularização do pagamento.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Section: Informações Adicionais */}
           <div>
             <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-4 border-b border-border-dark">
@@ -3584,14 +3662,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 <span className="text-text-secondary">E-mail:</span>
                 <span className="text-white font-mono font-medium">{createdStudentModal.email}</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between border-b border-border-dark/50 pb-2">
                 <span className="text-text-secondary">Senha Inicial:</span>
                 <span className="text-primary font-mono font-bold">{createdStudentModal.password}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-text-secondary">Validade do Vínculo:</span>
+                <span className="text-white font-mono font-bold">{createdStudentModal.expDateFormatted} ({createdStudentModal.trialDays} dias)</span>
               </div>
             </div>
 
             <p className="text-xs text-text-secondary leading-relaxed text-center">
-              Passe o e-mail e a senha inicial acima para o seu aluno. No primeiro acesso, o aplicativo sincronizará automaticamente todas as fichas e avaliações prescritas por você!
+              Passe o e-mail e a senha inicial acima para o seu aluno. No primeiro acesso, o aplicativo sincronizará e vinculará a conta automaticamente!
             </p>
 
             <div className="flex flex-col gap-2.5">
@@ -3632,6 +3714,62 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 className="w-full py-3.5 bg-primary text-background-dark font-black rounded-xl hover:brightness-110 transition-all text-sm mt-1 cursor-pointer"
               >
                 Concluído (Ir para Lista de Alunos)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Estender Tempo de Vínculo */}
+      {extendingStudentModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-card-dark border border-border-dark rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border-dark pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-primary/20 text-primary rounded-xl border border-primary/30">
+                  <span className="material-symbols-outlined text-xl">history_toggle_off</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-lg leading-tight">Estender Tempo de Vínculo</h3>
+                  <p className="text-xs text-text-secondary">Aluno: <strong className="text-white">{extendingStudentModal.studentName}</strong></p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExtendingStudentModal(null)}
+                className="text-text-secondary hover:text-white transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Escolha quantos dias deseja acrescentar ao período de vínculo e acesso antes da cobrança/pagamento. Caso a data esteja expirada, os dias serão acrescentados a partir de hoje.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {[7, 15, 30, 60, 90, 180].map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => handleExtendStudentAccess(extendingStudentModal.studentId, days)}
+                  className="py-3 px-4 bg-background-dark hover:bg-primary/20 border border-border-dark hover:border-primary/50 text-white hover:text-primary font-bold rounded-xl text-xs transition-all flex items-center justify-between group cursor-pointer"
+                >
+                  <span>+{days} Dias</span>
+                  <span className="text-[10px] text-text-secondary group-hover:text-primary">
+                    {days === 30 ? '(1 Mês)' : days === 60 ? '(2 Meses)' : days === 90 ? '(3 Meses)' : days === 180 ? '(6 Meses)' : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-border-dark flex gap-3">
+              <button
+                type="button"
+                onClick={() => setExtendingStudentModal(null)}
+                className="w-full py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl border border-white/10 transition-all text-xs cursor-pointer"
+              >
+                Cancelar
               </button>
             </div>
           </div>

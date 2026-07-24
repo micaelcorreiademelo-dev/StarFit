@@ -24,6 +24,10 @@ export const dataService = {
     status?: string;
     trainerId: string;
     accessPassword?: string;
+    subscriptionExpiry?: string;
+    trialUntil?: string;
+    expDate?: string;
+    paymentStatus?: 'paid' | 'pending' | 'expired';
   }) => {
     try {
       const emailLower = studentData.email.trim().toLowerCase();
@@ -52,6 +56,10 @@ export const dataService = {
         role: 'STUDENT',
         trainerId: studentData.trainerId,
         accessPassword: studentData.accessPassword || 'starfit123',
+        subscriptionExpiry: studentData.subscriptionExpiry || null,
+        trialUntil: studentData.trialUntil || null,
+        expDate: studentData.expDate || null,
+        paymentStatus: studentData.paymentStatus || 'pending',
         isManualStudent: true,
         avatar: `https://i.pravatar.cc/150?u=${studentId}`,
         createdAt: serverTimestamp(),
@@ -76,6 +84,45 @@ export const dataService = {
     } catch (error: any) {
       if (error.message?.includes('Já existe')) throw error;
       handleFirestoreError(error, OperationType.CREATE, 'users');
+    }
+  },
+
+  extendStudentAccess: async (studentId: string, daysToAdd: number) => {
+    try {
+      const userRef = doc(db, 'users', studentId);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) throw new Error('Aluno não encontrado.');
+      const userData = userSnap.data();
+
+      // Determine starting base date
+      let baseDate = new Date();
+      if (userData.subscriptionExpiry) {
+        const currentExp = new Date(userData.subscriptionExpiry);
+        if (currentExp > new Date()) {
+          baseDate = currentExp;
+        }
+      } else if (userData.trialUntil) {
+        const trialExp = userData.trialUntil?.toDate ? userData.trialUntil.toDate() : new Date(userData.trialUntil);
+        if (trialExp > new Date()) {
+          baseDate = trialExp;
+        }
+      }
+
+      baseDate.setDate(baseDate.getDate() + Number(daysToAdd));
+      const newExpiryIso = baseDate.toISOString();
+      const newExpDateStr = baseDate.toISOString().split('T')[0];
+
+      await updateDoc(userRef, {
+        subscriptionExpiry: newExpiryIso,
+        trialUntil: newExpiryIso,
+        expDate: newExpDateStr,
+        status: 'Ativo',
+        updatedAt: serverTimestamp(),
+      });
+
+      return { newExpiryIso, newExpDateStr };
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.UPDATE, 'users');
     }
   },
 

@@ -55,9 +55,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const isSubscriptionExpired = user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date();
-  const hasActiveTrial = user.trialUntil && new Date() < (user.trialUntil?.toDate ? user.trialUntil.toDate() : new Date(user.trialUntil));
-  const isAccessBlocked = user.trainerId && (user.status !== 'Ativa' || isSubscriptionExpired) && !hasActiveTrial;
+  const isSubscriptionExpired = user.subscriptionExpiry ? new Date(user.subscriptionExpiry) < new Date() : false;
+  const hasActiveTrial = (user.trialUntil && new Date() < (user.trialUntil?.toDate ? user.trialUntil.toDate() : new Date(user.trialUntil))) ||
+                        (user.subscriptionExpiry && new Date() < new Date(user.subscriptionExpiry));
+  const isAccessBlocked = user.trainerId && (user.status === 'Bloqueado' || user.status === 'Inativo' || (isSubscriptionExpired && !hasActiveTrial));
 
   // Online Presence
   useEffect(() => {
@@ -737,6 +738,37 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
 
     return (
       <div className="pb-20">
+        {trainer && (
+          <div className="bg-card-light dark:bg-card-dark border border-primary/30 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-primary/5">
+            <div className="flex items-center gap-3 min-w-0">
+              <img src={trainer.avatar || `https://i.pravatar.cc/150?u=${trainer.id}`} alt={trainer.name} className="size-11 rounded-full border-2 border-primary shrink-0 object-cover" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-bold text-text-light-primary dark:text-text-dark-primary truncate">
+                    Vinculado ao Personal <span className="text-primary">{trainer.name}</span>
+                  </p>
+                  <span className="bg-primary/20 text-primary text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-primary/30 shrink-0">
+                    Vínculo Ativo
+                  </span>
+                </div>
+                <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary mt-0.5">
+                  {user.subscriptionExpiry ? (
+                    <>Acesso Válido até: <strong className="text-text-light-primary dark:text-text-dark-primary font-mono">{new Date(user.subscriptionExpiry).toLocaleDateString('pt-BR')}</strong> (Pagamento Pendente)</>
+                  ) : (
+                    <>Vínculo estabelecido com o Personal Trainer</>
+                  )}
+                </p>
+              </div>
+            </div>
+            {user.subscriptionExpiry && (
+              <div className="text-xs font-bold text-primary bg-primary/10 px-3 py-2 rounded-xl border border-primary/20 shrink-0 flex items-center gap-1.5 self-stretch sm:self-auto justify-center">
+                <span className="material-symbols-outlined text-sm">schedule</span>
+                {Math.max(0, Math.ceil((new Date(user.subscriptionExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} dias restantes
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-wrap justify-between gap-3 mb-6">
           <div className="flex min-w-72 flex-col gap-2">
             <h1 className="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em]">
