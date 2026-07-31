@@ -1241,7 +1241,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div className="min-w-0">
                     {ex.isSpecial && (
-                      <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-black tracking-widest uppercase bg-primary/20 text-primary mb-2 border border-primary/20 animate-pulse">Série Especial</span>
+                      <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-black tracking-widest uppercase bg-primary/20 text-primary mb-2 border border-primary/20 animate-pulse">
+                        {ex.specialType || "Série Especial"}
+                      </span>
                     )}
                     <h2 className="text-xl font-black tracking-tight text-text-light-primary dark:text-text-dark-primary truncate">{ex.name}</h2>
                     <p className="text-text-light-secondary dark:text-text-dark-secondary text-[11px] font-bold uppercase tracking-wider mt-1">{ex.category || "GERAL"} • Exercício {index + 1} de {displayExercises.length}</p>
@@ -1298,6 +1300,77 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                     </button>
                   </div>
                 </div>
+
+                {/* Special series sub-exercises or drop stages */}
+                {ex.isSpecial && ex.subExercises && ex.subExercises.length > 0 && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-primary/10 pb-2">
+                      <span className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm">bolt</span>
+                        Sequência da Série Especial ({ex.specialType || "BI-SET"})
+                      </span>
+                      <span className="text-[10px] text-text-light-secondary dark:text-text-dark-secondary font-bold uppercase">
+                        {ex.subExercises.length} Exercícios
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {ex.subExercises.map((sub: any, sIdx: number) => (
+                        <div key={sIdx} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs bg-background-light dark:bg-background-dark/80 p-2.5 rounded-lg border border-border-light dark:border-border-dark font-bold">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="size-5 rounded-full bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center shrink-0">
+                                {sIdx + 1}
+                              </span>
+                              <span className="text-text-light-primary dark:text-text-dark-primary truncate">{sub.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 text-[11px] text-primary font-mono">
+                              <span>{sub.reps}</span>
+                              {sub.weight && <span className="bg-primary/10 px-1.5 py-0.5 rounded text-primary">{sub.weight}</span>}
+                            </div>
+                          </div>
+                          {sIdx < ex.subExercises.length - 1 && (
+                            <div className="flex items-center justify-center gap-1 text-[9px] font-black text-amber-500 uppercase tracking-widest py-0.5">
+                              <span className="material-symbols-outlined text-[11px]">bolt</span>
+                              SEM DESCANSO ENTRE EXERCÍCIOS
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ex.isSpecial && ex.dropStages && ex.dropStages.length > 0 && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-primary/10 pb-2">
+                      <span className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm">trending_down</span>
+                        Estágios de Drop-Set ({ex.dropStages.length} Cargas)
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {ex.dropStages.map((stage: any, stIdx: number) => (
+                        <div key={stIdx} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs bg-background-light dark:bg-background-dark/80 p-2.5 rounded-lg border border-border-light dark:border-border-dark font-bold">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-black text-primary">{stage.label || `Drop ${stIdx + 1}`}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] font-mono">
+                              <span className="text-text-light-primary dark:text-text-dark-primary">{stage.reps}</span>
+                              {stage.weight && <span className="bg-primary/10 px-1.5 py-0.5 rounded text-primary font-bold">{stage.weight}</span>}
+                            </div>
+                          </div>
+                          {stIdx < ex.dropStages.length - 1 && (
+                            <div className="flex items-center justify-center gap-1 text-[9px] font-black text-red-500 uppercase tracking-widest py-0.5">
+                              <span className="material-symbols-outlined text-[11px]">bolt</span>
+                              REDUZIR CARGA IMEDIATAMENTE - SEM DESCANSO
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Highly structured detailed series vs fallback */}
                 {ex.series && ex.series.length > 0 ? (

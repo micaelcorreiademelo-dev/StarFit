@@ -612,8 +612,132 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<any | null>(null);
   const [isManualExercise, setIsManualExercise] = useState(false);
   const [isSpecialSeries, setIsSpecialSeries] = useState(false);
+  const [specialSeriesType, setSpecialSeriesType] = useState<"BI-SET" | "TRI-SET" | "DROP-SET" | "CIRCUITO" | "SUPER-SÉRIE">("BI-SET");
+  const [specialSubExercises, setSpecialSubExercises] = useState<Array<{ name: string; reps: string; weight: string; notes?: string }>>([
+    { name: "Supino Reto com Barra", reps: "10 a 12", weight: "20kg" },
+    { name: "Crucifixo Reto com Halteres", reps: "12 a 15", weight: "12kg" }
+  ]);
+  const [specialDropStages, setSpecialDropStages] = useState<Array<{ label: string; weight: string; reps: string }>>([
+    { label: "Carga Inicial", weight: "20kg", reps: "10" },
+    { label: "1º Drop (-20%)", weight: "16kg", reps: "Até a falha" },
+    { label: "2º Drop (-20%)", weight: "12kg", reps: "Até a falha" }
+  ]);
+  const [libraryModalSubIndex, setLibraryModalSubIndex] = useState<number | null>(null);
+  const [libraryModalForDropMain, setLibraryModalForDropMain] = useState(false);
+  const [libraryModalSearch, setLibraryModalSearch] = useState("");
+  const [libraryModalCategory, setLibraryModalCategory] = useState<string | null>(null);
   const [editingConfiguredExerciseId, setEditingConfiguredExerciseId] = useState<string | null>(null);
   const [editingConfiguredExerciseIndex, setEditingConfiguredExerciseIndex] = useState<number | null>(null);
+
+  const handleSelectSpecialType = (type: "BI-SET" | "TRI-SET" | "DROP-SET" | "CIRCUITO" | "SUPER-SÉRIE") => {
+    setSpecialSeriesType(type);
+    
+    if (type === "BI-SET") {
+      const current = specialSubExercises.length >= 2 ? specialSubExercises.slice(0, 2) : [
+        { name: specialSubExercises[0]?.name || "Supino Reto com Barra", reps: specialSubExercises[0]?.reps || "10 a 12", weight: specialSubExercises[0]?.weight || "20kg" },
+        { name: "Crucifixo Reto com Halteres", reps: "12 a 15", weight: "12kg" }
+      ];
+      setSpecialSubExercises(current);
+      setSelectedLibraryExercise({
+        name: `[BI-SET] ${current[0]?.name || "Exercício 1"} + ${current[1]?.name || "Exercício 2"}`,
+        category: "Especial"
+      });
+    } else if (type === "TRI-SET") {
+      let current = [...specialSubExercises];
+      if (current.length < 3) {
+        const defaults = ["Elevação Lateral", "Desenvolvimento com Halteres", "Elevação Frontal"];
+        while (current.length < 3) {
+          current.push({
+            name: defaults[current.length] || `Exercício ${current.length + 1}`,
+            reps: "10 a 12",
+            weight: "10kg"
+          });
+        }
+      } else if (current.length > 3) {
+        current = current.slice(0, 3);
+      }
+      setSpecialSubExercises(current);
+      setSelectedLibraryExercise({
+        name: `[TRI-SET] ${current[0]?.name} + ${current[1]?.name} + ${current[2]?.name}`,
+        category: "Especial"
+      });
+    } else if (type === "DROP-SET") {
+      const mainName = specialSubExercises[0]?.name || "Elevação Lateral";
+      if (specialDropStages.length < 2) {
+        setSpecialDropStages([
+          { label: "Carga Inicial", weight: "20kg", reps: "10" },
+          { label: "1º Drop (-20%)", weight: "16kg", reps: "Até a falha" },
+          { label: "2º Drop (-20%)", weight: "12kg", reps: "Até a falha" }
+        ]);
+      }
+      setSelectedLibraryExercise({
+        name: `[DROP-SET] ${mainName}`,
+        category: "Especial"
+      });
+    } else if (type === "CIRCUITO") {
+      let current = [...specialSubExercises];
+      if (current.length < 3) {
+        current = [
+          { name: "Agachamento Livre", reps: "15 reps", weight: "Peso Corporal" },
+          { name: "Flexão de Braço", reps: "12 reps", weight: "Peso Corporal" },
+          { name: "Abdominal Supra", reps: "20 reps", weight: "Peso Corporal" },
+          { name: "Polichinelo", reps: "45 seg", weight: "Sem carga" }
+        ];
+      }
+      setSpecialSubExercises(current);
+      setSelectedLibraryExercise({
+        name: `[CIRCUITO] ${current.length} Exercícios em Circuito`,
+        category: "Especial"
+      });
+    } else if (type === "SUPER-SÉRIE") {
+      let current = [...specialSubExercises];
+      if (current.length < 2) {
+        current = [
+          { name: "Rosca Direta com Barra (Bíceps)", reps: "10 a 12", weight: "15kg" },
+          { name: "Tríceps de Testa (Tríceps)", reps: "10 a 12", weight: "15kg" }
+        ];
+      }
+      setSpecialSubExercises(current);
+      setSelectedLibraryExercise({
+        name: `[SUPER-SÉRIE] ${current[0]?.name} + ${current[1]?.name}`,
+        category: "Especial"
+      });
+    }
+  };
+
+  const updateSubExerciseField = (index: number, field: "name" | "reps" | "weight", value: string) => {
+    const updated = [...specialSubExercises];
+    updated[index] = { ...updated[index], [field]: value };
+    setSpecialSubExercises(updated);
+
+    if (specialSeriesType === "BI-SET" && updated.length >= 2) {
+      setSelectedLibraryExercise({
+        name: `[BI-SET] ${updated[0].name || "Ex 1"} + ${updated[1].name || "Ex 2"}`,
+        category: "Especial"
+      });
+    } else if (specialSeriesType === "TRI-SET" && updated.length >= 3) {
+      setSelectedLibraryExercise({
+        name: `[TRI-SET] ${updated[0].name || "Ex 1"} + ${updated[1].name || "Ex 2"} + ${updated[2].name || "Ex 3"}`,
+        category: "Especial"
+      });
+    } else if (specialSeriesType === "SUPER-SÉRIE" && updated.length >= 2) {
+      setSelectedLibraryExercise({
+        name: `[SUPER-SÉRIE] ${updated[0].name || "Ex 1"} + ${updated[1].name || "Ex 2"}`,
+        category: "Especial"
+      });
+    } else if (specialSeriesType === "CIRCUITO") {
+      setSelectedLibraryExercise({
+        name: `[CIRCUITO] ${updated.length} Exercícios em Circuito`,
+        category: "Especial"
+      });
+    }
+  };
+
+  const updateDropStageField = (index: number, field: "label" | "weight" | "reps", value: string) => {
+    const updated = [...specialDropStages];
+    updated[index] = { ...updated[index], [field]: value };
+    setSpecialDropStages(updated);
+  };
 
   const [detailSeriesForm, setDetailSeriesForm] = useState<"Repetição" | "Minuto" | "Segundo">("Repetição");
   const [detailLoadConfig, setDetailLoadConfig] = useState<"Kg" | "Libras" | "Pesos" | "%">("Kg");
@@ -711,6 +835,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     setSelectedLibraryExercise({ name: ex.name, category: ex.category });
     setIsManualExercise(ex.isManual || false);
     setIsSpecialSeries(ex.isSpecial || false);
+    setSpecialSeriesType(ex.specialType || "BI-SET");
+    setSpecialSubExercises(ex.subExercises && ex.subExercises.length > 0 ? ex.subExercises : [
+      { name: "Supino Reto com Barra", reps: "10 a 12", weight: "20kg" },
+      { name: "Crucifixo Reto com Halteres", reps: "12 a 15", weight: "12kg" }
+    ]);
+    setSpecialDropStages(ex.dropStages && ex.dropStages.length > 0 ? ex.dropStages : [
+      { label: "Carga Inicial", weight: "20kg", reps: "10" },
+      { label: "1º Drop (-20%)", weight: "16kg", reps: "Até a falha" },
+      { label: "2º Drop (-20%)", weight: "12kg", reps: "Até a falha" }
+    ]);
     setEditingConfiguredExerciseId(ex.id || null);
     setEditingConfiguredExerciseIndex(idx !== undefined ? idx : null);
     setDetailSeriesForm(ex.seriesForm || "Repetição");
@@ -738,20 +872,35 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   };
 
   const openExerciseDetailForSpecial = () => {
-    setSelectedLibraryExercise({ name: "", category: "Especial" });
     setIsManualExercise(false);
     setIsSpecialSeries(true);
+    setSpecialSeriesType("BI-SET");
+    const initialSubs = [
+      { name: "Supino Reto com Barra", reps: "10 a 12", weight: "20kg" },
+      { name: "Crucifixo Reto com Halteres", reps: "12 a 15", weight: "12kg" }
+    ];
+    setSpecialSubExercises(initialSubs);
+    setSpecialDropStages([
+      { label: "Carga Inicial", weight: "20kg", reps: "10" },
+      { label: "1º Drop (-20%)", weight: "16kg", reps: "Até a falha" },
+      { label: "2º Drop (-20%)", weight: "12kg", reps: "Até a falha" }
+    ]);
+    setSelectedLibraryExercise({
+      name: `[BI-SET] ${initialSubs[0].name} + ${initialSubs[1].name}`,
+      category: "Especial"
+    });
     setEditingConfiguredExerciseId(null);
     setEditingConfiguredExerciseIndex(null);
     setDetailSeriesForm("Repetição");
     setDetailLoadConfig("Kg");
     setDetailRest(90);
     setDetailSeries([
-      { id: "s1", reps: "10", weight: "" },
-      { id: "s2", reps: "10", weight: "" }
+      { id: "s1", reps: "1ª Série / Volta", weight: "Série Especial" },
+      { id: "s2", reps: "2ª Série / Volta", weight: "Série Especial" },
+      { id: "s3", reps: "3ª Série / Volta", weight: "Série Especial" }
     ]);
     setDetailVideoUrl("");
-    setDetailNotes("Descreva os exercícios conjugados/agrupados...");
+    setDetailNotes("Executar a sequência de exercícios de forma conjugada sem descanso entre eles. Pausar somente ao concluir cada série/volta completa.");
     setWorkoutEditorStep("detalhe");
   };
 
@@ -760,16 +909,19 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     
     const finalName = (selectedLibraryExercise?.name || "").trim();
     if (!finalName) {
-      alert("Por favor, preencha o nome do exercício.");
+      alert("Por favor, preencha o nome do exercício/série especial.");
       return;
     }
 
     const exData: any = {
       id: editingConfiguredExerciseId || `ex-${Date.now()}-${Math.random()}`,
       name: finalName,
-      category: selectedLibraryExercise?.category || "Geral",
+      category: isSpecialSeries ? "Especial" : (selectedLibraryExercise?.category || "Geral"),
       isManual: isManualExercise,
       isSpecial: isSpecialSeries,
+      specialType: isSpecialSeries ? specialSeriesType : undefined,
+      subExercises: isSpecialSeries && specialSeriesType !== "DROP-SET" ? specialSubExercises : [],
+      dropStages: isSpecialSeries && specialSeriesType === "DROP-SET" ? specialDropStages : [],
       seriesForm: detailSeriesForm,
       loadConfig: detailLoadConfig,
       rest: detailRest,
@@ -4630,17 +4782,294 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                       </div>
 
                       <div className="p-6 flex flex-col gap-6">
-                        {(isManualExercise || isSpecialSeries) && (
-                          <label className="flex flex-col gap-2">
-                            <span className="text-text-primary text-xs font-black tracking-widest uppercase">Nome Customizado do Exercício</span>
-                            <input
-                              type="text"
-                              value={selectedLibraryExercise.name}
-                              onChange={(e) => setSelectedLibraryExercise({...selectedLibraryExercise, name: e.target.value})}
-                              className="w-full h-12 rounded-lg bg-background-dark/55 border border-border-dark text-white px-4 focus:outline-none focus:border-primary text-sm font-bold"
-                              placeholder={isSpecialSeries ? "ex: Bi-set: Supino reto + Crucifixo" : "ex: Flexão declinada"}
-                            />
-                          </label>
+                        {isSpecialSeries ? (
+                          <>
+                            {/* SELECTION OF SPECIAL SERIES TYPE */}
+                            <div className="flex flex-col gap-3 bg-primary/5 border border-primary/20 p-4 rounded-xl">
+                              <div className="flex items-center justify-between">
+                                <span className="text-primary text-xs font-black tracking-widest uppercase flex items-center gap-1.5">
+                                  <span className="material-symbols-outlined text-base">bolt</span>
+                                  Modalidade de Série Especial
+                                </span>
+                                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded font-black uppercase">
+                                  {specialSeriesType}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                                {[
+                                  { type: "BI-SET", label: "BI-SET", desc: "2 Exercícios sem pausa" },
+                                  { type: "TRI-SET", label: "TRI-SET", desc: "3 Exercícios sem pausa" },
+                                  { type: "DROP-SET", label: "DROP-SET", desc: "Redução de carga p/ falha" },
+                                  { type: "CIRCUITO", label: "CIRCUITO", desc: "Sequência de 3+ exercícios" },
+                                  { type: "SUPER-SÉRIE", label: "SUPER-SÉRIE", desc: "Grupos opostos/alternados" }
+                                ].map((item) => (
+                                  <button
+                                    key={item.type}
+                                    type="button"
+                                    onClick={() => handleSelectSpecialType(item.type as any)}
+                                    className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                                      specialSeriesType === item.type
+                                        ? "bg-primary text-background-dark border-primary font-black shadow-lg shadow-primary/20"
+                                        : "bg-background-dark/60 text-white border-border-dark hover:border-primary/50 hover:bg-white/5"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-black uppercase tracking-wider">{item.label}</span>
+                                      {specialSeriesType === item.type && (
+                                        <span className="material-symbols-outlined text-sm font-black">check_circle</span>
+                                      )}
+                                    </div>
+                                    <span className={`text-[10px] leading-tight ${specialSeriesType === item.type ? "text-background-dark/80 font-bold" : "text-text-secondary font-medium"}`}>
+                                      {item.desc}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* IF SPECIAL SERIES AND NOT DROP-SET: SUB-EXERCISES LIST */}
+                            {specialSeriesType !== "DROP-SET" && (
+                              <div className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-text-primary text-xs font-black tracking-widest uppercase">
+                                    Exercícios Conjugados ({specialSubExercises.length})
+                                  </span>
+                                  {(specialSeriesType === "CIRCUITO" || specialSeriesType === "SUPER-SÉRIE") && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSpecialSubExercises([
+                                          ...specialSubExercises,
+                                          { name: `Exercício ${specialSubExercises.length + 1}`, reps: "10 a 12", weight: "10kg" }
+                                        ]);
+                                      }}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-[11px] font-black transition-all"
+                                    >
+                                      <span className="material-symbols-outlined text-xs">add</span>
+                                      Adicionar Exercício
+                                    </button>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                  {specialSubExercises.map((sub, sIdx) => (
+                                    <div key={sIdx} className="flex flex-col gap-3">
+                                      <div className="bg-background-dark/50 border border-border-dark p-4 rounded-xl flex flex-col gap-3 relative">
+                                        <div className="flex items-center justify-between gap-2 border-b border-border-dark/60 pb-2">
+                                          <span className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                                            <span className="size-5 rounded-full bg-primary/20 text-primary text-[10px] flex items-center justify-center font-black">
+                                              {sIdx + 1}
+                                            </span>
+                                            Exercício {sIdx + 1} da Série
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => setLibraryModalSubIndex(sIdx)}
+                                            className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-primary/20 hover:text-primary text-text-secondary border border-border-dark rounded-md text-[10px] font-black uppercase tracking-wider transition-all"
+                                          >
+                                            <span className="material-symbols-outlined text-xs">fitness_center</span>
+                                            Escolher da Biblioteca
+                                          </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                          <div className="sm:col-span-1 flex flex-col gap-1">
+                                            <span className="text-[10px] font-bold text-text-secondary uppercase">Nome do Exercício</span>
+                                            <input
+                                              type="text"
+                                              value={sub.name}
+                                              onChange={(e) => updateSubExerciseField(sIdx, "name", e.target.value)}
+                                              placeholder="Ex: Supino Reto"
+                                              className="w-full h-10 rounded-lg bg-card-dark border border-border-dark text-white px-3 text-xs font-bold focus:border-primary focus:outline-none"
+                                            />
+                                          </div>
+
+                                          <div className="flex flex-col gap-1">
+                                            <span className="text-[10px] font-bold text-text-secondary uppercase">Reps / Objetivo</span>
+                                            <input
+                                              type="text"
+                                              value={sub.reps}
+                                              onChange={(e) => updateSubExerciseField(sIdx, "reps", e.target.value)}
+                                              placeholder="Ex: 10 a 12 ou 45 seg"
+                                              className="w-full h-10 rounded-lg bg-card-dark border border-border-dark text-white px-3 text-xs font-bold focus:border-primary focus:outline-none text-center"
+                                            />
+                                          </div>
+
+                                          <div className="flex flex-col gap-1">
+                                            <span className="text-[10px] font-bold text-text-secondary uppercase">Carga / Peso</span>
+                                            <div className="flex items-center gap-2">
+                                              <input
+                                                type="text"
+                                                value={sub.weight}
+                                                onChange={(e) => updateSubExerciseField(sIdx, "weight", e.target.value)}
+                                                placeholder="Ex: 20kg"
+                                                className="w-full h-10 rounded-lg bg-card-dark border border-border-dark text-white px-3 text-xs font-bold focus:border-primary focus:outline-none text-center"
+                                              />
+                                              {(specialSeriesType === "CIRCUITO" || specialSeriesType === "SUPER-SÉRIE") && specialSubExercises.length > 2 && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setSpecialSubExercises(specialSubExercises.filter((_, i) => i !== sIdx))}
+                                                  className="size-10 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center shrink-0 transition-all"
+                                                  title="Remover este exercício"
+                                                >
+                                                  <span className="material-symbols-outlined text-sm font-bold">delete</span>
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {sIdx < specialSubExercises.length - 1 && (
+                                        <div className="flex items-center justify-center gap-2 text-[10px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 py-1.5 rounded-lg border border-amber-500/20">
+                                          <span className="material-symbols-outlined text-xs">bolt</span>
+                                          SEM DESCANSO ENTRE O EXERCÍCIO {sIdx + 1} E {sIdx + 2}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* IF SPECIAL SERIES AND DROP-SET: DROP STAGES */}
+                            {specialSeriesType === "DROP-SET" && (
+                              <div className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-text-primary text-xs font-black tracking-widest uppercase">
+                                    Exercício Principal e Estágios de Drop
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setLibraryModalForDropMain(true)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-[11px] font-black transition-all"
+                                  >
+                                    <span className="material-symbols-outlined text-xs">fitness_center</span>
+                                    Escolher Exercício da Biblioteca
+                                  </button>
+                                </div>
+
+                                <div className="bg-background-dark/50 border border-border-dark p-4 rounded-xl flex flex-col gap-4">
+                                  <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-text-secondary uppercase">Nome do Exercício para Drop-Set</span>
+                                    <input
+                                      type="text"
+                                      value={specialSubExercises[0]?.name || "Elevação Lateral"}
+                                      onChange={(e) => {
+                                        const name = e.target.value;
+                                        const updated = [...specialSubExercises];
+                                        updated[0] = { ...updated[0], name };
+                                        setSpecialSubExercises(updated);
+                                        setSelectedLibraryExercise({
+                                          name: `[DROP-SET] ${name}`,
+                                          category: "Especial"
+                                        });
+                                      }}
+                                      placeholder="Ex: Elevação Lateral com Halteres"
+                                      className="w-full h-11 rounded-lg bg-card-dark border border-border-dark text-white px-4 text-xs font-bold focus:border-primary focus:outline-none"
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center justify-between border-t border-border-dark pt-3">
+                                    <span className="text-[11px] font-black uppercase text-primary tracking-wider">Estágios de Carga / Redução</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSpecialDropStages([
+                                          ...specialDropStages,
+                                          { label: `${specialDropStages.length}º Drop (-20%)`, weight: "10kg", reps: "Até a falha" }
+                                        ]);
+                                      }}
+                                      className="flex items-center gap-1 px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-md text-[10px] font-black transition-all"
+                                    >
+                                      <span className="material-symbols-outlined text-xs">add</span>
+                                      Adicionar Drop
+                                    </button>
+                                  </div>
+
+                                  <div className="flex flex-col gap-2.5">
+                                    {specialDropStages.map((stage, stIdx) => (
+                                      <div key={stIdx} className="flex flex-col gap-1.5">
+                                        <div className="bg-card-dark border border-border-dark p-3 rounded-lg flex items-center justify-between gap-3">
+                                          <div className="w-1/3 min-w-0">
+                                            <input
+                                              type="text"
+                                              value={stage.label}
+                                              onChange={(e) => updateDropStageField(stIdx, "label", e.target.value)}
+                                              className="w-full h-9 rounded bg-background-dark border border-border-dark text-white px-2.5 text-xs font-bold focus:border-primary focus:outline-none"
+                                            />
+                                          </div>
+
+                                          <div className="w-1/3 min-w-0">
+                                            <input
+                                              type="text"
+                                              value={stage.reps}
+                                              onChange={(e) => updateDropStageField(stIdx, "reps", e.target.value)}
+                                              placeholder="Ex: Até a falha"
+                                              className="w-full h-9 rounded bg-background-dark border border-border-dark text-white px-2.5 text-xs font-bold text-center focus:border-primary focus:outline-none"
+                                            />
+                                          </div>
+
+                                          <div className="w-1/3 min-w-0 flex items-center gap-2">
+                                            <input
+                                              type="text"
+                                              value={stage.weight}
+                                              onChange={(e) => updateDropStageField(stIdx, "weight", e.target.value)}
+                                              placeholder="Ex: 16kg"
+                                              className="w-full h-9 rounded bg-background-dark border border-border-dark text-white px-2.5 text-xs font-bold text-center focus:border-primary focus:outline-none"
+                                            />
+                                            {specialDropStages.length > 2 && stIdx >= 1 && (
+                                              <button
+                                                type="button"
+                                                onClick={() => setSpecialDropStages(specialDropStages.filter((_, i) => i !== stIdx))}
+                                                className="size-9 rounded bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center shrink-0 transition-all"
+                                              >
+                                                <span className="material-symbols-outlined text-sm">delete</span>
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {stIdx < specialDropStages.length - 1 && (
+                                          <div className="text-[9px] font-black text-red-500 uppercase tracking-widest text-center py-0.5">
+                                            ⚡ REDUZIR CARGA IMEDIATAMENTE - SEM DESCANSO
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* TÍTULO DA SÉRIE ESPECIAL */}
+                            <label className="flex flex-col gap-2">
+                              <span className="text-text-primary text-xs font-black tracking-widest uppercase">Título / Identificação da Série Especial</span>
+                              <input
+                                type="text"
+                                value={selectedLibraryExercise.name}
+                                onChange={(e) => setSelectedLibraryExercise({...selectedLibraryExercise, name: e.target.value})}
+                                className="w-full h-12 rounded-lg bg-background-dark/55 border border-border-dark text-white px-4 focus:outline-none focus:border-primary text-sm font-bold"
+                                placeholder="ex: [BI-SET] Supino Reto + Crucifixo"
+                              />
+                            </label>
+                          </>
+                        ) : (
+                          <>
+                            {isManualExercise && (
+                              <label className="flex flex-col gap-2">
+                                <span className="text-text-primary text-xs font-black tracking-widest uppercase">Nome Customizado do Exercício</span>
+                                <input
+                                  type="text"
+                                  value={selectedLibraryExercise.name}
+                                  onChange={(e) => setSelectedLibraryExercise({...selectedLibraryExercise, name: e.target.value})}
+                                  className="w-full h-12 rounded-lg bg-background-dark/55 border border-border-dark text-white px-4 focus:outline-none focus:border-primary text-sm font-bold"
+                                  placeholder="ex: Flexão declinada"
+                                />
+                              </label>
+                            )}
+                          </>
                         )}
 
                         <div className="flex flex-col gap-2.5">
@@ -6430,6 +6859,122 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               >
                 Remover Vínculo
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para seleção de exercício da biblioteca na Série Especial */}
+      {(libraryModalSubIndex !== null || libraryModalForDropMain) && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card-dark border border-border-dark w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-border-dark bg-background-dark/50 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-xl">fitness_center</span>
+                <h3 className="text-white font-bold tracking-tight text-sm">
+                  Escolher Exercício da Biblioteca
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setLibraryModalSubIndex(null);
+                  setLibraryModalForDropMain(false);
+                  setLibraryModalSearch("");
+                  setLibraryModalCategory(null);
+                }}
+                className="text-text-secondary hover:text-white transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Search & Categories */}
+            <div className="p-4 bg-background-dark/30 border-b border-border-dark flex flex-col gap-3 shrink-0">
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-sm">
+                  search
+                </span>
+                <input
+                  type="text"
+                  placeholder="Pesquisar por nome do exercício..."
+                  value={libraryModalSearch}
+                  onChange={(e) => setLibraryModalSearch(e.target.value)}
+                  className="w-full bg-background-dark/80 border border-border-dark/80 rounded-xl py-2.5 pl-9 pr-4 text-white text-xs font-bold focus:outline-none focus:border-primary transition-all"
+                />
+              </div>
+
+              {/* Category Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 text-[10px] font-black uppercase">
+                <button
+                  type="button"
+                  onClick={() => setLibraryModalCategory(null)}
+                  className={`px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+                    libraryModalCategory === null
+                      ? "bg-primary text-background-dark border-primary"
+                      : "bg-white/5 text-text-secondary border-border-dark hover:text-white"
+                  }`}
+                >
+                  Todos
+                </button>
+                {["Peito", "Costas", "Ombros", "Pernas", "Bíceps", "Tríceps", "Glúteos", "Abdômen"].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setLibraryModalCategory(cat)}
+                    className={`px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+                      libraryModalCategory === cat
+                        ? "bg-primary text-background-dark border-primary"
+                        : "bg-white/5 text-text-secondary border-border-dark hover:text-white"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Exercise List */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 custom-scrollbar">
+              {LIBRARY_EXERCISES.filter((ex) => {
+                const matchesSearch = ex.name.toLowerCase().includes(libraryModalSearch.toLowerCase());
+                const matchesCategory = !libraryModalCategory || ex.category.toLowerCase() === libraryModalCategory.toLowerCase();
+                return matchesSearch && matchesCategory;
+              }).map((ex, idx) => (
+                <button
+                  key={`lib-modal-item-${idx}`}
+                  type="button"
+                  onClick={() => {
+                    if (libraryModalForDropMain) {
+                      const updated = [...specialSubExercises];
+                      updated[0] = { ...updated[0], name: ex.name };
+                      setSpecialSubExercises(updated);
+                      setSelectedLibraryExercise({
+                        name: `[DROP-SET] ${ex.name}`,
+                        category: "Especial"
+                      });
+                      setLibraryModalForDropMain(false);
+                    } else if (libraryModalSubIndex !== null) {
+                      updateSubExerciseField(libraryModalSubIndex, "name", ex.name);
+                      setLibraryModalSubIndex(null);
+                    }
+                    setLibraryModalSearch("");
+                    setLibraryModalCategory(null);
+                  }}
+                  className="w-full flex items-center justify-between p-3 bg-background-dark/40 hover:bg-white/5 border border-border-dark/50 hover:border-primary/40 rounded-xl transition-all text-left group"
+                >
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-white group-hover:text-primary transition-colors truncate">
+                      {ex.name}
+                    </span>
+                    <span className="text-[10px] text-text-secondary font-semibold uppercase">
+                      {ex.category}
+                    </span>
+                  </div>
+                  <span className="material-symbols-outlined text-xs text-text-secondary group-hover:text-primary shrink-0 ml-2">
+                    add_circle
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
