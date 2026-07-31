@@ -253,7 +253,36 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
   const [restAlertMessage, setRestAlertMessage] = useState('');
   const [expandedWorkouts, setExpandedWorkouts] = useState<Record<string, boolean>>({});
   const [videoModalUrl, setVideoModalUrl] = useState<string | null>(null);
+  const [videoModalList, setVideoModalList] = useState<Array<{ title: string; url: string }> | null>(null);
+  const [videoModalActiveIndex, setVideoModalActiveIndex] = useState<number>(0);
+  const [videoModalExerciseName, setVideoModalExerciseName] = useState<string>('');
   const [genericAlert, setGenericAlert] = useState<{title: string, message: string} | null>(null);
+
+  const getExerciseVideos = (ex: any): Array<{ title: string; url: string }> => {
+    if (!ex) return [];
+    if (ex.videoLinks && Array.isArray(ex.videoLinks) && ex.videoLinks.length > 0) {
+      const valid = ex.videoLinks.filter((v: any) => v && v.url && v.url.trim().length > 0);
+      if (valid.length > 0) return valid;
+    }
+    if (ex.videoUrl && ex.videoUrl.trim().length > 0) {
+      return [{ title: 'Vídeo Demonstrativo', url: ex.videoUrl }];
+    }
+    return [];
+  };
+
+  const openExerciseVideos = (ex: any, initialIdx = 0) => {
+    const vList = getExerciseVideos(ex);
+    if (vList.length === 0) {
+      setGenericAlert({
+        title: 'Vídeo Indisponível',
+        message: 'Nenhum vídeo cadastrado para este exercício.'
+      });
+      return;
+    }
+    setVideoModalList(vList);
+    setVideoModalActiveIndex(initialIdx >= 0 && initialIdx < vList.length ? initialIdx : 0);
+    setVideoModalExerciseName(ex.name || 'Demonstração do Exercício');
+  };
 
   const getEmbedUrl = (url: string) => {
     if (!url) return null;
@@ -1038,7 +1067,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
         }).map((workout, idx) => {
           const isExpanded = expandedWorkouts[workout.id];
           return (
-            <div key={workout.id} className="flex flex-col gap-4 p-5 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <div key={`workout-list-${workout.id || idx}-${idx}`} className="flex flex-col gap-4 p-5 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="bg-primary/20 p-3 rounded-full hidden sm:block">
@@ -1212,7 +1241,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
           <div className="flex flex-wrap gap-2.5 mb-8 bg-card-light dark:bg-card-dark p-2 rounded-2xl border border-border-light dark:border-border-dark shadow-inner">
             {activeWorkout.subWorkouts.map((sw: any, idx: number) => (
               <button
-                key={sw.id || idx}
+                key={`sw-btn-${sw.id || idx}-${idx}`}
                 onClick={() => {
                   setSelectedSubWorkoutIndex(idx);
                   setCompletedExercises([]);
@@ -1235,7 +1264,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
             const isFullExCompleted = completedExercises.includes(`full-${index}`);
             return (
               <div 
-                key={index} 
+                key={`ex-card-${ex.id || index}-${index}`} 
                 className={`bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark shadow-sm p-6 flex flex-col gap-4 transition-all duration-200 ${isFullExCompleted ? 'opacity-55' : ''}`}
               >
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -1250,25 +1279,20 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                   </div>
                   <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
                     <button
-                      onClick={() => {
-                        const url = getEmbedUrl(ex.videoUrl);
-                        if (url) {
-                          setVideoModalUrl(url);
-                        } else {
-                          setGenericAlert({
-                            title: 'Vídeo Indisponível',
-                            message: 'Vídeo não disponível para este exercício.'
-                          });
-                        }
-                      }}
-                      className={`size-11 flex shrink-0 items-center justify-center rounded-xl transition-all ${
-                        getEmbedUrl(ex.videoUrl)
-                          ? 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20'
+                      onClick={() => openExerciseVideos(ex)}
+                      className={`h-11 px-3 flex shrink-0 items-center justify-center gap-1.5 rounded-xl transition-all ${
+                        getExerciseVideos(ex).length > 0
+                          ? 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 cursor-pointer'
                           : 'bg-background-light dark:bg-background-dark text-text-light-secondary dark:text-text-dark-secondary/50 border border-border-light dark:border-border-dark opacity-60'
                       }`}
-                      title={getEmbedUrl(ex.videoUrl) ? "Ver Vídeo do Exercício" : "Vídeo não disponível"}
+                      title={getExerciseVideos(ex).length > 0 ? "Ver Vídeos do Exercício" : "Vídeo não disponível"}
                     >
                       <span className="material-symbols-outlined text-xl">play_circle</span>
+                      {getExerciseVideos(ex).length > 1 && (
+                        <span className="text-[10px] font-black bg-primary text-background-dark px-1.5 py-0.5 rounded-md">
+                          {getExerciseVideos(ex).length}
+                        </span>
+                      )}
                     </button>
                     <button
                       onClick={() => {
@@ -1387,7 +1411,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                         const isSetCompleted = completedExercises.includes(keyId);
                         return (
                           <div 
-                            key={s.id || sIdx} 
+                            key={`set-row-${s.id || sIdx}-${sIdx}`} 
                             className={`grid grid-cols-4 gap-2 p-3 text-sm items-center text-center transition-all ${isSetCompleted ? 'bg-primary/5 line-through opacity-55' : ''}`}
                           >
                             <span className="font-extrabold text-text-light-primary dark:text-text-dark-primary text-xs">A{sIdx + 1}</span>
@@ -1438,16 +1462,20 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
                     <span>Descanso Recomendado: {ex.rest >= 60 ? `${Math.floor(ex.rest / 60)}m ${ex.rest % 60}s` : `${ex.rest}s`}</span>
                   </div>
                   
-                  {ex.videoUrl && (
-                    <a 
-                      href={ex.videoUrl} 
-                      target="_blank" 
-                      rel="noreferrer" 
-                      className="flex items-center gap-1.5 text-xs text-secondary hover:underline font-black uppercase tracking-wider"
-                    >
-                      <span className="material-symbols-outlined text-[17px]">play_circle</span>
-                      <span>Assistir Vídeo de Execução</span>
-                    </a>
+                  {getExerciseVideos(ex).length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {getExerciseVideos(ex).map((vItem, vIdx) => (
+                        <button
+                          key={vIdx}
+                          type="button"
+                          onClick={() => openExerciseVideos(ex, vIdx)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary/10 hover:bg-secondary/20 border border-secondary/30 rounded-lg text-xs text-secondary font-black uppercase tracking-wider transition-all cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-base">play_circle</span>
+                          <span>{vItem.title || `Assistir Vídeo ${vIdx + 1}`}</span>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -1839,7 +1867,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
             <div className="space-y-4">
               <h3 className="text-text-light-primary dark:text-text-dark-primary font-bold text-lg">Exercícios Prescritos</h3>
               {displayExercises.map((ex: any, idx: number) => (
-                <div key={idx} className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 flex justify-between items-center gap-4">
+                <div key={`preview-ex-${ex.id || idx}-${idx}`} className="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 flex justify-between items-center gap-4">
                   <div>
                     <h4 className="font-extrabold text-text-light-primary dark:text-text-dark-primary">{ex.name}</h4>
                     <p className="text-xs text-text-light-secondary dark:text-text-dark-secondary mt-1 uppercase tracking-wider font-semibold">
@@ -1897,7 +1925,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
 
                 return (
                   <div
-                    key={idx}
+                    key={`tracked-ex-${ex.id || idx}-${idx}`}
                     className={`bg-card-light dark:bg-card-dark rounded-2xl border border-border-light dark:border-border-dark shadow-sm p-6 flex flex-col gap-4 transition-all duration-300 ${
                       exState === 'completed' ? 'opacity-55 scale-[0.98]' : exState === 'running' ? 'ring-2 ring-primary/50 bg-primary/5' : ''
                     }`}
@@ -1915,25 +1943,20 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
 
                       <div className="flex items-center gap-2.5 w-full sm:w-auto">
                         <button
-                          onClick={() => {
-                            const url = getEmbedUrl(ex.videoUrl);
-                            if (url) {
-                              setVideoModalUrl(url);
-                            } else {
-                              setGenericAlert({
-                                title: 'Vídeo Indisponível',
-                                message: 'Vídeo não disponível para este exercício.'
-                              });
-                            }
-                          }}
-                          className={`size-11 flex shrink-0 items-center justify-center rounded-xl transition-all ${
-                            getEmbedUrl(ex.videoUrl)
+                          onClick={() => openExerciseVideos(ex)}
+                          className={`h-11 px-3 flex shrink-0 items-center justify-center gap-1.5 rounded-xl transition-all ${
+                            getExerciseVideos(ex).length > 0
                               ? 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 cursor-pointer'
                               : 'bg-background-light dark:bg-background-dark/50 text-text-light-secondary dark:text-text-dark-secondary/50 border border-border-light dark:border-border-dark opacity-60 cursor-pointer grayscale'
                           }`}
-                          title={getEmbedUrl(ex.videoUrl) ? "Ver Vídeo do Exercício" : "Vídeo não disponível"}
+                          title={getExerciseVideos(ex).length > 0 ? "Ver Vídeos do Exercício" : "Vídeo não disponível"}
                         >
                           <span className="material-symbols-outlined text-xl">play_circle</span>
+                          {getExerciseVideos(ex).length > 1 && (
+                            <span className="text-[10px] font-black bg-primary text-background-dark px-1.5 py-0.5 rounded-md">
+                              {getExerciseVideos(ex).length}
+                            </span>
+                          )}
                         </button>
                         {workoutMode === 'simple' ? (
                           // Controls for Simple Workout Mode (Independent of tracked)
@@ -3403,7 +3426,71 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
       )}
 
       {/* Video Embed Modal */}
-      {videoModalUrl && (
+      {(videoModalList && videoModalList.length > 0) ? (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-2 sm:p-4 md:p-8 animate-in fade-in duration-200">
+          <div className="w-full h-full md:h-auto md:max-w-4xl flex flex-col bg-slate-950 md:rounded-3xl overflow-hidden shadow-2xl relative border border-white/10 animate-in slide-in-from-bottom md:zoom-in-95 duration-300">
+            {/* Header */}
+            <div className="p-4 flex items-center justify-between z-10 bg-black/80 border-b border-white/10">
+              <div className="min-w-0 pr-4">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest">Demonstração em Vídeo</p>
+                <h3 className="text-white text-base sm:text-lg font-black truncate">{videoModalExerciseName}</h3>
+              </div>
+              <button
+                onClick={() => setVideoModalList(null)}
+                className="size-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center backdrop-blur-sm transition-all shrink-0 cursor-pointer"
+                title="Fechar vídeo"
+              >
+                <span className="material-symbols-outlined font-black">close</span>
+              </button>
+            </div>
+
+            {/* Multiple Videos Tabs Bar */}
+            {videoModalList.length > 1 && (
+              <div className="flex items-center gap-2 overflow-x-auto p-3 bg-black/60 border-b border-white/10 custom-scrollbar shrink-0">
+                <span className="text-[10px] font-black text-primary uppercase tracking-widest shrink-0 hidden sm:inline-flex items-center gap-1 mr-1">
+                  <span className="material-symbols-outlined text-sm">video_library</span>
+                  Vídeos:
+                </span>
+                {videoModalList.map((v, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setVideoModalActiveIndex(idx)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                      videoModalActiveIndex === idx
+                        ? 'bg-primary text-background-dark shadow-md shadow-primary/20 scale-105'
+                        : 'bg-white/10 hover:bg-white/20 text-white opacity-80 hover:opacity-100'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-sm">play_circle</span>
+                    <span>{v.title || `Vídeo ${idx + 1}`}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Active Video Title Bar if set */}
+            {videoModalList[videoModalActiveIndex]?.title && (
+              <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex items-center gap-2 text-xs font-bold text-primary">
+                <span className="material-symbols-outlined text-sm">label</span>
+                <span>{videoModalList[videoModalActiveIndex].title}</span>
+              </div>
+            )}
+
+            {/* 16:9 Container */}
+            <div className="w-full flex-1 flex items-center justify-center bg-black">
+              <div className="w-full aspect-video">
+                <iframe
+                  src={getEmbedUrl(videoModalList[videoModalActiveIndex]?.url) || ''}
+                  title={videoModalList[videoModalActiveIndex]?.title || "Execução do Exercício"}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : videoModalUrl ? (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-0 md:p-8 animate-in fade-in duration-200">
           <div className="w-full h-full md:h-auto md:max-w-4xl flex flex-col bg-black md:rounded-3xl overflow-hidden shadow-2xl relative animate-in slide-in-from-bottom md:zoom-in-95 duration-300">
             {/* Header */}
@@ -3430,7 +3517,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) =
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
     </div>
   );

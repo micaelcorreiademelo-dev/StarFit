@@ -612,7 +612,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<any | null>(null);
   const [isManualExercise, setIsManualExercise] = useState(false);
   const [isSpecialSeries, setIsSpecialSeries] = useState(false);
-  const [specialSeriesType, setSpecialSeriesType] = useState<"BI-SET" | "TRI-SET" | "DROP-SET" | "CIRCUITO" | "SUPER-SÉRIE">("BI-SET");
+  const [specialSeriesType, setSpecialSeriesType] = useState<"BI-SET" | "TRI-SET" | "DROP-SET" | "CIRCUITO" | "SUPER-SÉRIE" | "PERSONALIZADA">("BI-SET");
   const [specialSubExercises, setSpecialSubExercises] = useState<Array<{ name: string; reps: string; weight: string; notes?: string }>>([
     { name: "Supino Reto com Barra", reps: "10 a 12", weight: "20kg" },
     { name: "Crucifixo Reto com Halteres", reps: "12 a 15", weight: "12kg" }
@@ -629,7 +629,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [editingConfiguredExerciseId, setEditingConfiguredExerciseId] = useState<string | null>(null);
   const [editingConfiguredExerciseIndex, setEditingConfiguredExerciseIndex] = useState<number | null>(null);
 
-  const handleSelectSpecialType = (type: "BI-SET" | "TRI-SET" | "DROP-SET" | "CIRCUITO" | "SUPER-SÉRIE") => {
+  const handleSelectSpecialType = (type: "BI-SET" | "TRI-SET" | "DROP-SET" | "CIRCUITO" | "SUPER-SÉRIE" | "PERSONALIZADA") => {
     setSpecialSeriesType(type);
     
     if (type === "BI-SET") {
@@ -702,6 +702,19 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
         name: `[SUPER-SÉRIE] ${current[0]?.name} + ${current[1]?.name}`,
         category: "Especial"
       });
+    } else if (type === "PERSONALIZADA") {
+      let current = [...specialSubExercises];
+      if (current.length === 0) {
+        current = [
+          { name: "Exercício A Customizado", reps: "10 a 12", weight: "Carga a definir" },
+          { name: "Exercício B Customizado", reps: "10 a 12", weight: "Carga a definir" }
+        ];
+      }
+      setSpecialSubExercises(current);
+      setSelectedLibraryExercise({
+        name: selectedLibraryExercise?.name || "[SÉRIE PERSONALIZADA] Combinação Especial Criada",
+        category: "Especial"
+      });
     }
   };
 
@@ -744,6 +757,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
   const [detailRest, setDetailRest] = useState<number>(60);
   const [detailSeries, setDetailSeries] = useState<any[]>([{ id: "1", reps: "10", weight: "12" }]);
   const [detailVideoUrl, setDetailVideoUrl] = useState("");
+  const [detailVideoLinks, setDetailVideoLinks] = useState<Array<{ title: string; url: string }>>([{ title: "", url: "" }]);
   const [detailNotes, setDetailNotes] = useState("");
   const [accordionExpanded, setAccordionExpanded] = useState(false);
 
@@ -827,6 +841,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       { id: "s3", reps: "10", weight: "" }
     ]);
     setDetailVideoUrl("");
+    setDetailVideoLinks([{ title: "", url: "" }]);
     setDetailNotes("");
     setWorkoutEditorStep("detalhe");
   };
@@ -852,6 +867,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     setDetailRest(ex.rest || 60);
     setDetailSeries(ex.series || [{ id: "s1", reps: "10", weight: "" }]);
     setDetailVideoUrl(ex.videoUrl || "");
+    if (ex.videoLinks && Array.isArray(ex.videoLinks) && ex.videoLinks.length > 0) {
+      setDetailVideoLinks(ex.videoLinks);
+    } else if (ex.videoUrl && ex.videoUrl.trim().length > 0) {
+      setDetailVideoLinks([{ title: "Vídeo Demonstrativo", url: ex.videoUrl }]);
+    } else {
+      setDetailVideoLinks([{ title: "", url: "" }]);
+    }
     setDetailNotes(ex.notes || "");
     setWorkoutEditorStep("detalhe");
   };
@@ -867,6 +889,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
     setDetailRest(60);
     setDetailSeries([{ id: "s1", reps: "10", weight: "" }]);
     setDetailVideoUrl("");
+    setDetailVideoLinks([{ title: "", url: "" }]);
     setDetailNotes("");
     setWorkoutEditorStep("detalhe");
   };
@@ -900,6 +923,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       { id: "s3", reps: "3ª Série / Volta", weight: "Série Especial" }
     ]);
     setDetailVideoUrl("");
+    setDetailVideoLinks([{ title: "", url: "" }]);
     setDetailNotes("Executar a sequência de exercícios de forma conjugada sem descanso entre eles. Pausar somente ao concluir cada série/volta completa.");
     setWorkoutEditorStep("detalhe");
   };
@@ -912,6 +936,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       alert("Por favor, preencha o nome do exercício/série especial.");
       return;
     }
+
+    const filteredVideoLinks = detailVideoLinks
+      .map(v => ({ title: (v.title || "").trim(), url: (v.url || "").trim() }))
+      .filter(v => v.url.length > 0);
 
     const exData: any = {
       id: editingConfiguredExerciseId || `ex-${Date.now()}-${Math.random()}`,
@@ -926,7 +954,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
       loadConfig: detailLoadConfig,
       rest: detailRest,
       series: detailSeries,
-      videoUrl: detailVideoUrl,
+      videoLinks: filteredVideoLinks,
+      videoUrl: filteredVideoLinks[0]?.url || "",
       notes: detailNotes
     };
 
@@ -2976,7 +3005,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                   return matchesSearch && matchesStatus;
                 })
                 .map((student, i) => (
-                  <React.Fragment key={student.id}>
+                  <React.Fragment key={`student-tr-${student.id || i}-${i}`}>
                     <tr
                       className={`group hover:bg-white/[0.02] transition-colors cursor-pointer ${selectedStudentId === student.id ? "bg-white/[0.02]" : ""}`}
                       onClick={async () => {
@@ -4796,13 +4825,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                 </span>
                               </div>
 
-                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                                 {[
                                   { type: "BI-SET", label: "BI-SET", desc: "2 Exercícios sem pausa" },
                                   { type: "TRI-SET", label: "TRI-SET", desc: "3 Exercícios sem pausa" },
                                   { type: "DROP-SET", label: "DROP-SET", desc: "Redução de carga p/ falha" },
                                   { type: "CIRCUITO", label: "CIRCUITO", desc: "Sequência de 3+ exercícios" },
-                                  { type: "SUPER-SÉRIE", label: "SUPER-SÉRIE", desc: "Grupos opostos/alternados" }
+                                  { type: "SUPER-SÉRIE", label: "SUPER-SÉRIE", desc: "Grupos opostos/alternados" },
+                                  { type: "PERSONALIZADA", label: "PERSONALIZADA", desc: "Criar série manual sob medida" }
                                 ].map((item) => (
                                   <button
                                     key={item.type}
@@ -4835,7 +4865,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                   <span className="text-text-primary text-xs font-black tracking-widest uppercase">
                                     Exercícios Conjugados ({specialSubExercises.length})
                                   </span>
-                                  {(specialSeriesType === "CIRCUITO" || specialSeriesType === "SUPER-SÉRIE") && (
+                                  {(specialSeriesType === "CIRCUITO" || specialSeriesType === "SUPER-SÉRIE" || specialSeriesType === "PERSONALIZADA") && (
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -4906,7 +4936,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                                                 placeholder="Ex: 20kg"
                                                 className="w-full h-10 rounded-lg bg-card-dark border border-border-dark text-white px-3 text-xs font-bold focus:border-primary focus:outline-none text-center"
                                               />
-                                              {(specialSeriesType === "CIRCUITO" || specialSeriesType === "SUPER-SÉRIE") && specialSubExercises.length > 2 && (
+                                              {((specialSeriesType === "CIRCUITO" || specialSeriesType === "SUPER-SÉRIE" || specialSeriesType === "PERSONALIZADA") && specialSubExercises.length > 1) && (
                                                 <button
                                                   type="button"
                                                   onClick={() => setSpecialSubExercises(specialSubExercises.filter((_, i) => i !== sIdx))}
@@ -5215,15 +5245,79 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                          <span className="text-text-primary text-xs font-black tracking-widest uppercase">5 - Link de Vídeo demonstrativo (YouTube)</span>
-                          <input
-                            type="url"
-                            value={detailVideoUrl}
-                            onChange={(e) => setDetailVideoUrl(e.target.value)}
-                            placeholder="https://www.youtube.com/watch?v=..."
-                            className="w-full h-12 rounded-lg bg-background-dark/55 border border-border-dark text-white px-4 text-xs focus:outline-none focus:border-primary font-mono font-bold"
-                          />
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-text-primary text-xs font-black tracking-widest uppercase flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-base text-primary">video_library</span>
+                              5 - Links de Vídeos Demonstrativos (YouTube)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setDetailVideoLinks([...detailVideoLinks, { title: "", url: "" }])}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-[11px] font-black transition-all"
+                            >
+                              <span className="material-symbols-outlined text-xs">add</span>
+                              Adicionar Outro Vídeo
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col gap-3">
+                            {detailVideoLinks.map((vItem, vIdx) => (
+                              <div key={vIdx} className="bg-background-dark/50 border border-border-dark p-3.5 rounded-xl flex flex-col gap-2.5 relative">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[10px] font-black uppercase text-primary tracking-wider flex items-center gap-1.5">
+                                    <span className="size-5 rounded-full bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center">
+                                      {vIdx + 1}
+                                    </span>
+                                    Vídeo {vIdx + 1}
+                                  </span>
+                                  {detailVideoLinks.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setDetailVideoLinks(detailVideoLinks.filter((_, i) => i !== vIdx))}
+                                      className="text-red-400 hover:text-red-300 text-[11px] font-bold flex items-center gap-1 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-md transition-all"
+                                      title="Remover vídeo"
+                                    >
+                                      <span className="material-symbols-outlined text-xs">delete</span>
+                                      Excluir
+                                    </button>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                                  <div className="sm:col-span-5 flex flex-col gap-1">
+                                    <span className="text-[10px] font-bold text-text-secondary uppercase">Título do Vídeo</span>
+                                    <input
+                                      type="text"
+                                      value={vItem.title}
+                                      onChange={(e) => {
+                                        const updated = [...detailVideoLinks];
+                                        updated[vIdx] = { ...updated[vIdx], title: e.target.value };
+                                        setDetailVideoLinks(updated);
+                                      }}
+                                      placeholder="Ex: Execução Visão Lateral, Erros Comuns"
+                                      className="w-full h-10 rounded-lg bg-card-dark border border-border-dark text-white px-3 text-xs font-bold focus:border-primary focus:outline-none"
+                                    />
+                                  </div>
+
+                                  <div className="sm:col-span-7 flex flex-col gap-1">
+                                    <span className="text-[10px] font-bold text-text-secondary uppercase">Link do YouTube (URL)</span>
+                                    <input
+                                      type="url"
+                                      value={vItem.url}
+                                      onChange={(e) => {
+                                        const updated = [...detailVideoLinks];
+                                        updated[vIdx] = { ...updated[vIdx], url: e.target.value };
+                                        setDetailVideoLinks(updated);
+                                      }}
+                                      placeholder="https://www.youtube.com/watch?v=..."
+                                      className="w-full h-10 rounded-lg bg-card-dark border border-border-dark text-white px-3 text-xs font-mono font-bold focus:border-primary focus:outline-none"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
 
                         <div className="flex flex-col gap-2">
@@ -6618,9 +6712,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 ) : (
                   studentsData
                     .filter(s => s.name.toLowerCase().includes(studentSearchForWorkout.toLowerCase()))
-                    .map((student) => (
+                    .map((student, idx) => (
                       <button
-                        key={student.id}
+                        key={`select-student-btn-${student.id || idx}-${idx}`}
                         onClick={() => {
                           setEditingWorkoutId("new");
                           setPreAssignedStudentId(student.id);
@@ -6687,8 +6781,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     Nenhum comunicado disponível no momento.
                   </div>
                 ) : (
-                  announcements.map((ann) => (
-                    <div key={ann.id} className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
+                  announcements.map((ann, idx) => (
+                    <div key={`announcement-${ann.id || idx}-${idx}`} className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
                        <p className="text-[10px] text-primary font-black uppercase tracking-widest">
                          {ann.createdAt?.seconds ? new Date(ann.createdAt.seconds * 1000).toLocaleDateString() : '—'}
                        </p>

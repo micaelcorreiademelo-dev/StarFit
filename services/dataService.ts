@@ -1,5 +1,25 @@
-import { db, OperationType, handleFirestoreError } from './firebase';
+import { db, auth, OperationType, handleFirestoreError } from './firebase';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, getDocs, getDoc, setDoc, runTransaction } from 'firebase/firestore';
+
+export const sanitizeFirestoreData = (data: any): any => {
+  if (data === undefined) return null;
+  if (data === null || typeof data !== 'object') return data;
+  if (data instanceof Date) return data;
+  if (data.constructor && data.constructor.name !== 'Object' && data.constructor.name !== 'Array') {
+    return data;
+  }
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeFirestoreData(item));
+  }
+  const clean: Record<string, any> = {};
+  for (const key of Object.keys(data)) {
+    const val = data[key];
+    if (val !== undefined) {
+      clean[key] = sanitizeFirestoreData(val);
+    }
+  }
+  return clean;
+};
 
 export const dataService = {
   // Students
@@ -173,21 +193,37 @@ export const dataService = {
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'workouts'));
   },
 
-  deactivateOtherWorkouts: async (studentId: string, activeWorkoutId: string) => {
+  deactivateOtherWorkouts: async (studentId: string, activeWorkoutId: string, trainerId?: string) => {
     try {
-      const q = query(
-        collection(db, 'workouts'),
-        where('studentIds', 'array-contains', studentId)
-      );
-      const snap = await getDocs(q);
+      const currentUser = auth.currentUser;
+      let snap;
+      if (currentUser && currentUser.uid !== studentId) {
+        // If caller is trainer or admin, query by trainerId to satisfy security rules
+        const tId = trainerId || currentUser.uid;
+        const q = query(
+          collection(db, 'workouts'),
+          where('trainerId', '==', tId)
+        );
+        snap = await getDocs(q);
+      } else {
+        const q = query(
+          collection(db, 'workouts'),
+          where('studentIds', 'array-contains', studentId)
+        );
+        snap = await getDocs(q);
+      }
+
       for (const d of snap.docs) {
         if (d.id !== activeWorkoutId) {
           const data = d.data();
-          if (data.status === 'ativa' || data.status === 'sem_periodizacao' || data.isActive !== false) {
-            await updateDoc(doc(db, 'workouts', d.id), {
-              status: 'encerrada',
-              isActive: false
-            });
+          const isForStudent = (data.studentIds && Array.isArray(data.studentIds) && data.studentIds.includes(studentId)) || data.studentId === studentId;
+          if (isForStudent) {
+            if (data.status === 'ativa' || data.status === 'sem_periodizacao' || data.isActive !== false) {
+              await updateDoc(doc(db, 'workouts', d.id), {
+                status: 'encerrada',
+                isActive: false
+              });
+            }
           }
         }
       }
@@ -238,8 +274,9 @@ export const dataService = {
 
   createWorkout: async (workoutData: any) => {
     try {
+      const sanitizedPayload = sanitizeFirestoreData(workoutData);
       const docRef = await addDoc(collection(db, 'workouts'), {
-        ...workoutData,
+        ...sanitizedPayload,
         createdAt: serverTimestamp()
       });
       // If the workout is saved as active, deactivate other workouts for the student
@@ -256,8 +293,9 @@ export const dataService = {
 
   updateWorkout: async (workoutId: string, workoutData: any) => {
     try {
+      const sanitizedPayload = sanitizeFirestoreData(workoutData);
       const docRef = doc(db, 'workouts', workoutId);
-      await updateDoc(docRef, workoutData);
+      await updateDoc(docRef, sanitizedPayload);
       
       // If the updated workout is saved as active, deactivate other workouts for the student
       const studentIdToDeactivate = workoutData.studentIds?.[0];
@@ -752,7 +790,7 @@ export const dataService = {
         const { id, createdAt, studentIds, studentStatuses, ...cleanData } = data;
         const initialStatus = cleanData.status || (cleanData.tipoPeriodizacao === 'nenhuma' ? 'sem_periodizacao' : 'ativa');
         
-        const docRef = await addDoc(collection(db, 'workouts'), {
+        const docRef = await addDoc(collection(db, 'workouts'), sanitizeFirestoreData({
           ...cleanData,
           status: initialStatus,
           isActive: initialStatus === 'ativa' || initialStatus === 'sem_periodizacao',
@@ -760,7 +798,7 @@ export const dataService = {
           studentStatuses: { [studentId]: "Ativo" },
           isModelLinked: true, // Marker showing it was cloned from a template
           createdAt: serverTimestamp()
-        });
+        }));
 
         if (initialStatus === 'ativa' || initialStatus === 'sem_periodizacao') {
           await dataService.deactivateOtherWorkouts(studentId, docRef.id);
