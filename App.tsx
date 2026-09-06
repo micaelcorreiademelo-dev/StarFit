@@ -26,6 +26,18 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
+    // Handle legacy hash URLs like /#/@username or /#/username
+    if (window.location.hash) {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/@') || hash.startsWith('#/')) {
+        const cleanPath = hash.replace(/^#/, '');
+        if (cleanPath && cleanPath !== '/') {
+          window.location.replace(window.location.origin + cleanPath);
+          return;
+        }
+      }
+    }
+
     handleRedirectResult().catch(err => {
       console.error("Error handling redirect result:", err);
     });

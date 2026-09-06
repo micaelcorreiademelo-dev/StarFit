@@ -6829,7 +6829,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
 
               <div className="bg-white p-4 rounded-xl shadow-inner">
                 <QRCodeSVG
-                  value={`${window.location.origin}/#/${user.username}`}
+                  value={`${window.location.origin}/@${(user.username || user.id || '').replace(/^@/, '')}`}
                   size={200}
                   bgColor={"#ffffff"}
                   fgColor={"#000000"}
@@ -6841,14 +6841,15 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
               <div className="w-full flex flex-col gap-3">
                 <div className="w-full bg-background-dark border border-border-dark rounded-lg p-3 text-center flex flex-col gap-1 select-none cursor-pointer group hover:border-primary/50 transition-colors"
                      onClick={() => {
-                        const publicLink = `${window.location.protocol}//${user.username}.${window.location.host.replace('www.', '')}`;
+                        const cleanUsername = (user.username || user.id || '').replace(/^@/, '');
+                        const publicLink = `${window.location.origin}/@${cleanUsername}`;
                         navigator.clipboard.writeText(publicLink);
                         setCopied(true);
                         setTimeout(() => setCopied(false), 2000);
                      }}
                 >
                   <span className="text-[10px] text-text-secondary uppercase tracking-widest font-bold">Seu link público</span>
-                  <span className="text-primary font-bold text-sm truncate">{`${user.username}.${window.location.host.replace('www.', '')}`}</span>
+                  <span className="text-primary font-bold text-sm truncate">{`${window.location.host}/@${(user.username || user.id || '').replace(/^@/, '')}`}</span>
                   <span className={`text-[9px] mt-1 transition-all whitespace-nowrap font-bold ${copied ? 'text-green-400 opacity-100' : 'text-text-secondary opacity-0 group-hover:opacity-100'}`}>
                     {copied ? '✓ Link copiado para a área de transferência!' : 'Clique para copiar'}
                   </span>
@@ -6857,7 +6858,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                 <div className="flex gap-2">
                   <button 
                     onClick={() => {
-                      const publicLink = `${window.location.protocol}//${user.username}.${window.location.host.replace('www.', '')}`;
+                      const cleanUsername = (user.username || user.id || '').replace(/^@/, '');
+                      const publicLink = `${window.location.origin}/@${cleanUsername}`;
                       if (navigator.share) {
                         navigator.share({
                           title: 'Minha Landing Page - StarFit',
@@ -6875,7 +6877,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({
                     Compartilhar
                   </button>
                   <a 
-                    href={`${window.location.protocol}//${user.username}.${window.location.host.replace('www.', '')}`}
+                    href={`${window.location.origin}/@${(user.username || user.id || '').replace(/^@/, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center size-12 bg-card-light/10 border border-border-dark text-white rounded-lg hover:bg-white/5 transition-all"

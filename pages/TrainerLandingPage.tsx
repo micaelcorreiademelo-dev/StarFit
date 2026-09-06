@@ -119,8 +119,8 @@ const TrainerLandingPage: React.FC<{ user: User }> = ({ user }) => {
 
   const [saved, setSaved] = useState(false);
 
-  const originUrl = window.location.origin + window.location.pathname;
-  const fullUrl = `${originUrl}#/@${trainerURL}`;
+  const cleanUsername = (trainerURL || user.username || user.id || "").replace(/^@/, '');
+  const fullUrl = `${window.location.origin}/@${cleanUsername}`;
 
   const copyURL = () => {
     navigator.clipboard.writeText(fullUrl);
